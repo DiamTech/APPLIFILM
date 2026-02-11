@@ -181,19 +181,46 @@ function stopCamera() {
 
 async function captureAndScan() {
     const canvas = document.getElementById('cam-canvas');
+    const status = document.getElementById('cam-status');
+    
+    // On crée un canvas temporaire pour le recadrage
+    const cropCanvas = document.createElement('canvas');
+    const cropCtx = cropCanvas.getContext('2d');
+
+    // On définit la zone de capture (le centre de l'image)
+    // On prend 80% de la largeur et 20% de la hauteur au milieu
+    const width = canvas.width * 0.8;
+    const height = canvas.height * 0.2;
+    const x = (canvas.width - width) / 2;
+    const y = (canvas.height - height) / 2;
+
+    cropCanvas.width = width;
+    cropCanvas.height = height;
+
+    // On dessine uniquement la zone centrale du flux vidéo sur notre petit canvas
+    cropCtx.drawImage(canvas, x, y, width, height, 0, 0, width, height);
+
     try {
-        const result = await Tesseract.recognize(canvas, 'eng', {
+        // On envoie seulement la zone découpée à Tesseract
+        const result = await Tesseract.recognize(cropCanvas, 'eng', {
             tessedit_char_whitelist: '0123456789ABCDEFGHJKLMNPRSTUVWXYZ',
             tessedit_pageseg_mode: '7'
         });
+
         let text = result.data.text.toUpperCase().replace(/[^A-Z0-9]/g, '');
         const vinMatch = text.match(/[A-Z0-9]{17}/);
+
         if (vinMatch) {
             document.getElementById('vin-input').value = vinMatch[0];
+            status.innerText = "VIN DÉTECTÉ !";
             if (navigator.vibrate) navigator.vibrate(200);
             stopCamera();
+        } else {
+            status.innerText = "ALIGNEZ LE CODE...";
         }
-    } catch (e) {}
+    } catch (e) {
+        console.error("Erreur OCR:", e);
+    }
 }
 
 async function finalize() {

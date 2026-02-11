@@ -1,0 +1,1097 @@
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Applifilm Pro V5.2</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+
+  <style>
+    body { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+    .ios-active:active { transform: scale(0.97); opacity: 0.9; }
+    input, textarea { font-size: 16px !important; } /* Stop zoom iOS */
+
+    .car-grid{
+      display:grid;
+      grid-template-columns: 1fr 2fr 1fr;
+      grid-template-rows: auto auto auto auto;
+      gap:8px;
+      max-width: 340px;
+      margin: 0 auto;
+    }
+    .window-btn{
+      height: 50px;
+      border: 2px solid #e2e8f0;
+      border-radius: 10px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size: 10px;
+      font-weight: 800;
+      color:#64748b;
+      background:#f8fafc;
+      transition: all .2s;
+      text-transform: uppercase;
+      user-select:none;
+    }
+    .window-btn.selected{
+      background:#4f46e5;
+      border-color:#4338ca;
+      color:#fff;
+      box-shadow: 0 4px 10px -1px rgba(79,70,229,.35);
+    }
+
+    #cam-overlay{ position:fixed; inset:0; background:#000; z-index:100; display:none; flex-direction:column; }
+    #cam-feed-container{ position:relative; flex:1; overflow:hidden; background:#000; }
+    #hidden-video{ display:none; }
+    #cam-canvas{ width:100%; height:100%; object-fit:cover; }
+
+    .scan-target{
+      position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+      width: 90%; height: 80px;
+      border: 2px solid rgba(255,255,255,.85);
+      border-radius: 14px;
+      box-shadow: 0 0 0 100vmax rgba(0,0,0,.68);
+    }
+    .scan-laser{
+      position:absolute; top:0; left:0; right:0; height:2px;
+      background:#ef4444; box-shadow:0 0 10px #ef4444;
+      animation: scan 1.6s infinite linear;
+    }
+    @keyframes scan { 0%{top:0;opacity:0;} 40%{opacity:1;} 100%{top:100%;opacity:0;} }
+
+    canvas#sig-canvas{ touch-action:none; cursor:crosshair; }
+  </style>
+</head>
+
+<body class="bg-slate-100 min-h-screen pb-48 text-slate-900 font-sans">
+
+  <!-- Header -->
+  <header class="bg-slate-900 text-white p-4 sticky top-0 z-40 shadow-lg flex justify-between items-center">
+    <div class="flex items-center gap-3">
+      <img
+        src="https://www.applifilm.fr/wp-content/uploads/2020/07/applifilm.png"
+        alt="Applifilm"
+        class="h-7 w-auto"
+        referrerpolicy="no-referrer"
+      />
+      <div>
+        <div class="text-[11px] font-black tracking-tight text-indigo-300 uppercase">
+          Applifilm Pro <span class="text-white/70 font-bold">V5.2</span>
+        </div>
+        <div id="storage-status" class="flex items-center gap-1 text-[9px] font-bold text-amber-400 uppercase hidden">
+          <i data-lucide="save" size="10"></i> Sauvegardé
+        </div>
+      </div>
+    </div>
+    <button onclick="hardReset()" class="text-[10px] font-bold bg-slate-800 px-2 py-1 rounded text-slate-400 border border-slate-700">
+      RESET APP
+    </button>
+  </header>
+
+  <main class="max-w-xl mx-auto p-3 space-y-4">
+
+    <!-- Bandeau édition -->
+    <div id="edit-banner" class="hidden bg-amber-50 border border-amber-200 text-amber-900 p-3 rounded-xl text-xs font-bold flex justify-between items-center"></div>
+
+    <!-- Formulaire Véhicule -->
+    <section class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div class="bg-slate-50 p-3 border-b border-slate-100 flex justify-between items-center">
+        <h2 class="font-bold text-sm text-slate-700 uppercase tracking-wide flex items-center gap-2">
+          <span class="w-6 h-6 bg-indigo-600 text-white rounded flex items-center justify-center text-xs">1</span> Véhicule
+        </h2>
+        <button onclick="clearForm()" class="text-slate-400"><i data-lucide="eraser" size="16"></i></button>
+      </div>
+
+      <div class="p-4 space-y-5">
+        <!-- VIN & OCR -->
+        <div class="space-y-2">
+          <label class="text-[10px] font-black uppercase text-slate-400">Identification (Scan Auto VIN)</label>
+          <div class="flex gap-2">
+            <div class="relative flex-1">
+              <input type="text" id="vin-input" placeholder="SCANNER LE VIN"
+                class="w-full bg-slate-50 border-2 border-slate-200 rounded-xl pl-3 pr-10 py-3 font-mono text-sm font-bold uppercase outline-none focus:border-indigo-500 transition-colors">
+              <i id="vin-valid" data-lucide="check-circle" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 transition-colors" size="18"></i>
+            </div>
+            <button onclick="startCamera('vin')" class="bg-indigo-600 text-white w-14 rounded-xl flex items-center justify-center ios-active shadow-lg shadow-indigo-100">
+              <i data-lucide="scan-line" size="24"></i>
+            </button>
+          </div>
+
+          <!-- Preuve Photo -->
+          <div id="vin-proof-container" class="hidden flex items-center gap-3 p-2 bg-green-50 rounded-lg border border-green-100">
+            <img id="vin-proof-img" class="w-16 h-8 object-cover rounded border border-green-200">
+            <span class="text-[10px] font-bold text-green-700 uppercase">Preuve VIN capturée</span>
+            <button onclick="clearVinProof()" class="ml-auto text-[10px] font-bold text-green-800 bg-green-100 px-2 py-1 rounded">
+              Retirer
+            </button>
+          </div>
+
+          <div class="text-[10px] text-slate-400 font-semibold">
+            OCR anti-hallucinations: check digit + confirmation 2 fois.
+          </div>
+        </div>
+
+        <hr class="border-slate-100">
+
+        <!-- Schéma vitres -->
+        <div>
+          <div class="flex justify-between items-center mb-2">
+            <label class="text-[10px] font-black uppercase text-slate-400">Sélection des Vitres</label>
+            <button onclick="clearWindows()" class="text-[9px] text-red-400 font-bold uppercase">Effacer</button>
+          </div>
+
+          <div class="car-grid">
+            <!-- Rangée 1 -->
+            <button onclick="toggleWindow('avg')" id="win-avg" class="window-btn">AV-G</button>
+            <button onclick="toggleWindow('pb')" id="win-pb" class="window-btn border-b-4 border-indigo-100">Pare-brise</button>
+            <button onclick="toggleWindow('avd')" id="win-avd" class="window-btn">AV-D</button>
+
+            <!-- Rangée 2 : AR + Toit1/Toit2 -->
+            <button onclick="toggleWindow('arg')" id="win-arg" class="window-btn">AR-G</button>
+            <div class="flex flex-col gap-2">
+              <button onclick="toggleWindow('toit1')" id="win-toit1" class="window-btn h-10">Toit 1</button>
+              <button onclick="toggleWindow('toit2')" id="win-toit2" class="window-btn h-10">Toit 2</button>
+            </div>
+            <button onclick="toggleWindow('ard')" id="win-ard" class="window-btn">AR-D</button>
+
+            <!-- Rangée 3 : Custodes + Lunette AR -->
+            <button onclick="toggleWindow('custg')" id="win-custg" class="window-btn">Cust.G</button>
+            <button onclick="toggleWindow('arr')" id="win-arr" class="window-btn bg-slate-100">Lunette AR</button>
+            <button onclick="toggleWindow('custd')" id="win-custd" class="window-btn">Cust.D</button>
+
+            <!-- Rangée 4 : Lunette AR gauche/droite -->
+            <button onclick="toggleWindow('largs')" id="win-largs" class="window-btn">Lun. AR G</button>
+            <div class="flex items-center justify-center text-[10px] font-bold text-slate-300 uppercase tracking-widest italic">
+              Coffre
+            </div>
+            <button onclick="toggleWindow('lard')" id="win-lard" class="window-btn">Lun. AR D</button>
+          </div>
+        </div>
+
+        <!-- Type intervention -->
+        <div class="grid grid-cols-3 gap-2">
+          <label class="flex flex-col items-center gap-2 p-3 rounded-xl border border-slate-200 bg-slate-50 has-[:checked]:bg-indigo-50 has-[:checked]:border-indigo-200 transition-colors">
+            <input type="radio" name="type_inter" value="Pose" class="accent-indigo-600 w-4 h-4" checked onchange="saveState()">
+            <span class="text-xs font-bold text-slate-700">Pose</span>
+          </label>
+          <label class="flex flex-col items-center gap-2 p-3 rounded-xl border border-slate-200 bg-slate-50 has-[:checked]:bg-amber-50 has-[:checked]:border-amber-200 transition-colors">
+            <input type="radio" name="type_inter" value="SAV" class="accent-amber-600 w-4 h-4" onchange="saveState()">
+            <span class="text-xs font-bold text-slate-700">SAV</span>
+          </label>
+          <label class="flex flex-col items-center gap-2 p-3 rounded-xl border border-slate-200 bg-slate-50 has-[:checked]:bg-rose-50 has-[:checked]:border-rose-200 transition-colors">
+            <input type="radio" name="type_inter" value="Garantie" class="accent-rose-600 w-4 h-4" onchange="saveState()">
+            <span class="text-xs font-bold text-slate-700">Garantie</span>
+          </label>
+        </div>
+
+        <!-- Photos -->
+        <div>
+          <div class="flex gap-2 overflow-x-auto py-2 no-scrollbar" id="extra-photos-list">
+            <!-- rempli par renderExtraPhotos() -->
+          </div>
+          <div class="text-[10px] text-slate-400 font-semibold">
+            Stockage images: IndexedDB + fallback localStorage si indisponible.
+          </div>
+        </div>
+
+        <textarea id="obs" oninput="ensureStartAt(); saveState();" rows="2" placeholder="Observations..."
+          class="w-full text-sm p-3 rounded-xl bg-slate-50 border-2 border-slate-200 focus:border-indigo-500 outline-none"></textarea>
+
+        <div class="grid grid-cols-1 gap-2">
+          <button onclick="addToBatch()" class="w-full py-4 bg-slate-900 text-white font-black uppercase rounded-xl shadow-xl ios-active flex items-center justify-center gap-2">
+            <i data-lucide="save"></i> <span id="save-btn-label">Sauvegarder Véhicule</span>
+          </button>
+          <button id="cancel-edit-btn" onclick="cancelEdit()" class="hidden w-full py-3 bg-amber-50 text-amber-900 font-black uppercase rounded-xl border border-amber-200 ios-active">
+            Annuler l’édition
+          </button>
+        </div>
+
+        <div class="text-[10px] text-slate-500">
+          Début d’intervention: auto au 1er input/caméra. Fin d’intervention: au moment de la sauvegarde du véhicule.
+        </div>
+      </div>
+    </section>
+
+    <!-- Liste Batch -->
+    <div id="batch-container" class="space-y-3 pb-24"></div>
+  </main>
+
+  <!-- Footer -->
+  <div class="fixed bottom-0 left-0 right-0 p-3 bg-white/95 backdrop-blur-xl border-t border-slate-200 z-30">
+    <div class="max-w-xl mx-auto flex gap-3">
+      <button onclick="openSignature()" class="flex-1 py-3.5 bg-slate-100 text-slate-700 font-bold rounded-xl border border-slate-200 ios-active text-xs uppercase">
+        <i data-lucide="pen-tool" class="inline w-3 h-3 mr-1"></i> Signer
+      </button>
+      <button onclick="finalize()" class="flex-[2] py-3.5 bg-indigo-600 text-white font-bold rounded-xl shadow-lg ios-active text-xs uppercase flex items-center justify-center gap-2">
+        Envoyer <span id="batch-count" class="bg-white/20 px-2 py-0.5 rounded text-[10px] ml-1">0</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Caméra Overlay -->
+  <div id="cam-overlay">
+    <div class="absolute top-0 w-full p-4 z-10 flex justify-between items-center bg-gradient-to-b from-black/80 to-transparent">
+      <div class="flex items-center gap-2">
+        <span id="cam-status" class="text-white font-bold text-xs bg-red-600 px-2 py-1 rounded animate-pulse">RECHERCHE VIN...</span>
+        <button id="torch-btn" onclick="toggleTorch()" class="hidden bg-white/10 px-2 py-1 rounded text-white text-xs font-bold">
+          TORCH
+        </button>
+      </div>
+      <button onclick="stopCamera()" class="bg-white/10 p-2 rounded-full text-white"><i data-lucide="x"></i></button>
+    </div>
+
+    <div id="cam-feed-container">
+      <video id="hidden-video" playsinline autoplay muted></video>
+      <canvas id="cam-canvas"></canvas>
+
+      <div id="scan-target" class="scan-target">
+        <div class="scan-laser"></div>
+        <div class="absolute -bottom-8 w-full text-center text-white/80 text-[10px] font-bold">STABILISEZ SUR LE VIN</div>
+      </div>
+    </div>
+
+    <div class="p-6 bg-black flex justify-center gap-6">
+      <button onclick="forceCapture()" class="flex flex-col items-center gap-1">
+        <div class="w-16 h-16 rounded-full border-4 border-white flex items-center justify-center bg-white/20 ios-active">
+          <div class="w-12 h-12 bg-white rounded-full"></div>
+        </div>
+        <span class="text-[9px] text-white font-bold uppercase mt-2">Forcer Photo</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal Signature -->
+  <div id="sig-modal" class="fixed inset-0 bg-slate-900/95 z-[110] hidden flex flex-col items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl flex flex-col">
+      <div class="p-3 bg-slate-50 border-b flex justify-between items-center">
+        <span class="font-bold text-sm">Signature Client</span>
+        <button onclick="clearSig()" class="text-[10px] text-red-500 font-bold uppercase">Effacer</button>
+      </div>
+      <div class="flex-1 bg-white relative h-64 w-full cursor-crosshair touch-none" id="sig-wrapper">
+        <canvas id="sig-canvas" class="w-full h-full"></canvas>
+      </div>
+      <div class="p-3 flex gap-2 border-t">
+        <button onclick="closeSignature()" class="flex-1 py-3 bg-slate-100 font-bold rounded-lg text-xs">Annuler</button>
+        <button onclick="saveSignature()" class="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-lg text-xs">Valider</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* =========================
+   STATE + KEYS
+   ========================= */
+const STORE_KEY_DRAFT = 'applifilm_v52_draft';
+const STORE_KEY_BATCH = 'applifilm_v52_batch';
+const STORE_KEY_SIG   = 'applifilm_v52_sig';
+
+let editingIndex = null;
+
+let state = {
+  draft: { vin:"", vinProofId:null, windows:[], type:"Pose", photoIds:[], obs:"", startAt:null, endAt:null },
+  batch: [],
+  signature: null
+};
+
+function nowIso(){ return new Date().toISOString(); }
+function ensureStartAt(){
+  if (!state.draft.startAt) state.draft.startAt = nowIso();
+}
+function markEndAt(obj){
+  obj.endAt = nowIso();
+}
+
+/* =========================
+   VIN: validation + check digit
+   ========================= */
+const VIN_RE = /^[A-HJ-NPR-Z0-9]{17}$/;
+function normalizeVin(s){ return (s||"").toUpperCase().replace(/[^A-Z0-9]/g,''); }
+function isValidVinBasic(v){ return VIN_RE.test(v); }
+
+const VIN_MAP = {
+  A:1,B:2,C:3,D:4,E:5,F:6,G:7,H:8,
+  J:1,K:2,L:3,M:4,N:5,P:7,R:9,
+  S:2,T:3,U:4,V:5,W:6,X:7,Y:8,Z:9,
+  "0":0,"1":1,"2":2,"3":3,"4":4,"5":5,"6":6,"7":7,"8":8,"9":9
+};
+const VIN_W = [8,7,6,5,4,3,2,10,0,9,8,7,6,5,4,3,2];
+
+function vinCheckDigitOk(vin){
+  if(!isValidVinBasic(vin)) return false;
+  let sum = 0;
+  for(let i=0;i<17;i++){
+    const c = vin[i];
+    const val = VIN_MAP[c];
+    if(val === undefined) return false;
+    sum += val * VIN_W[i];
+  }
+  const r = sum % 11;
+  const cd = (r === 10) ? "X" : String(r);
+  return vin[8] === cd;
+}
+
+function checkVinValidity() {
+  const val = normalizeVin(state.draft.vin);
+  const icon = document.getElementById('vin-valid');
+  const ok = isValidVinBasic(val) && vinCheckDigitOk(val);
+  if(ok) {
+    icon.classList.remove('text-slate-300');
+    icon.classList.add('text-green-500');
+  } else {
+    icon.classList.remove('text-green-500');
+    icon.classList.add('text-slate-300');
+  }
+}
+
+/* =========================
+   Storage status
+   ========================= */
+function flashSaved(){
+  const el = document.getElementById('storage-status');
+  el.classList.remove('hidden');
+  setTimeout(() => el.classList.add('hidden'), 1200);
+}
+
+/* =========================
+   MEDIA STORAGE: IndexedDB + fallback localStorage base64
+   ========================= */
+const DB_NAME = 'applifilm_v52_db';
+const DB_STORE = 'blobs';
+const LS_MEDIA_PREFIX = 'applifilm_v52_media_';
+
+let mediaMode = 'idb';
+
+function idbAvailable(){ return !!window.indexedDB; }
+
+function openDb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(DB_STORE)) {
+        db.createObjectStore(DB_STORE, { keyPath: 'id' });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbPutBlob(blob) {
+  const db = await openDb();
+  const id = crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + '_' + Math.random().toString(16).slice(2);
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(DB_STORE, 'readwrite');
+    tx.objectStore(DB_STORE).put({ id, blob, createdAt: Date.now() });
+    tx.oncomplete = () => resolve(id);
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function idbGetBlob(id) {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(DB_STORE, 'readonly');
+    const req = tx.objectStore(DB_STORE).get(id);
+    req.onsuccess = () => resolve(req.result?.blob || null);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbDeleteBlob(id) {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(DB_STORE, 'readwrite');
+    tx.objectStore(DB_STORE).delete(id);
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+function blobToDataURL(blob){
+  return new Promise((resolve) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.readAsDataURL(blob);
+  });
+}
+
+async function mediaPut(blob){
+  try {
+    if(mediaMode === 'idb' && idbAvailable()){
+      return await idbPutBlob(blob);
+    }
+  } catch (e) {
+    mediaMode = 'ls';
+  }
+
+  const id = crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + '_' + Math.random().toString(16).slice(2);
+  const dataUrl = await blobToDataURL(blob);
+  try {
+    localStorage.setItem(LS_MEDIA_PREFIX + id, dataUrl);
+  } catch(e){
+    throw new Error("Stockage images saturé (fallback localStorage).");
+  }
+  return 'ls:' + id;
+}
+
+async function mediaGet(id){
+  if(!id) return null;
+
+  if(String(id).startsWith('ls:')){
+    const key = LS_MEDIA_PREFIX + String(id).slice(3);
+    const dataUrl = localStorage.getItem(key);
+    if(!dataUrl) return null;
+    const res = await fetch(dataUrl);
+    return await res.blob();
+  }
+
+  try {
+    if(mediaMode === 'idb' && idbAvailable()){
+      return await idbGetBlob(id);
+    }
+  } catch(e){
+    mediaMode = 'ls';
+    return null;
+  }
+  return null;
+}
+
+async function mediaDelete(id){
+  if(!id) return;
+
+  if(String(id).startsWith('ls:')){
+    localStorage.removeItem(LS_MEDIA_PREFIX + String(id).slice(3));
+    return;
+  }
+  try { await idbDeleteBlob(id); } catch(e){}
+}
+
+/* =========================
+   Persist draft/batch/sig (meta only)
+   ========================= */
+function saveState() {
+  state.draft.obs = document.getElementById('obs').value;
+  const typeEl = document.querySelector('input[name="type_inter"]:checked');
+  if(typeEl) state.draft.type = typeEl.value;
+
+  localStorage.setItem(STORE_KEY_DRAFT, JSON.stringify(state.draft));
+  localStorage.setItem(STORE_KEY_BATCH, JSON.stringify(state.batch));
+  if(state.signature) localStorage.setItem(STORE_KEY_SIG, state.signature);
+
+  flashSaved();
+}
+
+async function restoreData() {
+  const draft = localStorage.getItem(STORE_KEY_DRAFT);
+  const batch = localStorage.getItem(STORE_KEY_BATCH);
+  const sig   = localStorage.getItem(STORE_KEY_SIG);
+
+  if(draft) state.draft = JSON.parse(draft);
+  if(batch) state.batch = JSON.parse(batch);
+  if(sig) state.signature = sig;
+
+  // Defensive defaults
+  state.draft.windows = state.draft.windows || [];
+  state.draft.photoIds = state.draft.photoIds || [];
+  state.draft.type = state.draft.type || "Pose";
+  state.draft.obs = state.draft.obs || "";
+  state.draft.startAt = state.draft.startAt || null;
+  state.draft.endAt = state.draft.endAt || null;
+
+  document.getElementById('vin-input').value = state.draft.vin || "";
+  document.getElementById('obs').value = state.draft.obs || "";
+
+  document.getElementsByName('type_inter').forEach(r => r.checked = (r.value === state.draft.type));
+
+  // windows UI
+  document.querySelectorAll('.window-btn').forEach(b => b.classList.remove('selected'));
+  state.draft.windows.forEach(w => {
+    const btn = document.getElementById(`win-${w}`);
+    if(btn) btn.classList.add('selected');
+  });
+
+  // VIN proof
+  if(state.draft.vinProofId) {
+    const blob = await mediaGet(state.draft.vinProofId);
+    if(blob) {
+      const src = await blobToDataURL(blob);
+      document.getElementById('vin-proof-img').src = src;
+      document.getElementById('vin-proof-container').classList.remove('hidden');
+    } else {
+      document.getElementById('vin-proof-container').classList.add('hidden');
+    }
+  } else {
+    document.getElementById('vin-proof-container').classList.add('hidden');
+  }
+
+  await renderExtraPhotos();
+  await renderBatchList();
+
+  renderEditUI();
+  checkVinValidity();
+
+  lucide.createIcons();
+}
+
+function renderEditUI(){
+  const banner = document.getElementById('edit-banner');
+  const cancelBtn = document.getElementById('cancel-edit-btn');
+  const label = document.getElementById('save-btn-label');
+
+  if(editingIndex === null){
+    banner.classList.add('hidden');
+    banner.innerHTML = '';
+    cancelBtn.classList.add('hidden');
+    label.textContent = "Sauvegarder Véhicule";
+  } else {
+    banner.classList.remove('hidden');
+    banner.innerHTML = `
+      <span>MODE ÉDITION — véhicule #${editingIndex+1}</span>
+      <button onclick="cancelEdit()" class="px-2 py-1 bg-amber-200 rounded">Annuler</button>
+    `;
+    cancelBtn.classList.remove('hidden');
+    label.textContent = "Mettre à jour le véhicule";
+  }
+}
+
+function hardReset() {
+  if(confirm("Tout effacer et réinitialiser l'application ?")) {
+    localStorage.clear();
+    try { indexedDB.deleteDatabase(DB_NAME); } catch(e){}
+    window.location.reload();
+  }
+}
+
+function clearForm() {
+  editingIndex = null;
+  state.draft = { vin:"", vinProofId:null, windows:[], type:"Pose", photoIds:[], obs:"", startAt:null, endAt:null };
+  saveState();
+
+  document.getElementById('vin-input').value = "";
+  document.getElementById('obs').value = "";
+  document.getElementById('vin-proof-container').classList.add('hidden');
+  document.querySelectorAll('.window-btn').forEach(b => b.classList.remove('selected'));
+
+  renderEditUI();
+  renderExtraPhotos();
+  checkVinValidity();
+}
+
+function cancelEdit(){
+  clearForm();
+}
+
+/* =========================
+   Windows selection
+   ========================= */
+function toggleWindow(code) {
+  ensureStartAt();
+  const idx = state.draft.windows.indexOf(code);
+  const btn = document.getElementById(`win-${code}`);
+  if(idx > -1) {
+    state.draft.windows.splice(idx, 1);
+    btn?.classList.remove('selected');
+  } else {
+    state.draft.windows.push(code);
+    btn?.classList.add('selected');
+  }
+  saveState();
+}
+
+function clearWindows() {
+  ensureStartAt();
+  state.draft.windows = [];
+  document.querySelectorAll('.window-btn').forEach(b => b.classList.remove('selected'));
+  saveState();
+}
+
+/* =========================
+   VIN proof
+   ========================= */
+async function clearVinProof(){
+  ensureStartAt();
+  const id = state.draft.vinProofId;
+  state.draft.vinProofId = null;
+  saveState();
+  if(id) await mediaDelete(id);
+  await restoreData();
+}
+
+/* =========================
+   Extra photos UI
+   ========================= */
+async function renderExtraPhotos() {
+  const container = document.getElementById('extra-photos-list');
+
+  container.innerHTML = `
+    <button onclick="startCamera('extra')" class="flex-shrink-0 w-16 h-16 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-slate-400 gap-1 ios-active">
+      <i data-lucide="plus" size="18"></i>
+      <span class="text-[8px] font-bold uppercase">Ajout</span>
+    </button>
+  `;
+
+  for (let i = 0; i < (state.draft.photoIds || []).length; i++) {
+    const id = state.draft.photoIds[i];
+    const blob = await mediaGet(id);
+    const src = blob ? await blobToDataURL(blob) : '';
+
+    const div = document.createElement('div');
+    div.className = "relative flex-shrink-0 w-16 h-16";
+    div.innerHTML = `
+      <img src="${src}" class="w-full h-full object-cover rounded-xl border border-slate-200">
+      <button onclick="removeExtraPhoto(${i})" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 shadow-sm">
+        <i data-lucide="x" size="12"></i>
+      </button>
+    `;
+    container.appendChild(div);
+  }
+  lucide.createIcons();
+}
+
+async function removeExtraPhoto(i) {
+  ensureStartAt();
+  const id = state.draft.photoIds[i];
+  state.draft.photoIds.splice(i, 1);
+  saveState();
+  if(id) await mediaDelete(id);
+  await renderExtraPhotos();
+}
+
+/* =========================
+   Camera + Torch + OCR (anti-hallucinations)
+   ========================= */
+let stream = null;
+let camMode = 'vin';
+let lastOcr = 0;
+let torchOn = false;
+let videoTrack = null;
+
+let ocrWorker = null;
+let ocrBusy = false;
+
+let lastCandidate = null;
+let candidateHits = 0;
+
+async function ensureOcrWorker() {
+  if (ocrWorker) return ocrWorker;
+  const { createWorker } = Tesseract;
+  ocrWorker = await createWorker({ logger: () => {} });
+  await ocrWorker.loadLanguage('eng');
+  await ocrWorker.initialize('eng');
+  await ocrWorker.setParameters({
+    tessedit_char_whitelist: 'ABCDEFGHJKLMNPRSTUVWXYZ0123456789',
+    tessedit_pageseg_mode: Tesseract.PSM.SINGLE_LINE
+  });
+  return ocrWorker;
+}
+
+async function startCamera(mode) {
+  camMode = mode;
+  if (mode === 'vin') ensureStartAt();
+
+  const overlay = document.getElementById('cam-overlay');
+  const target = document.getElementById('scan-target');
+  const status = document.getElementById('cam-status');
+  const torchBtn = document.getElementById('torch-btn');
+
+  overlay.style.display = 'flex';
+  target.style.display = (mode === 'vin') ? 'block' : 'none';
+  status.textContent = (mode === 'vin') ? "RECHERCHE VIN..." : "MODE PHOTO";
+  status.className = (mode === 'vin')
+    ? "text-white font-bold text-xs bg-red-600 px-2 py-1 rounded animate-pulse"
+    : "text-white font-bold text-xs bg-indigo-600 px-2 py-1 rounded";
+
+  torchBtn.classList.add('hidden');
+  torchOn = false;
+
+  // reset stability
+  lastCandidate = null;
+  candidateHits = 0;
+
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment", width: { ideal: 1280 } }
+    });
+
+    const video = document.getElementById('hidden-video');
+    const canvas = document.getElementById('cam-canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+    video.srcObject = stream;
+    await video.play();
+
+    videoTrack = stream.getVideoTracks()[0];
+    const caps = videoTrack.getCapabilities ? videoTrack.getCapabilities() : {};
+    if (caps && 'torch' in caps) torchBtn.classList.remove('hidden');
+
+    const loop = async (ts) => {
+      if(!stream) return;
+
+      canvas.width = video.videoWidth || 1280;
+      canvas.height = video.videoHeight || 720;
+      ctx.drawImage(video, 0, 0);
+
+      if(mode === 'vin' && (ts - lastOcr > 1000)) {
+        lastOcr = ts;
+        runOcrCheck(canvas);
+      }
+
+      requestAnimationFrame(loop);
+    };
+    requestAnimationFrame(loop);
+
+  } catch (e) {
+    alert("Erreur Caméra: " + e.message);
+    stopCamera();
+  }
+}
+
+async function toggleTorch() {
+  if (!videoTrack || !videoTrack.applyConstraints) return;
+  try {
+    torchOn = !torchOn;
+    await videoTrack.applyConstraints({ advanced: [{ torch: torchOn }] });
+  } catch (e) {
+    torchOn = false;
+  }
+}
+
+function stopCamera() {
+  if(stream) stream.getTracks().forEach(t => t.stop());
+  stream = null;
+  videoTrack = null;
+  torchOn = false;
+  document.getElementById('cam-overlay').style.display = 'none';
+}
+
+async function runOcrCheck(canvas) {
+  if (ocrBusy) return;
+  ocrBusy = true;
+
+  try {
+    const worker = await ensureOcrWorker();
+
+    const w = canvas.width, h = canvas.height;
+    const roiX = Math.floor(w * 0.06);
+    const roiW = Math.floor(w * 0.88);
+    const roiY = Math.floor(h * 0.45);
+    const roiH = Math.floor(h * 0.16);
+
+    const tmp = document.createElement('canvas');
+    tmp.width = roiW; tmp.height = roiH;
+    const tctx = tmp.getContext('2d', { willReadFrequently: true });
+    tctx.drawImage(canvas, roiX, roiY, roiW, roiH, 0, 0, roiW, roiH);
+
+    // Binarisation ROI
+    const imgData = tctx.getImageData(0, 0, roiW, roiH);
+    const d = imgData.data;
+    for (let i=0; i<d.length; i+=4) {
+      const avg = (d[i] + d[i+1] + d[i+2]) / 3;
+      const v = avg > 135 ? 255 : 0;
+      d[i]=d[i+1]=d[i+2]=v;
+    }
+    tctx.putImageData(imgData, 0, 0);
+
+    const { data } = await worker.recognize(tmp);
+    const clean = normalizeVin(data.text || "");
+    const m = clean.match(/[A-HJ-NPR-Z0-9]{17}/);
+    if(!m) { lastCandidate=null; candidateHits=0; return; }
+
+    const vin = m[0];
+    if(!isValidVinBasic(vin) || !vinCheckDigitOk(vin)) {
+      lastCandidate=null; candidateHits=0;
+      return;
+    }
+
+    // stabilité: 2 hits consécutifs
+    if(vin === lastCandidate) candidateHits++;
+    else { lastCandidate = vin; candidateHits = 1; }
+
+    if(candidateHits < 2) return;
+
+    // accept
+    document.getElementById('vin-input').value = vin;
+    state.draft.vin = vin;
+    ensureStartAt();
+
+    const proofBlob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.75));
+    const proofId = await mediaPut(proofBlob);
+    state.draft.vinProofId = proofId;
+
+    saveState();
+    await restoreData();
+
+    if(navigator.vibrate) navigator.vibrate(200);
+    stopCamera();
+
+  } catch(e) {
+    // silence
+  } finally {
+    ocrBusy = false;
+  }
+}
+
+async function forceCapture() {
+  const canvas = document.getElementById('cam-canvas');
+  const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.75));
+  const id = await mediaPut(blob);
+
+  ensureStartAt();
+
+  if(camMode === 'vin') state.draft.vinProofId = id;
+  else state.draft.photoIds.push(id);
+
+  saveState();
+  await restoreData();
+  stopCamera();
+}
+
+/* =========================
+   Batch: add/update/edit/remove
+   ========================= */
+function editBatchItem(i){
+  const v = state.batch[i];
+  editingIndex = i;
+
+  state.draft = JSON.parse(JSON.stringify(v));
+  // On ré-ouvre une saisie: fin remise à null (sera recalculée au save)
+  state.draft.endAt = null;
+
+  saveState();
+  restoreData();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function removeBatchItem(i) {
+  if(confirm("Supprimer ce véhicule ?")) {
+    state.batch.splice(i, 1);
+    saveState();
+    renderBatchList();
+  }
+}
+
+async function addToBatch() {
+  ensureStartAt();
+
+  const vin = normalizeVin(state.draft.vin);
+  if(!isValidVinBasic(vin) || !vinCheckDigitOk(vin)) {
+    alert("VIN invalide (17 caractères + check digit).");
+    throw new Error("VIN invalid");
+  }
+  if(!state.draft.windows || state.draft.windows.length === 0) {
+    alert("Sélectionne au moins 1 vitre.");
+    throw new Error("No windows");
+  }
+
+  const vehicle = JSON.parse(JSON.stringify(state.draft));
+  vehicle.vin = vin;
+  vehicle.timestamp = new Date().toLocaleTimeString();
+  if(!vehicle.startAt) vehicle.startAt = nowIso();
+  markEndAt(vehicle);
+
+  if(editingIndex !== null) {
+    state.batch[editingIndex] = vehicle;
+    editingIndex = null;
+  } else {
+    vehicle.id = Date.now();
+    state.batch.unshift(vehicle);
+  }
+
+  // Reset draft (ne supprime pas les blobs: ils sont référencés par batch)
+  state.draft = { vin:"", vinProofId:null, windows:[], type:"Pose", photoIds:[], obs:"", startAt:null, endAt:null };
+
+  saveState();
+  await restoreData();
+}
+
+async function renderBatchList() {
+  const cont = document.getElementById('batch-container');
+  const badge = document.getElementById('batch-count');
+  badge.textContent = state.batch.length;
+  cont.innerHTML = "";
+
+  for (let i = 0; i < state.batch.length; i++) {
+    const v = state.batch[i];
+
+    // preuves + photos (dataURL pour éviter soucis d’objectURL)
+    let proofSrc = '';
+    if(v.vinProofId) {
+      const b = await mediaGet(v.vinProofId);
+      if(b) proofSrc = await blobToDataURL(b);
+    }
+
+    const photoSrcs = [];
+    for (const pid of (v.photoIds || [])) {
+      const b = await mediaGet(pid);
+      if(b) photoSrcs.push(await blobToDataURL(b));
+    }
+
+    const startTxt = v.startAt ? new Date(v.startAt).toLocaleString() : '—';
+    const endTxt   = v.endAt ? new Date(v.endAt).toLocaleString() : '—';
+
+    const div = document.createElement('div');
+    div.className = "bg-white p-4 rounded-xl shadow-sm border border-slate-200";
+    div.innerHTML = `
+      <div class="flex justify-between items-start mb-2">
+        <div>
+          <span class="text-[10px] text-slate-400 font-bold">${v.timestamp || ''}</span>
+          <div class="font-black font-mono text-sm">${v.vin}</div>
+          <div class="text-[10px] font-bold text-indigo-600 uppercase mt-1">${v.type} - ${(v.windows||[]).length} Vitre(s)</div>
+          <div class="mt-1 text-[10px] text-slate-500 font-semibold">
+            Début: ${startTxt}<br>
+            Fin: ${endTxt}
+          </div>
+          <div class="mt-1 text-[10px] text-slate-400 font-semibold">Vitres: ${(v.windows||[]).join(', ')}</div>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="editBatchItem(${i})" class="text-slate-300"><i data-lucide="pencil"></i></button>
+          <button onclick="removeBatchItem(${i})" class="text-slate-300"><i data-lucide="trash-2"></i></button>
+        </div>
+      </div>
+      <div class="flex gap-1 overflow-x-auto no-scrollbar">
+        ${proofSrc ? `<img src="${proofSrc}" class="h-8 w-12 object-cover rounded border border-green-200">` : ''}
+        ${photoSrcs.map(u => `<img src="${u}" class="h-8 w-8 object-cover rounded border border-slate-200">`).join('')}
+      </div>
+    `;
+    cont.appendChild(div);
+  }
+
+  lucide.createIcons();
+}
+
+/* =========================
+   Signature
+   ========================= */
+let sigCanvas, sigCtx, drawing = false;
+
+function openSignature() {
+  const modal = document.getElementById('sig-modal');
+  modal.classList.remove('hidden');
+
+  setTimeout(() => {
+    sigCanvas = document.getElementById('sig-canvas');
+    const wrapper = document.getElementById('sig-wrapper');
+    sigCanvas.width = wrapper.clientWidth;
+    sigCanvas.height = wrapper.clientHeight;
+
+    sigCtx = sigCanvas.getContext('2d');
+    sigCtx.lineWidth = 3;
+    sigCtx.lineCap = 'round';
+    sigCtx.lineJoin = 'round';
+    sigCtx.strokeStyle = '#000';
+
+    const start = (e) => {
+      e.preventDefault();
+      drawing = true;
+      sigCtx.beginPath();
+      const pos = getPos(e);
+      sigCtx.moveTo(pos.x, pos.y);
+    };
+    const move = (e) => {
+      if(!drawing) return;
+      e.preventDefault();
+      const pos = getPos(e);
+      sigCtx.lineTo(pos.x, pos.y);
+      sigCtx.stroke();
+    };
+    const end = () => { drawing = false; };
+
+    sigCanvas.onmousedown = start;
+    sigCanvas.onmousemove = move;
+    sigCanvas.onmouseup = end;
+    sigCanvas.ontouchstart = start;
+    sigCanvas.ontouchmove = move;
+    sigCanvas.ontouchend = end;
+  }, 80);
+}
+
+function getPos(e) {
+  const rect = sigCanvas.getBoundingClientRect();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  return { x: clientX - rect.left, y: clientY - rect.top };
+}
+
+function closeSignature() { document.getElementById('sig-modal').classList.add('hidden'); }
+function clearSig() { sigCtx?.clearRect(0,0,sigCanvas.width,sigCanvas.height); }
+
+function saveSignature() {
+  state.signature = sigCanvas.toDataURL('image/png');
+  saveState();
+  closeSignature();
+  alert("Signature enregistrée !");
+}
+
+/* =========================
+   Finalize: prevent forgetting last draft
+   ========================= */
+function draftHasPendingInput(){
+  const d = state.draft || {};
+  const vin = normalizeVin(d.vin || "");
+  return !!(
+    vin.length > 0 ||
+    (d.windows && d.windows.length) ||
+    (d.photoIds && d.photoIds.length) ||
+    (d.vinProofId) ||
+    (d.obs && d.obs.trim().length > 0) ||
+    (editingIndex !== null)
+  );
+}
+
+async function finalize() {
+  if (draftHasPendingInput()) {
+    const go = confirm(
+      "Une saisie semble en cours (dernier véhicule non ajouté au lot).\n\n" +
+      "OK = Ajouter au lot puis envoyer\n" +
+      "Annuler = Revenir à la saisie"
+    );
+    if (!go) return;
+
+    try {
+      await addToBatch();
+    } catch(e) {
+      return; // addToBatch a déjà affiché l’erreur
+    }
+  }
+
+  if(state.batch.length === 0) return alert("Aucun véhicule");
+  if(!state.signature) return alert("Signature manquante");
+
+  const payload = {
+    meta: { date: new Date().toISOString(), signature: state.signature },
+    batch: state.batch
+  };
+
+  console.log("PAYLOAD FINAL:", payload);
+  alert("Données prêtes ! (Voir console).");
+
+  state.batch = [];
+  saveState();
+  await renderBatchList();
+}
+
+/* =========================
+   Init
+   ========================= */
+window.onload = async () => {
+  lucide.createIcons();
+
+  // VIN input
+  document.getElementById('vin-input').addEventListener('input', (e) => {
+    ensureStartAt();
+    e.target.value = normalizeVin(e.target.value);
+    state.draft.vin = e.target.value;
+    checkVinValidity();
+    saveState();
+  });
+
+  // photos container initial
+  await restoreData();
+};
+</script>
+</body>
+</html>

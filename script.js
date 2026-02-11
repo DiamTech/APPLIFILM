@@ -290,38 +290,46 @@ async function captureAndScan() {
     const canvas = document.getElementById('cam-canvas');
     const status = document.getElementById('cam-status');
     
-    status.innerText = "ANALYSE DU VIN...";
+    // --- ÉTAPE 1 : TENTER DE LIRE LE CODE-BARRES ---
+    if ('BarcodeDetector' in window) {
+        const detector = new BarcodeDetector({ formats: ['code_128', 'code_39', 'ean_13'] });
+        try {
+            const barcodes = await detector.detect(canvas);
+            if (barcodes.length > 0) {
+                const val = barcodes[0].rawValue.toUpperCase();
+                // On vérifie si c'est un format VIN (17 caractères)
+                if (val.length === 17) {
+                    successScan(val, "CODE-BARRES");
+                    return; // On arrête là si on a trouvé
+                }
+            }
+        } catch (e) { console.error("Erreur BarcodeDetector:", e); }
+    }
 
+    // --- ÉTAPE 2 : SI PAS DE CODE-BARRES, ON TENTE LE TEXTE (OCR) ---
+    status.innerText = "LECTURE TEXTE...";
     try {
-        // On utilise Tesseract pour lire le texte sur le canvas
-        const result = await Tesseract.recognize(canvas, 'eng', {
-            tessedit_char_whitelist: '0123456789ABCDEFGHJKLMNPRSTUVWXYZ'
-        });
-
-        const text = result.data.text.replace(/\s+/g, ''); // On enlève les espaces
-        console.log("Texte détecté :", text);
-
-        // On cherche un VIN (17 caractères alphanumériques)
+        const result = await Tesseract.recognize(canvas, 'eng');
+        const text = result.data.text.replace(/\s+/g, '').toUpperCase();
         const vinMatch = text.match(/[A-Z0-9]{17}/);
 
         if (vinMatch) {
-            const foundVin = vinMatch[0];
-            document.getElementById('vin-input').value = foundVin;
-            
-            status.innerText = "VIN DÉTECTÉ !";
-            status.classList.replace('bg-red-600', 'bg-green-600');
-
-            // Petite vibration de succès
-            if (navigator.vibrate) navigator.vibrate(100);
-
-            // On ferme la caméra après 1.5s pour laisser l'utilisateur voir le résultat
-            setTimeout(stopCamera, 1500);
+            successScan(vinMatch[0], "TEXTE");
         }
-    } catch (e) {
-        console.error("Erreur OCR:", e);
-    }
+    } catch (e) { console.error("Erreur OCR:", e); }
 }
 
+// Petite fonction pour gérer le succès proprement
+function successScan(vin, source) {
+    const status = document.getElementById('cam-status');
+    document.getElementById('vin-input').value = vin;
+    status.innerText = "DÉTECTÉ (" + source + ")";
+    status.classList.replace('bg-red-600', 'bg-green-600');
+    
+    if (navigator.vibrate) navigator.vibrate([100, 50, 100]); // Triple vibration "pro"
+    
+    setTimeout(stopCamera, 1200);
+}
 // Optionnel : Forcer la capture si l'OCR galère
 function forceCapture() {
     const canvas = document.getElementById('cam-canvas');

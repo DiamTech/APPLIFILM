@@ -1,5 +1,5 @@
 // ==========================================
-// 1. VARIABLES GLOBALES
+// 1. VARIABLES GLOBALES & ÉTAT
 // ==========================================
 let state = JSON.parse(localStorage.getItem('appliFilmState')) || {
     batch: [],
@@ -10,12 +10,14 @@ let selectedWindows = [];
 let envoiEnCours = false;
 let stream = null;
 let ocrInterval = null;
-let isRequesting = false; // Le fameux verrou anti-boucle
+let isRequesting = false; // Verrou pour éviter les demandes caméra en boucle
 
-// Initialisation au chargement de la page
+// Initialisation au chargement
 window.onload = () => {
     if (typeof lucide !== 'undefined') lucide.createIcons();
     renderBatch();
+    // On initialise la taille du canvas de signature
+    setTimeout(resizeSignatureCanvas, 1000);
 };
 
 function saveState() {
@@ -23,10 +25,10 @@ function saveState() {
 }
 
 // ==========================================
-// 2. CAMÉRA ET SCAN (VERSION STABLE)
+// 2. GESTION DE LA CAMÉRA (STABLE)
 // ==========================================
 async function startCamera() {
-    if (isRequesting) return; 
+    if (isRequesting) return;
     isRequesting = true;
 
     const overlay = document.getElementById('cam-overlay');
@@ -37,7 +39,6 @@ async function startCamera() {
     status.innerText = "INITIALISATION...";
 
     try {
-        // Nettoyage avant de démarrer
         if (stream) {
             stream.getTracks().forEach(track => track.stop());
         }
@@ -52,19 +53,18 @@ async function startCamera() {
         
         video.onloadedmetadata = () => {
             video.play();
-            status.innerText = "VISEZ LE CODE (VIN)";
+            status.innerText = "VISEZ LE VIN OU LE CODE-BARRES";
             isRequesting = false;
             
             if (ocrInterval) clearInterval(ocrInterval);
-            // On scanne toutes les 1.5 secondes pour laisser le temps à l'appareil de faire le point
-            ocrInterval = setInterval(captureAndScan, 1500);
+            ocrInterval = setInterval(captureAndScan, 1500); // Scan toutes les 1.5s
             requestAnimationFrame(() => updateCanvas(video));
         };
 
     } catch (err) {
         isRequesting = false;
         console.error("Erreur Caméra:", err);
-        alert("🔒 Accès bloqué. Vérifiez les réglages de votre téléphone.");
+        alert("🔒 Accès bloqué. Vérifiez les réglages de votre téléphone (Safari/Chrome).");
         stopCamera();
     }
 }
@@ -75,6 +75,8 @@ function updateCanvas(video) {
     const ctx = canvas.getContext('2d');
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
+    
+    // On dessine l'image
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     requestAnimationFrame(() => updateCanvas(video));
 }
@@ -89,29 +91,29 @@ function stopCamera() {
 }
 
 // ==========================================
-// 3. LOGIQUE DE DÉCODAGE (VIN & BARCODE)
+// 3. LOGIQUE DE SCAN (OCR + BARCODE)
 // ==========================================
 async function captureAndScan() {
     const canvas = document.getElementById('cam-canvas');
     const status = document.getElementById('cam-status');
     
-    // TENTATIVE CODE-BARRES
+    // A. TENTATIVE CODE-BARRES (Très rapide)
     if ('BarcodeDetector' in window) {
         const detector = new BarcodeDetector({ formats: ['code_128', 'code_39'] });
         try {
             const barcodes = await detector.detect(canvas);
             if (barcodes.length > 0) {
                 const val = barcodes[0].rawValue.toUpperCase().replace(/\s+/g, '');
-                if (val.length >= 10) return successScan(val, "CODE-BARRES");
+                if (val.length >= 10) return successScan(val, "LASER");
             }
         } catch (e) {}
     }
 
-    // TENTATIVE TEXTE (OCR)
+    // B. TENTATIVE TEXTE (OCR optimisé)
     try {
         const result = await Tesseract.recognize(canvas, 'eng', {
-            tessedit_char_whitelist: '0123456789ABCDEFGHJKLMNPRSTUVWXYZ', // Uniquement caractères VIN
-            tessedit_pageseg_mode: '7'
+            tessedit_char_whitelist: '0123456789ABCDEFGHJKLMNPRSTUVWXYZ', // Exclut I, O, Q
+            tessedit_pageseg_mode: '7' // Mode ligne seule
         });
 
         let text = result.data.text.toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -126,13 +128,81 @@ async function captureAndScan() {
 function successScan(vin, source) {
     const status = document.getElementById('cam-status');
     document.getElementById('vin-input').value = vin;
-    status.innerText = "VIN TROUVÉ (" + source + ")";
+    status.innerText = "DÉTECTÉ (" + source + ")";
     if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
     setTimeout(stopCamera, 1200);
 }
 
 // ==========================================
-// 4. GESTION DES VITRES ET ENVOI
+// 4. SIGNATURE TACTILE (FIXÉE)
+// ==========================================
+const sigCanvas = document.getElementById('signature-pad');
+let isDrawing = false;
+
+if (sigCanvas) {
+    const ctx = sigCanvas.getContext('2d');
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = 3;
+    ctx.lineCap = "round";
+
+    function resizeSignatureCanvas() {
+        const rect = sigCanvas.getBoundingClientRect();
+        if (rect.width > 0) {
+            sigCanvas.width = rect.width;
+            sigCanvas.height = rect.height;
+            ctx.strokeStyle = "#000000";
+            ctx.lineWidth = 3;
+            ctx.lineCap = "round";
+        }
+    }
+
+    function getPos(e) {
+        const rect = sigCanvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return { x: clientX - rect.left, y: clientY - rect.top };
+    }
+
+    const startDrawing = (e) => {
+        isDrawing = true;
+        const pos = getPos(e);
+        ctx.beginPath();
+        ctx.moveTo(pos.x, pos.y);
+    };
+
+    const draw = (e) => {
+        if (!isDrawing) return;
+        if (e.cancelable) e.preventDefault(); 
+        const pos = getPos(e);
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
+    };
+
+    const stopDrawing = () => {
+        if (isDrawing) {
+            isDrawing = false;
+            state.signature = sigCanvas.toDataURL();
+            saveState();
+        }
+    };
+
+    sigCanvas.addEventListener('mousedown', startDrawing);
+    sigCanvas.addEventListener('mousemove', draw);
+    window.addEventListener('mouseup', stopDrawing);
+    sigCanvas.addEventListener('touchstart', startDrawing, { passive: false });
+    sigCanvas.addEventListener('touchmove', draw, { passive: false });
+    sigCanvas.addEventListener('touchend', stopDrawing);
+}
+
+function clearSignature() {
+    const ctx = sigCanvas.getContext('2d');
+    ctx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+    state.signature = null;
+    saveState();
+}
+
+// ==========================================
+// 5. VITRES, LOTS ET ENVOI
 // ==========================================
 function toggleWindow(id) {
     const btn = document.getElementById('win-' + id);
@@ -148,7 +218,7 @@ function toggleWindow(id) {
 
 function addToBatch() {
     const vin = document.getElementById('vin-input').value;
-    if (!vin) return alert("Scannez ou tapez un VIN");
+    if (!vin) return alert("Scannez un VIN d'abord");
     
     state.batch.push({
         vin: vin,
@@ -159,6 +229,8 @@ function addToBatch() {
     
     saveState();
     renderBatch();
+    
+    // Reset
     document.getElementById('vin-input').value = "";
     selectedWindows = [];
     document.querySelectorAll('.window-btn').forEach(b => b.classList.remove('selected'));
@@ -170,103 +242,42 @@ function renderBatch() {
     container.innerHTML = state.batch.map((v, i) => `
         <div class="bg-white p-3 rounded-xl mb-2 shadow-sm border border-slate-200">
             <div class="font-bold text-indigo-600">${v.vin}</div>
-            <div class="text-[10px] text-slate-500">${v.windows.join(', ')}</div>
+            <div class="text-[10px] text-slate-500">${v.windows.join(', ')} - ${v.type}</div>
         </div>
     `).join('');
     document.getElementById('batch-count').innerText = state.batch.length;
 }
 
 async function finalize() {
-    if (envoiEnCours || state.batch.length === 0) return alert("Rien à envoyer");
+    if (envoiEnCours || state.batch.length === 0) return alert("Aucune donnée à envoyer");
+    if (!state.signature) return alert("Merci de signer avant d'envoyer");
+
     envoiEnCours = true;
     try {
         const response = await fetch('https://sheetdb.io/api/v1/gc2df6w3b42tw', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-    data: state.batch.map(v => ({
-        "Date": v.timestamp,
-        "VIN": v.vin,
-        "Vitres": v.windows.join(', '),
-        "Type": v.type,
-        "Signature": state.signature // Cela enverra le code de l'image
+                data: state.batch.map(v => ({
+                    "Date": v.timestamp,
+                    "VIN": v.vin,
+                    "Vitres": v.windows.join(', '),
+                    "Type": v.type,
+                    "Signature": state.signature
                 }))
             })
         });
+
         if (response.ok) {
-            alert("✅ Données envoyées !");
+            alert("✅ Données et signature envoyées !");
             state.batch = [];
+            state.signature = null;
             saveState();
             location.reload();
         }
-    } catch (err) { alert("Erreur : " + err); }
-    finally { envoiEnCours = false; }
-}
-
-// ==========================================
-// 5. GESTION DE LA SIGNATURE
-// ==========================================
-let isDrawing = false;
-const sigCanvas = document.getElementById('signature-pad');
-
-if (sigCanvas) {
-    const ctx = sigCanvas.getContext('2d');
-
-    // Adapter la taille du canvas à l'affichage
-    function resizeCanvas() {
-        const ratio = Math.max(window.devicePixelRatio || 1, 1);
-        sigCanvas.width = sigCanvas.offsetWidth * ratio;
-        sigCanvas.height = sigCanvas.offsetHeight * ratio;
-        ctx.scale(ratio, ratio);
+    } catch (err) {
+        alert("Erreur d'envoi : " + err);
+    } finally {
+        envoiEnCours = false;
     }
-
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
-
-    // Événements Souris / Tactile
-    const startDrawing = (e) => {
-        isDrawing = true;
-        ctx.beginPath();
-        const pos = getPos(e);
-        ctx.moveTo(pos.x, pos.y);
-    };
-
-    const draw = (e) => {
-        if (!isDrawing) return;
-        e.preventDefault();
-        const pos = getPos(e);
-        ctx.lineTo(pos.x, pos.y);
-        ctx.stroke();
-    };
-
-    const stopDrawing = () => {
-        isDrawing = false;
-        state.signature = sigCanvas.toDataURL(); // Sauvegarde le dessin
-        saveState();
-    };
-
-    function getPos(e) {
-        const rect = sigCanvas.getBoundingClientRect();
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        return {
-            x: clientX - rect.left,
-            y: clientY - rect.top
-        };
-    }
-
-    sigCanvas.addEventListener('mousedown', startDrawing);
-    sigCanvas.addEventListener('mousemove', draw);
-    window.addEventListener('mouseup', stopDrawing);
-
-    sigCanvas.addEventListener('touchstart', startDrawing, { passive: false });
-    sigCanvas.addEventListener('touchmove', draw, { passive: false });
-    sigCanvas.addEventListener('touchend', stopDrawing);
-}
-
-function clearSignature() {
-    const ctx = sigCanvas.getContext('2d');
-    ctx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
-    state.signature = null;
-    saveState();
 }

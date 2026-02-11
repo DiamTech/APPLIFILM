@@ -296,14 +296,15 @@ async function finalize() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                data: state.batch.map(v => ({
-                    "Date": v.timestamp,
-                    "VIN": v.vin,
-                    "Vitres": v.windows.join(', '),
-                    "Type": v.type,
-                    "Signature": state.signature
-                }))
-            })
+            data: state.batch.map(v => ({
+                // L'apostrophe force Sheets à garder le format texte lisible
+                "Date": "'" + v.timestamp, 
+                "VIN": v.vin,
+                "Vitres": v.windows.join(', '),
+                "Type": v.type,
+                "Signature": state.signature
+            }))
+        })
         });
 
         if (response.ok) {

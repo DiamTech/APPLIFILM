@@ -11,22 +11,14 @@
 
     <style>
         .window-btn { transition: all 0.2s; border: 2px solid #e2e8f0; cursor: pointer; }
-        /* Style quand une vitre est sélectionnée */
         .window-btn.selected { background-color: #4f46e5 !important; color: white !important; border-color: #4338ca !important; transform: scale(0.95); }
-        
         #cam-canvas { width: 100%; height: 100%; object-fit: cover; }
-        
         .scanner-target {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             width: 80%; height: 120px; border: 2px solid rgba(255,255,255,0.8);
             border-radius: 15px; box-shadow: 0 0 0 4000px rgba(0,0,0,0.6);
             z-index: 10; pointer-events: none;
         }
-        .scanner-target::after {
-            content: "ALIGNEZ LE CODE-BARRES OU VIN ICI"; position: absolute; bottom: -30px;
-            width: 100%; text-align: center; color: white; font-size: 12px; font-weight: bold;
-        }
-
         #signature-pad { touch-action: none; cursor: crosshair; }
     </style>
 </head>
@@ -55,7 +47,7 @@
         </section>
 
         <section class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
-            <label class="block text-sm font-semibold text-slate-700 mb-6 text-center uppercase tracking-wider">Plan d'intervention</label>
+            <label class="block text-sm font-semibold text-slate-700 mb-6 text-center uppercase tracking-wider">Plan des vitres</label>
             
             <div class="relative mx-auto mb-6" style="width: 240px; height: 460px; background: #f8fafc; border-radius: 50px; border: 3px solid #cbd5e1;">
                 <button onclick="toggleWindow('Toit-Avant')" id="win-Toit-Avant" class="window-btn absolute top-32 left-[70px] w-[100px] h-[70px] rounded-xl text-[10px] font-bold border bg-indigo-50 border-indigo-200 flex items-center justify-center text-center">TOIT AVANT</button>
@@ -71,31 +63,17 @@
             </div>
         </section>
 
-        </section>
-<div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm mt-6">
-    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-2 ml-1 tracking-wider">Observations / Défauts constatés</label>
-    <textarea id="observation-input" rows="2" placeholder="Ex: Rayure porte AR, impact pare-brise..." 
-        class="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none transition-all"></textarea>
-</div>
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm mt-4">
+            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-2 ml-1 tracking-wider">Observations / Défauts</label>
+            <textarea id="observation-input" rows="2" placeholder="Ex: Rayure porte AR, impact..." 
+                class="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none"></textarea>
+        </div>
 
-<div class="grid grid-cols-3 gap-2 mt-4">
-    <label class="flex flex-col items-center p-3 border-2 rounded-xl bg-white cursor-pointer shadow-sm">
-        <input type="radio" name="type_inter" value="Pose" checked class="w-4 h-4 accent-indigo-600">
-        <span class="text-[10px] font-bold uppercase mt-1 text-slate-700">Pose</span>
-    </label>
-    <label class="flex flex-col items-center p-3 border-2 rounded-xl bg-white cursor-pointer shadow-sm">
-        <input type="radio" name="type_inter" value="Dépose" class="w-4 h-4 accent-indigo-600">
-        <span class="text-[10px] font-bold uppercase mt-1 text-slate-700">Dépose</span>
-    </label>
-    <label class="flex flex-col items-center p-3 border-2 rounded-xl bg-white cursor-pointer shadow-sm">
-        <input type="radio" name="type_inter" value="Répa" class="w-4 h-4 accent-indigo-600">
-        <span class="text-[10px] font-bold uppercase mt-1 text-slate-700">Répa</span>
-    </label>
-</div>
-
-<button onclick="addToBatch()" class="w-full bg-slate-800 text-white p-4 rounded-2xl font-bold shadow-md active:scale-95 transition-transform flex items-center justify-center gap-2 mt-4">
-    <i data-lucide="plus-circle"></i> AJOUTER AU LOT
-</button>
+        <div class="grid grid-cols-3 gap-2 mt-4">
+            <label class="flex flex-col items-center p-3 border-2 rounded-xl bg-white cursor-pointer shadow-sm">
+                <input type="radio" name="type_inter" value="Pose" checked class="w-4 h-4 accent-indigo-600">
+                <span class="text-[10px] font-bold uppercase mt-1 text-slate-700">Pose</span>
+            </label>
             <label class="flex flex-col items-center p-3 border-2 rounded-xl bg-white cursor-pointer shadow-sm">
                 <input type="radio" name="type_inter" value="Dépose" class="w-4 h-4 accent-indigo-600">
                 <span class="text-[10px] font-bold uppercase mt-1 text-slate-700">Dépose</span>
@@ -106,13 +84,13 @@
             </label>
         </div>
 
-        <button onclick="addToBatch()" class="w-full bg-slate-800 text-white p-4 rounded-2xl font-bold shadow-md active:scale-95 transition-transform flex items-center justify-center gap-2">
+        <button onclick="addToBatch()" class="w-full bg-slate-800 text-white p-4 rounded-2xl font-bold shadow-md active:scale-95 transition-transform flex items-center justify-center gap-2 mt-4">
             <i data-lucide="plus-circle"></i> AJOUTER AU LOT
         </button>
 
-        <div id="batch-container" class="space-y-2"></div>
+        <div id="batch-container" class="space-y-2 mt-4"></div>
 
-        <button onclick="openSignature()" class="w-full bg-amber-500 text-white p-4 rounded-2xl font-bold shadow-md flex items-center justify-center gap-2">
+        <button onclick="openSignature()" class="w-full bg-amber-500 text-white p-4 rounded-2xl font-bold shadow-md flex items-center justify-center gap-2 mt-6">
             <i data-lucide="pen-tool"></i> SIGNER LE BON
         </button>
 
@@ -150,6 +128,6 @@
         </div>
     </div>
 
-    <script src="script.js?v=72"></script>
+    <script src="script.js?v=73"></script>
 </body>
 </html>

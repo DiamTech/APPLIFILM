@@ -201,3 +201,71 @@ async function finalize() {
     } catch (err) { alert("Erreur : " + err); }
     finally { envoiEnCours = false; }
 }
+
+// ==========================================
+// 5. GESTION DE LA SIGNATURE
+// ==========================================
+let isDrawing = false;
+const sigCanvas = document.getElementById('signature-pad');
+
+if (sigCanvas) {
+    const ctx = sigCanvas.getContext('2d');
+
+    // Adapter la taille du canvas à l'affichage
+    function resizeCanvas() {
+        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+        sigCanvas.width = sigCanvas.offsetWidth * ratio;
+        sigCanvas.height = sigCanvas.offsetHeight * ratio;
+        ctx.scale(ratio, ratio);
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Événements Souris / Tactile
+    const startDrawing = (e) => {
+        isDrawing = true;
+        ctx.beginPath();
+        const pos = getPos(e);
+        ctx.moveTo(pos.x, pos.y);
+    };
+
+    const draw = (e) => {
+        if (!isDrawing) return;
+        e.preventDefault();
+        const pos = getPos(e);
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
+    };
+
+    const stopDrawing = () => {
+        isDrawing = false;
+        state.signature = sigCanvas.toDataURL(); // Sauvegarde le dessin
+        saveState();
+    };
+
+    function getPos(e) {
+        const rect = sigCanvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return {
+            x: clientX - rect.left,
+            y: clientY - rect.top
+        };
+    }
+
+    sigCanvas.addEventListener('mousedown', startDrawing);
+    sigCanvas.addEventListener('mousemove', draw);
+    window.addEventListener('mouseup', stopDrawing);
+
+    sigCanvas.addEventListener('touchstart', startDrawing, { passive: false });
+    sigCanvas.addEventListener('touchmove', draw, { passive: false });
+    sigCanvas.addEventListener('touchend', stopDrawing);
+}
+
+function clearSignature() {
+    const ctx = sigCanvas.getContext('2d');
+    ctx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+    state.signature = null;
+    saveState();
+}

@@ -1,296 +1,122 @@
+<!DOCTYPE html>
+<html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Applifilm Pro V6.4</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Scanner VIN & Signature</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 
-  <link rel="manifest" href="manifest.json">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="apple-touch-icon" href="https://www.applifilm.fr/wp-content/uploads/2020/07/applifilm.png">
+    <style>
+        /* Styles personnalisés pour mobile */
+        .window-btn { transition: all 0.2s; border: 2px solid #e2e8f0; }
+        .window-btn.selected { background-color: #4f46e5; color: white; border-color: #4338ca; transform: scale(0.95); }
+        
+        #cam-canvas { transform: scaleX(1); width: 100%; height: 100%; object-fit: cover; }
+        
+        /* Le viseur du scanner */
+        .scanner-target {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 80%; height: 120px; border: 2px solid rgba(255,255,255,0.8);
+            border-radius: 15px; box-shadow: 0 0 0 4000px rgba(0,0,0,0.6);
+            z-index: 10; pointer-events: none;
+        }
+        .scanner-target::after {
+            content: "ALIGNEZ LE VIN ICI"; position: absolute; bottom: -30px;
+            width: 100%; text-align: center; color: white; font-size: 12px; font-weight: bold;
+        }
 
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js');
-    }
-  </script>
-
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
-  
-  <style>
-    /* ... ton CSS ... */
-    body { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
-    .ios-active:active { transform: scale(0.97); opacity: 0.9; }
-    input, textarea { font-size: 16px !important; } /* Stop zoom iOS */
-
-    .car-grid{
-      display:grid;
-      grid-template-columns: 1fr 2fr 1fr;
-      grid-template-rows: auto auto auto auto;
-      gap:8px;
-      max-width: 340px;
-      margin: 0 auto;
-    }
-    .window-btn{
-      height: 50px;
-      border: 2px solid #e2e8f0;
-      border-radius: 10px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-size: 10px;
-      font-weight: 800;
-      color:#64748b;
-      background:#f8fafc;
-      transition: all .2s;
-      text-transform: uppercase;
-      user-select:none;
-    }
-    .window-btn.selected{
-      background:#4f46e5;
-      border-color:#4338ca;
-      color:#fff;
-      box-shadow: 0 4px 10px -1px rgba(79,70,229,.35);
-    }
-
-    #cam-overlay{ position:fixed; inset:0; background:#000; z-index:100; display:none; flex-direction:column; }
-    #cam-feed-container{ position:relative; flex:1; overflow:hidden; background:#000; }
-    #hidden-video{ display:none; }
-    #cam-canvas{ width:100%; height:100%; object-fit:cover; }
-
-    .scan-target{
-      position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-      width: 90%; height: 80px;
-      border: 2px solid rgba(255,255,255,.85);
-      border-radius: 14px;
-      box-shadow: 0 0 0 100vmax rgba(0,0,0,.68);
-    }
-    .scan-laser{
-      position:absolute; top:0; left:0; right:0; height:2px;
-      background:#ef4444; box-shadow:0 0 10px #ef4444;
-      animation: scan 1.6s infinite linear;
-    }
-    @keyframes scan { 0%{top:0;opacity:0;} 40%{opacity:1;} 100%{top:100%;opacity:0;} }
-
-    canvas#sig-canvas{ touch-action:none; cursor:crosshair; }
-  </style>
+        /* Signature Pad */
+        #signature-pad { touch-action: none; cursor: crosshair; }
+    </style>
 </head>
+<body class="bg-slate-50 font-sans pb-24">
 
-<body class="bg-slate-100 min-h-screen pb-48 text-slate-900 font-sans">
-
-  <!-- Header -->
-  <header class="bg-slate-900 text-white p-4 sticky top-0 z-40 shadow-lg flex justify-between items-center">
-    <div class="flex items-center gap-3">
-      <img
-        src="https://www.applifilm.fr/wp-content/uploads/2020/07/applifilm.png"
-        alt="Applifilm"
-        class="h-7 w-auto"
-        referrerpolicy="no-referrer"
-      />
-      <div>
-        <div class="text-[11px] font-black tracking-tight text-indigo-300 uppercase">
-          Applifilm Pro <span class="text-white/70 font-bold">V6.4</span>
+    <header class="bg-indigo-600 text-white p-4 shadow-lg sticky top-0 z-50">
+        <div class="flex justify-between items-center max-w-md mx-auto">
+            <h1 class="font-bold text-lg flex items-center gap-2">
+                <i data-lucide="scan-line"></i> Scanner Pro V7
+            </h1>
+            <span id="batch-count" class="bg-white text-indigo-600 px-3 py-1 rounded-full text-xs font-bold">0</span>
         </div>
-        <div id="storage-status" class="flex items-center gap-1 text-[9px] font-bold text-amber-400 uppercase hidden">
-          <i data-lucide="save" size="10"></i> Sauvegardé
-        </div>
-      </div>
-    </div>
-    <button onclick="hardReset()" class="text-[10px] font-bold bg-slate-800 px-2 py-1 rounded text-slate-400 border border-slate-700">
-      RESET APP
-    </button>
-  </header>
+    </header>
 
-  <main class="max-w-xl mx-auto p-3 space-y-4">
+    <main class="max-w-md mx-auto p-4 space-y-6">
 
-    <!-- Bandeau édition -->
-    <div id="edit-banner" class="hidden bg-amber-50 border border-amber-200 text-amber-900 p-3 rounded-xl text-xs font-bold flex justify-between items-center"></div>
-
-    <!-- Formulaire Véhicule -->
-    <section class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-      <div class="bg-slate-50 p-3 border-b border-slate-100 flex justify-between items-center">
-        <h2 class="font-bold text-sm text-slate-700 uppercase tracking-wide flex items-center gap-2">
-          <span class="w-6 h-6 bg-indigo-600 text-white rounded flex items-center justify-center text-xs">1</span> Véhicule
-        </h2>
-        <button onclick="clearForm()" class="text-slate-400"><i data-lucide="eraser" size="16"></i></button>
-      </div>
-
-      <div class="p-4 space-y-5">
-        <!-- VIN & OCR -->
-        <div class="space-y-2">
-          <label class="text-[10px] font-black uppercase text-slate-400">Identification (Scan Auto VIN)</label>
-          <div class="flex gap-2">
-            <div class="relative flex-1">
-              <input type="text" id="vin-input" placeholder="SCANNER LE VIN"
-                class="w-full bg-slate-50 border-2 border-slate-200 rounded-xl pl-3 pr-10 py-3 font-mono text-sm font-bold uppercase outline-none focus:border-indigo-500 transition-colors">
-              <i id="vin-valid" data-lucide="check-circle" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 transition-colors" size="18"></i>
+        <section class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+            <label class="block text-sm font-semibold text-slate-700 mb-2">Identification Véhicule</label>
+            <div class="flex gap-2">
+                <input type="text" id="vin-input" placeholder="Scanner ou taper le VIN" 
+                    class="flex-1 bg-slate-100 border-none rounded-xl p-3 text-sm font-mono uppercase focus:ring-2 focus:ring-indigo-500">
+                <button onclick="startCamera()" class="bg-indigo-600 text-white p-3 rounded-xl hover:bg-indigo-700">
+                    <i data-lucide="camera"></i>
+                </button>
             </div>
-            <button onclick="startCamera('vin')" class="bg-indigo-600 text-white w-14 rounded-xl flex items-center justify-center ios-active shadow-lg shadow-indigo-100">
-              <i data-lucide="scan-line" size="24"></i>
-            </button>
-          </div>
+        </section>
 
-          <!-- Preuve Photo -->
-          <div id="vin-proof-container" class="hidden flex items-center gap-3 p-2 bg-green-50 rounded-lg border border-green-100">
-            <img id="vin-proof-img" class="w-16 h-8 object-cover rounded border border-green-200">
-            <span class="text-[10px] font-bold text-green-700 uppercase">Preuve VIN capturée</span>
-            <button onclick="clearVinProof()" class="ml-auto text-[10px] font-bold text-green-800 bg-green-100 px-2 py-1 rounded">
-              Retirer
-            </button>
-          </div>
-
-          <div class="text-[10px] text-slate-400 font-semibold">
-            OCR anti-hallucinations: check digit + confirmation 2 fois.
-          </div>
-        </div>
-
-        <hr class="border-slate-100">
-
-        <!-- Schéma vitres -->
-        <div>
-          <div class="flex justify-between items-center mb-2">
-            <label class="text-[10px] font-black uppercase text-slate-400">Sélection des Vitres</label>
-            <button onclick="clearWindows()" class="text-[9px] text-red-400 font-bold uppercase">Effacer</button>
-          </div>
-
-          <div class="car-grid">
-            <!-- Rangée 1 -->
-            <button onclick="toggleWindow('avg')" id="win-avg" class="window-btn">AV-G</button>
-            <button onclick="toggleWindow('pb')" id="win-pb" class="window-btn border-b-4 border-indigo-100">Pare-brise</button>
-            <button onclick="toggleWindow('avd')" id="win-avd" class="window-btn">AV-D</button>
-
-            <!-- Rangée 2 : AR + Toit1/Toit2 -->
-            <button onclick="toggleWindow('arg')" id="win-arg" class="window-btn">AR-G</button>
-            <div class="flex flex-col gap-2">
-              <button onclick="toggleWindow('toit1')" id="win-toit1" class="window-btn h-10">Toit 1</button>
-              <button onclick="toggleWindow('toit2')" id="win-toit2" class="window-btn h-10">Toit 2</button>
+        <section class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+            <label class="block text-sm font-semibold text-slate-700 mb-3">Vitres concernées</label>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="toggleWindow('AVG')" id="win-AVG" class="window-btn p-3 rounded-xl text-sm font-medium text-slate-600">AV Gauche</button>
+                <button onclick="toggleWindow('AVD')" id="win-AVD" class="window-btn p-3 rounded-xl text-sm font-medium text-slate-600">AV Droit</button>
+                <button onclick="toggleWindow('ARG')" id="win-ARG" class="window-btn p-3 rounded-xl text-sm font-medium text-slate-600">AR Gauche</button>
+                <button onclick="toggleWindow('ARD')" id="win-ARD" class="window-btn p-3 rounded-xl text-sm font-medium text-slate-600">AR Droit</button>
+                <button onclick="toggleWindow('LUN')" id="win-LUN" class="window-btn p-3 rounded-xl text-sm font-medium text-slate-600">Lunette AR</button>
+                <button onclick="toggleWindow('PAR')" id="win-PAR" class="window-btn p-3 rounded-xl text-sm font-medium text-slate-600">Pare-Brise</button>
             </div>
-            <button onclick="toggleWindow('ard')" id="win-ard" class="window-btn">AR-D</button>
-
-            <!-- Rangée 3 : Custodes + Lunette AR -->
-            <button onclick="toggleWindow('custg')" id="win-custg" class="window-btn">Cust.G</button>
-            <button onclick="toggleWindow('arr')" id="win-arr" class="window-btn bg-slate-100">Lunette AR</button>
-            <button onclick="toggleWindow('custd')" id="win-custd" class="window-btn">Cust.D</button>
-
-            <!-- Rangée 4 : Lunette AR gauche/droite -->
-            <button onclick="toggleWindow('largs')" id="win-largs" class="window-btn">Lun. AR G</button>
-            <div class="flex items-center justify-center text-[10px] font-bold text-slate-300 uppercase tracking-widest italic">
-              Coffre
+            
+            <div class="mt-4 pt-4 border-t flex justify-around">
+                <label class="flex items-center gap-2 text-sm"><input type="radio" name="type_inter" value="Pose" checked> Pose</label>
+                <label class="flex items-center gap-2 text-sm"><input type="radio" name="type_inter" value="Dépose"> Dépose</label>
             </div>
-            <button onclick="toggleWindow('lard')" id="win-lard" class="window-btn">Lun. AR D</button>
-          </div>
-        </div>
+        </section>
 
-        <!-- Type intervention -->
-        <div class="grid grid-cols-3 gap-2">
-          <label class="flex flex-col items-center gap-2 p-3 rounded-xl border border-slate-200 bg-slate-50 has-[:checked]:bg-indigo-50 has-[:checked]:border-indigo-200 transition-colors">
-            <input type="radio" name="type_inter" value="Pose" class="accent-indigo-600 w-4 h-4" checked onchange="saveState()">
-            <span class="text-xs font-bold text-slate-700">Pose</span>
-          </label>
-          <label class="flex flex-col items-center gap-2 p-3 rounded-xl border border-slate-200 bg-slate-50 has-[:checked]:bg-amber-50 has-[:checked]:border-amber-200 transition-colors">
-            <input type="radio" name="type_inter" value="SAV" class="accent-amber-600 w-4 h-4" onchange="saveState()">
-            <span class="text-xs font-bold text-slate-700">SAV</span>
-          </label>
-          <label class="flex flex-col items-center gap-2 p-3 rounded-xl border border-slate-200 bg-slate-50 has-[:checked]:bg-rose-50 has-[:checked]:border-rose-200 transition-colors">
-            <input type="radio" name="type_inter" value="Garantie" class="accent-rose-600 w-4 h-4" onchange="saveState()">
-            <span class="text-xs font-bold text-slate-700">Garantie</span>
-          </label>
-        </div>
-
-        <!-- Photos -->
-        <div>
-          <div class="flex gap-2 overflow-x-auto py-2 no-scrollbar" id="extra-photos-list">
-            <!-- rempli par renderExtraPhotos() -->
-          </div>
-          <div class="text-[10px] text-slate-400 font-semibold">
-            Stockage images: IndexedDB + fallback localStorage si indisponible.
-          </div>
-        </div>
-
-        <textarea id="obs" oninput="ensureStartAt(); saveState();" rows="2" placeholder="Observations..."
-          class="w-full text-sm p-3 rounded-xl bg-slate-50 border-2 border-slate-200 focus:border-indigo-500 outline-none"></textarea>
-
-        <div class="grid grid-cols-1 gap-2">
-          <button onclick="addToBatch()" class="w-full py-4 bg-slate-900 text-white font-black uppercase rounded-xl shadow-xl ios-active flex items-center justify-center gap-2">
-            <i data-lucide="save"></i> <span id="save-btn-label">Sauvegarder Véhicule</span>
-          </button>
-          <button id="cancel-edit-btn" onclick="cancelEdit()" class="hidden w-full py-3 bg-amber-50 text-amber-900 font-black uppercase rounded-xl border border-amber-200 ios-active">
-            Annuler l’édition
-          </button>
-        </div>
-
-        <div class="text-[10px] text-slate-500">
-          Début d’intervention: auto au 1er input/caméra. Fin d’intervention: au moment de la sauvegarde du véhicule.
-        </div>
-      </div>
-    </section>
-
-    <!-- Liste Batch -->
-    <div id="batch-container" class="space-y-3 pb-24"></div>
-  </main>
-
-  <!-- Footer -->
-  <div class="fixed bottom-0 left-0 right-0 p-3 bg-white/95 backdrop-blur-xl border-t border-slate-200 z-30">
-    <div class="max-w-xl mx-auto flex gap-3">
-      <button onclick="openSignature()" class="flex-1 py-3.5 bg-slate-100 text-slate-700 font-bold rounded-xl border border-slate-200 ios-active text-xs uppercase">
-        <i data-lucide="pen-tool" class="inline w-3 h-3 mr-1"></i> Signer
-      </button>
-      <button onclick="finalize()" class="flex-[2] py-3.5 bg-indigo-600 text-white font-bold rounded-xl shadow-lg ios-active text-xs uppercase flex items-center justify-center gap-2">
-        Envoyer <span id="batch-count" class="bg-white/20 px-2 py-0.5 rounded text-[10px] ml-1">0</span>
-      </button>
-    </div>
-  </div>
-
-  <!-- Caméra Overlay -->
-  <div id="cam-overlay">
-    <div class="absolute top-0 w-full p-4 z-10 flex justify-between items-center bg-gradient-to-b from-black/80 to-transparent">
-      <div class="flex items-center gap-2">
-        <span id="cam-status" class="text-white font-bold text-xs bg-red-600 px-2 py-1 rounded animate-pulse">RECHERCHE VIN...</span>
-        <button id="torch-btn" onclick="toggleTorch()" class="hidden bg-white/10 px-2 py-1 rounded text-white text-xs font-bold">
-          TORCH
+        <button onclick="addToBatch()" class="w-full bg-slate-800 text-white p-4 rounded-2xl font-bold shadow-md active:scale-95 transition-transform flex items-center justify-center gap-2">
+            <i data-lucide="plus-circle"></i> AJOUTER AU LOT
         </button>
-      </div>
-      <button onclick="stopCamera()" class="bg-white/10 p-2 rounded-full text-white"><i data-lucide="x"></i></button>
+
+        <div id="batch-container" class="space-y-2"></div>
+
+        <button onclick="openSignature()" class="w-full bg-amber-500 text-white p-4 rounded-2xl font-bold shadow-md flex items-center justify-center gap-2">
+            <i data-lucide="pen-tool"></i> SIGNER LE BON
+        </button>
+
+    </main>
+
+    <div class="fixed bottom-0 inset-x-0 p-4 bg-slate-50 border-t border-slate-200">
+        <button onclick="finalize()" class="w-full bg-green-600 text-white p-4 rounded-2xl font-extrabold shadow-xl text-lg flex items-center justify-center gap-2">
+            <i data-lucide="send"></i> FINALISER & ENVOYER
+        </button>
     </div>
 
-    <div id="cam-feed-container">
-      <video id="hidden-video" playsinline autoplay muted></video>
-      <canvas id="cam-canvas"></canvas>
-
-      <div id="scan-target" class="scan-target">
-        <div class="scan-laser"></div>
-        <div class="absolute -bottom-8 w-full text-center text-white/80 text-[10px] font-bold">STABILISEZ SUR LE VIN</div>
-      </div>
-    </div>
-
-    <div class="p-6 bg-black flex justify-center gap-6">
-      <button onclick="forceCapture()" class="flex flex-col items-center gap-1">
-        <div class="w-16 h-16 rounded-full border-4 border-white flex items-center justify-center bg-white/20 ios-active">
-          <div class="w-12 h-12 bg-white rounded-full"></div>
+    <div id="cam-overlay" class="fixed inset-0 bg-black z-[100] hidden flex-col">
+        <div class="relative flex-1">
+            <video id="hidden-video" class="hidden" playsinline></video>
+            <canvas id="cam-canvas"></canvas>
+            <div class="scanner-target"></div>
         </div>
-        <span class="text-[9px] text-white font-bold uppercase mt-2">Forcer Photo</span>
-      </button>
+        <div class="p-6 bg-black text-white flex justify-between items-center">
+            <span id="cam-status" class="text-xs font-bold uppercase tracking-widest px-3 py-1 bg-red-600 rounded">Analyse...</span>
+            <button onclick="stopCamera()" class="bg-white/20 p-3 rounded-full"><i data-lucide="x"></i></button>
+        </div>
     </div>
-  </div>
 
-  <!-- Modal Signature -->
-  <div id="sig-modal" class="fixed inset-0 bg-slate-900/95 z-[110] hidden flex flex-col items-center justify-center p-4">
-    <div class="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl flex flex-col">
-      <div class="p-3 bg-slate-50 border-b flex justify-between items-center">
-        <span class="font-bold text-sm">Signature Client</span>
-        <button onclick="clearSig()" class="text-[10px] text-red-500 font-bold uppercase">Effacer</button>
-      </div>
-      <div class="flex-1 bg-white relative h-64 w-full cursor-crosshair touch-none" id="sig-wrapper">
-        <canvas id="sig-canvas" class="w-full h-full"></canvas>
-      </div>
-      <div class="p-3 flex gap-2 border-t">
-        <button onclick="closeSignature()" class="flex-1 py-3 bg-slate-100 font-bold rounded-lg text-xs">Annuler</button>
-        <button onclick="saveSignature()" class="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-lg text-xs">Valider</button>
-      </div>
+    <div id="signature-overlay" class="fixed inset-0 bg-black/80 z-[200] hidden flex-col items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl">
+            <div class="p-4 border-b flex justify-between items-center bg-slate-50">
+                <h3 class="font-bold text-slate-800">Signature Client</h3>
+                <button onclick="clearSignature()" class="text-red-500 text-xs font-bold uppercase">Effacer</button>
+            </div>
+            <canvas id="signature-pad" class="w-full h-64 bg-slate-50"></canvas>
+            <div class="p-4 bg-white space-y-2">
+                <button onclick="closeSignature()" class="w-full bg-indigo-600 text-white p-4 rounded-xl font-bold">VALIDER LA SIGNATURE</button>
+                <button onclick="document.getElementById('signature-overlay').style.display='none'" class="w-full text-slate-400 text-sm py-2">Annuler</button>
+            </div>
+        </div>
     </div>
-  </div>
 
-<script src="script.js?v=3"></script>
+    <script src="script.js?v=71"></script>
 </body>
 </html>

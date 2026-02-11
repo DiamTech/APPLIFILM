@@ -253,6 +253,24 @@ function clearSignature() {
 
 function closeSignature() {
     document.getElementById('signature-overlay').style.display = 'none';
+    
+    if (state.signature) {
+        // On récupère le bouton de signature
+        const btnSigner = document.querySelector('button[onclick="openSignature()"]');
+        
+        // On le grise et on le désactive
+        btnSigner.classList.remove('bg-amber-500');
+        btnSigner.classList.add('bg-slate-400', 'cursor-not-allowed');
+        btnSigner.disabled = true;
+        btnSigner.innerHTML = '<i data-lucide="check-circle"></i> BON SIGNÉ';
+        
+        // On rafraîchit l'icône Lucide
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        
+        alert("✅ Signature enregistrée !");
+    } else {
+        alert("⚠️ Aucune signature détectée.");
+    }
 }
 
 // ==========================================

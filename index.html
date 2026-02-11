@@ -1,14 +1,25 @@
-<html lang="fr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Applifilm Pro V6.3</title>
+  <title>Applifilm Pro V6.4</title>
+
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="https://www.applifilm.fr/wp-content/uploads/2020/07/applifilm.png">
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+  </script>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
-
+  
   <style>
+    /* ... ton CSS ... */
     body { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
     .ios-active:active { transform: scale(0.97); opacity: 0.9; }
     input, textarea { font-size: 16px !important; } /* Stop zoom iOS */
@@ -79,7 +90,7 @@
       />
       <div>
         <div class="text-[11px] font-black tracking-tight text-indigo-300 uppercase">
-          Applifilm Pro <span class="text-white/70 font-bold">V6.3</span>
+          Applifilm Pro <span class="text-white/70 font-bold">V6.4</span>
         </div>
         <div id="storage-status" class="flex items-center gap-1 text-[9px] font-bold text-amber-400 uppercase hidden">
           <i data-lucide="save" size="10"></i> Sauvegardé

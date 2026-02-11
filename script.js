@@ -49,36 +49,33 @@ function toggleWindow(id) {
 // ==========================================
 function addToBatch() {
     const vinInput = document.getElementById('vin-input');
+    const obsInput = document.getElementById('observation-input'); // Assure-toi que cette ligne est là
     const vin = vinInput.value.trim();
 
-    if (!vin) {
-        alert("Veuillez scanner ou saisir un VIN.");
-        return;
-    }
-    if (selectedWindows.length === 0) {
-        alert("Veuillez sélectionner au moins une vitre sur le plan.");
-        return;
-    }
+    if (!vin) return alert("⚠️ Scannez ou tapez un VIN.");
+    if (selectedWindows.length === 0) return alert("⚠️ Sélectionnez au moins une vitre.");
 
     const typeInter = document.querySelector('input[name="type_inter"]:checked').value;
 
-    // Ajout à l'état
     state.batch.push({
         vin: vin.toUpperCase(),
         windows: [...selectedWindows],
         type: typeInter,
-        timestamp: new Date().toLocaleString('fr-FR')
+        timestamp: new Date().toLocaleString('fr-FR'),
+        // On récupère la valeur du champ ou "RAS" si c'est vide
+        obs: (obsInput && obsInput.value.trim()) ? obsInput.value.trim() : "RAS" 
     });
 
     saveState();
     renderBatch();
 
-    // Reset de l'interface
+    // Reset des champs
     vinInput.value = "";
+    if(obsInput) obsInput.value = ""; // On vide le champ après l'ajout
     selectedWindows = [];
-    document.querySelectorAll('.window-btn').forEach(btn => {
-        btn.classList.remove('selected', 'bg-indigo-600', 'text-white');
-    });
+    document.querySelectorAll('.window-btn').forEach(btn => btn.classList.remove('selected'));
+    
+    alert("✅ Véhicule ajouté au lot !");
 }
 
 function renderBatch() {

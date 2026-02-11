@@ -80,24 +80,36 @@ function addToBatch() {
 
 function renderBatch() {
     const container = document.getElementById('batch-container');
-    const countEl = document.getElementById('batch-count');
-    if (!container) return;
+    const countBadge = document.getElementById('batch-count');
+    countBadge.innerText = state.batch.length;
+    container.innerHTML = "";
 
-    container.innerHTML = state.batch.map((item, index) => `
-        <div class="bg-white p-3 rounded-xl mb-2 shadow-sm border-l-4 border-indigo-500 flex justify-between items-center">
-            <div>
-                <div class="font-bold text-slate-800">${item.vin}</div>
-                <div class="text-[10px] text-slate-500 uppercase font-semibold">
-                    ${item.type} : ${item.windows.join(', ')}
+    state.batch.forEach((v, index) => {
+        const div = document.createElement('div');
+        div.className = "bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300";
+        div.innerHTML = `
+            <div class="flex justify-between items-start">
+                <div>
+                    <span class="text-[10px] font-black bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded uppercase">${v.type}</span>
+                    <h3 class="font-mono font-bold text-slate-800 mt-1">${v.vin}</h3>
                 </div>
+                <button onclick="removeItem(${index})" class="text-slate-300 hover:text-red-500 p-1">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
             </div>
-            <button onclick="removeItem(${index})" class="text-slate-300 hover:text-red-500">
-                <i data-lucide="trash-2" class="w-4 h-4"></i>
-            </button>
-        </div>
-    `).join('');
+            
+            <div class="flex flex-wrap gap-1">
+                ${v.windows.map(w => `<span class="text-[9px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md border border-slate-200">${w}</span>`).join('')}
+            </div>
 
-    if (countEl) countEl.innerText = state.batch.length;
+            <div class="text-[11px] text-slate-500 italic mt-1 border-t pt-2 flex items-center gap-1">
+                <i data-lucide="message-square" class="w-3 h-3"></i>
+                ${v.obs}
+            </div>
+        `;
+        container.appendChild(div);
+    });
+    
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 

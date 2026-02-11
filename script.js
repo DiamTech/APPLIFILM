@@ -145,83 +145,108 @@ function clearSignature() {
 // ==========================================
 // 4. CAMÉRA ET ENVOI (RESTE INCHANGÉ)
 // ==========================================
+// ==========================================
+// MOTEUR DE SCAN : CODE-BARRES + OCR
+// ==========================================
+
 async function startCamera() {
     if (isRequesting) return;
     isRequesting = true;
+    
     const overlay = document.getElementById('cam-overlay');
     const video = document.getElementById('hidden-video');
+    const status = document.getElementById('cam-status');
+    
     overlay.style.display = 'flex';
+    status.innerText = "DÉMARRAGE...";
+
     try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        const constraints = {
+            video: { 
+                facingMode: "environment",
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            }
+        };
+
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
         video.srcObject = stream;
+        
         video.onloadedmetadata = () => {
             video.play();
             isRequesting = false;
-            ocrInterval = setInterval(captureAndScan, 1500);
+            status.innerText = "ALIGNEZ LE CODE-BARRES";
+            
+            // Boucle de scan
+            if (ocrInterval) clearInterval(ocrInterval);
+            ocrInterval = setInterval(scanLogic, 800); 
             requestAnimationFrame(() => updateCanvas(video));
         };
-    } catch (err) { isRequesting = false; stopCamera(); }
+    } catch (err) {
+        isRequesting = false;
+        alert("Erreur caméra : " + err);
+        stopCamera();
+    }
 }
 
+// Affiche le flux vidéo sur le canvas pour l'analyse
 function updateCanvas(video) {
     if (!stream) return;
     const canvas = document.getElementById('cam-canvas');
     const ctx = canvas.getContext('2d');
+    
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
+    
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     requestAnimationFrame(() => updateCanvas(video));
 }
 
+// Arrête tout proprement
 function stopCamera() {
-    if (stream) stream.getTracks().forEach(t => t.stop());
-    clearInterval(ocrInterval);
+    if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+    }
+    if (ocrInterval) clearInterval(ocrInterval);
     document.getElementById('cam-overlay').style.display = 'none';
 }
 
-async function captureAndScan() {
+async function scanLogic() {
     const canvas = document.getElementById('cam-canvas');
     const status = document.getElementById('cam-status');
-    
-    // On crée un canvas temporaire pour le recadrage
+
+    // 1. SCAN CODE-BARRES (API Native ultra-rapide)
+    if ('BarcodeDetector' in window) {
+        const detector = new BarcodeDetector({ 
+            formats: ['code_128', 'code_39', 'ean_13'] 
+        });
+        
+        try {
+            const barcodes = await detector.detect(canvas);
+            if (barcodes.length > 0) {
+                let code = barcodes[0].rawValue.toUpperCase().replace(/\s/g, '');
+                if (code.length >= 10) {
+                    return successScan(code, "CODE-BARRES");
+                }
+            }
+        } catch (e) { console.error("Erreur Laser:", e); }
+    }
+
+    // 2. SCAN TEXTE (En secours sur zone centrale)
     const cropCanvas = document.createElement('canvas');
-    const cropCtx = cropCanvas.getContext('2d');
-
-    // On définit la zone de capture (le centre de l'image)
-    // On prend 80% de la largeur et 20% de la hauteur au milieu
-    const width = canvas.width * 0.8;
-    const height = canvas.height * 0.2;
-    const x = (canvas.width - width) / 2;
-    const y = (canvas.height - height) / 2;
-
-    cropCanvas.width = width;
-    cropCanvas.height = height;
-
-    // On dessine uniquement la zone centrale du flux vidéo sur notre petit canvas
-    cropCtx.drawImage(canvas, x, y, width, height, 0, 0, width, height);
+    const ctx = cropCanvas.getContext('2d');
+    const w = canvas.width * 0.7;
+    const h = canvas.height * 0.15;
+    cropCanvas.width = w;
+    cropCanvas.height = h;
+    ctx.drawImage(canvas, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h, 0, 0, w, h);
 
     try {
-        // On envoie seulement la zone découpée à Tesseract
         const result = await Tesseract.recognize(cropCanvas, 'eng', {
             tessedit_char_whitelist: '0123456789ABCDEFGHJKLMNPRSTUVWXYZ',
             tessedit_pageseg_mode: '7'
         });
-
-        let text = result.data.text.toUpperCase().replace(/[^A-Z0-9]/g, '');
-        const vinMatch = text.match(/[A-Z0-9]{17}/);
-
-        if (vinMatch) {
-            document.getElementById('vin-input').value = vinMatch[0];
-            status.innerText = "VIN DÉTECTÉ !";
-            if (navigator.vibrate) navigator.vibrate(200);
-            stopCamera();
-        } else {
-            status.innerText = "ALIGNEZ LE CODE...";
-        }
-    } catch (e) {
-        console.error("Erreur OCR:", e);
-    }
-}
 
 async function finalize() {
     if (envoiEnCours || state.batch.length === 0) return alert("Lot vide");

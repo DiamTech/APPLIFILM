@@ -206,32 +206,55 @@ async function startCamera() {
     const status = document.getElementById('cam-status');
     
     overlay.style.display = 'flex';
-    status.innerText = "DÉMARRAGE CAMÉRA...";
-    status.classList.replace('bg-green-600', 'bg-red-600');
+    status.innerText = "DEMANDE D'ACCÈS...";
+
+    // 1. On vérifie si le navigateur supporte la caméra
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert("Votre navigateur ne supporte pas l'accès caméra.");
+        return stopCamera();
+    }
+
+    // 2. Réglages ultra-propres (Constraints)
+    const constraints = {
+        video: {
+            facingMode: { ideal: "environment" }, // "ideal" est moins agressif que "exact"
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+        },
+        audio: false
+    };
 
     try {
-        // On définit les réglages (les fameuses constraints)
-        const mesReglages = {
-            video: { 
-                facingMode: "environment" // On demande la caméra arrière
-            },
-            audio: false
-        };
-
-        // On demande l'accès avec ces réglages
-        stream = await navigator.mediaDevices.getUserMedia(mesReglages);
+        // 3. LA DEMANDE OFFICIELLE
+        console.log("Demande d'autorisation en cours...");
+        const userStream = await navigator.mediaDevices.getUserMedia(constraints);
         
+        // Si on arrive ici, l'utilisateur a accepté !
+        stream = userStream;
         video.srcObject = stream;
-        video.setAttribute("playsinline", true); // Crucial pour iPhone
-        video.play();
         
-        requestAnimationFrame(() => updateCanvas(video, canvas));
-        ocrInterval = setInterval(captureAndScan, 1500);
+        // Indispensable pour iOS en mode Appli
+        video.setAttribute("playsinline", true);
+        video.setAttribute("muted", true);
+        video.setAttribute("autoplay", true);
+
+        video.play().then(() => {
+            console.log("Lecture vidéo démarrée");
+            requestAnimationFrame(() => updateCanvas(video, canvas));
+            ocrInterval = setInterval(captureAndScan, 1500);
+        }).catch(err => {
+            console.error("Erreur lecture vidéo:", err);
+        });
 
     } catch (err) {
-        console.error("Erreur Caméra:", err);
-        // Si ça bloque, on affiche un message clair
-        alert("ERREUR : " + err.name + "\nAllez dans les réglages de votre téléphone pour autoriser l'appareil photo.");
+        console.error("Erreur getUserMedia:", err);
+        
+        // Diagnostic précis
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+            alert("❌ ACCÈS REFUSÉ : Le téléphone bloque la caméra. \n\nAllez dans Réglages > Safari (ou Chrome) > Appareil Photo > AUTORISER.");
+        } else {
+            alert("Erreur technique : " + err.name);
+        }
         stopCamera();
     }
 }

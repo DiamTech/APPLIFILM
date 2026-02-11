@@ -283,37 +283,50 @@ function closeSignature() {
 // 6. ENVOI FINAL (SHEETDB)
 // ==========================================
 async function finalize() {
-    if (envoiEnCours) return;
-    if (state.batch.length === 0) return alert("Le lot est vide.");
-    if (!state.signature) return alert("La signature est obligatoire.");
+    if (state.batch.length === 0) return alert("Le lot est vide !");
+    if (!state.signature) return alert("Merci de signer avant d'envoyer.");
 
-    envoiEnCours = true;
+    // 1. Animation du bouton
+    const finalBtn = document.querySelector('button[onclick="finalize()"]');
+    const originalContent = finalBtn.innerHTML;
+    finalBtn.disabled = true;
+    finalBtn.innerHTML = `
+        <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span>ENVOI EN COURS...</span>
+    `;
+
     try {
-        const response = await fetch('https://sheetdb.io/api/v1/gc2df6w3b42tw', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+        const response = await fetch("TON_URL_SHEETDB", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-            data: state.batch.map(v => ({
-                "Date": "'" + v.timestamp, // Ajoute l'apostrophe ici pour corriger le format
-                "VIN": v.vin,
-                "Vitres": v.windows.join(', '),
-                "Type": v.type,
-                "Observations": v.obs || "RAS", // Ajoute cette ligne pour les remarques
-                "Signature": state.signature
-            }))
-        })
+                data: state.batch.map(v => ({
+                    "Date": "'" + v.timestamp,
+                    "VIN": v.vin,
+                    "Vitres": v.windows.join(', '),
+                    "Type": v.type,
+                    "Observations": v.obs,
+                    "Signature": state.signature
+                }))
+            })
         });
 
         if (response.ok) {
-            alert("✅ Données envoyées avec succès !");
-            state.batch = [];
-            state.signature = null;
-            saveState();
-            location.reload();
+            finalBtn.innerHTML = `<i data-lucide="check"></i> TRANSMIS !`;
+            finalBtn.classList.replace('bg-green-600', 'bg-blue-600');
+            
+            setTimeout(() => {
+                alert("🚀 Données envoyées avec succès !");
+                localStorage.clear();
+                location.reload();
+            }, 1000);
         }
-    } catch (err) {
-        alert("Erreur réseau : " + err);
-    } finally {
-        envoiEnCours = false;
+    } catch (error) {
+        finalBtn.innerHTML = originalContent;
+        finalBtn.disabled = false;
+        alert("Erreur réseau. Réessayez.");
     }
 }

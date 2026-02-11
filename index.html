@@ -71,11 +71,31 @@
             </div>
         </section>
 
-        <div class="grid grid-cols-3 gap-2">
-            <label class="flex flex-col items-center p-3 border-2 rounded-xl bg-white cursor-pointer shadow-sm">
-                <input type="radio" name="type_inter" value="Pose" checked class="w-4 h-4 accent-indigo-600">
-                <span class="text-[10px] font-bold uppercase mt-1 text-slate-700">Pose</span>
-            </label>
+        </section>
+<div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm mt-6">
+    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-2 ml-1 tracking-wider">Observations / Défauts constatés</label>
+    <textarea id="observation-input" rows="2" placeholder="Ex: Rayure porte AR, impact pare-brise..." 
+        class="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none transition-all"></textarea>
+</div>
+
+<div class="grid grid-cols-3 gap-2 mt-4">
+    <label class="flex flex-col items-center p-3 border-2 rounded-xl bg-white cursor-pointer shadow-sm">
+        <input type="radio" name="type_inter" value="Pose" checked class="w-4 h-4 accent-indigo-600">
+        <span class="text-[10px] font-bold uppercase mt-1 text-slate-700">Pose</span>
+    </label>
+    <label class="flex flex-col items-center p-3 border-2 rounded-xl bg-white cursor-pointer shadow-sm">
+        <input type="radio" name="type_inter" value="Dépose" class="w-4 h-4 accent-indigo-600">
+        <span class="text-[10px] font-bold uppercase mt-1 text-slate-700">Dépose</span>
+    </label>
+    <label class="flex flex-col items-center p-3 border-2 rounded-xl bg-white cursor-pointer shadow-sm">
+        <input type="radio" name="type_inter" value="Répa" class="w-4 h-4 accent-indigo-600">
+        <span class="text-[10px] font-bold uppercase mt-1 text-slate-700">Répa</span>
+    </label>
+</div>
+
+<button onclick="addToBatch()" class="w-full bg-slate-800 text-white p-4 rounded-2xl font-bold shadow-md active:scale-95 transition-transform flex items-center justify-center gap-2 mt-4">
+    <i data-lucide="plus-circle"></i> AJOUTER AU LOT
+</button>
             <label class="flex flex-col items-center p-3 border-2 rounded-xl bg-white cursor-pointer shadow-sm">
                 <input type="radio" name="type_inter" value="Dépose" class="w-4 h-4 accent-indigo-600">
                 <span class="text-[10px] font-bold uppercase mt-1 text-slate-700">Dépose</span>

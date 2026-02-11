@@ -210,27 +210,28 @@ async function startCamera() {
     status.classList.replace('bg-green-600', 'bg-red-600');
 
     try {
-        // On demande la caméra arrière avec une résolution correcte
-        stream = await navigator.mediaDevices.getUserMedia({
+        // On définit les réglages (les fameuses constraints)
+        const mesReglages = {
             video: { 
-                facingMode: "environment",
-                width: { ideal: 1280 },
-                height: { ideal: 720 }
+                facingMode: "environment" // On demande la caméra arrière
             },
             audio: false
-        });
-        
-        video.srcObject = stream;
-        video.onloadedmetadata = () => {
-            video.play();
-            requestAnimationFrame(() => updateCanvas(video, canvas));
         };
 
-        // Lancer l'analyse OCR toutes les 1.5 secondes pour ne pas surchauffer
+        // On demande l'accès avec ces réglages
+        stream = await navigator.mediaDevices.getUserMedia(mesReglages);
+        
+        video.srcObject = stream;
+        video.setAttribute("playsinline", true); // Crucial pour iPhone
+        video.play();
+        
+        requestAnimationFrame(() => updateCanvas(video, canvas));
         ocrInterval = setInterval(captureAndScan, 1500);
 
     } catch (err) {
-        alert("Erreur Caméra : " + err.message);
+        console.error("Erreur Caméra:", err);
+        // Si ça bloque, on affiche un message clair
+        alert("ERREUR : " + err.name + "\nAllez dans les réglages de votre téléphone pour autoriser l'appareil photo.");
         stopCamera();
     }
 }

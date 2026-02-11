@@ -194,3 +194,114 @@ async function finalize() {
 function startCamera() {
     alert("Fonction Caméra/OCR en cours de liaison. Tapez le VIN manuellement pour tester l'envoi.");
 }
+
+// --- 6. GESTION DE LA CAMÉRA ET OCR ---
+let stream = null;
+let ocrInterval = null;
+
+async function startCamera() {
+    const overlay = document.getElementById('cam-overlay');
+    const video = document.getElementById('hidden-video');
+    const canvas = document.getElementById('cam-canvas');
+    const status = document.getElementById('cam-status');
+    
+    overlay.style.display = 'flex';
+    status.innerText = "DÉMARRAGE CAMÉRA...";
+    status.classList.replace('bg-green-600', 'bg-red-600');
+
+    try {
+        // On demande la caméra arrière avec une résolution correcte
+        stream = await navigator.mediaDevices.getUserMedia({
+            video: { 
+                facingMode: "environment",
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            },
+            audio: false
+        });
+        
+        video.srcObject = stream;
+        video.onloadedmetadata = () => {
+            video.play();
+            requestAnimationFrame(() => updateCanvas(video, canvas));
+        };
+
+        // Lancer l'analyse OCR toutes les 1.5 secondes pour ne pas surchauffer
+        ocrInterval = setInterval(captureAndScan, 1500);
+
+    } catch (err) {
+        alert("Erreur Caméra : " + err.message);
+        stopCamera();
+    }
+}
+
+function updateCanvas(video, canvas) {
+    if (!stream) return;
+    const ctx = canvas.getContext('2d');
+    
+    // On adapte le canvas à la taille de la vidéo
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    // Dessiner l'image
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    requestAnimationFrame(() => updateCanvas(video, canvas));
+}
+
+function stopCamera() {
+    if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+    }
+    if (ocrInterval) {
+        clearInterval(ocrInterval);
+        ocrInterval = null;
+    }
+    document.getElementById('cam-overlay').style.display = 'none';
+}
+
+// --- 7. L'INTELLIGENCE : LECTURE DU VIN ---
+async function captureAndScan() {
+    const canvas = document.getElementById('cam-canvas');
+    const status = document.getElementById('cam-status');
+    
+    status.innerText = "ANALYSE DU VIN...";
+
+    try {
+        // On utilise Tesseract pour lire le texte sur le canvas
+        const result = await Tesseract.recognize(canvas, 'eng', {
+            tessedit_char_whitelist: '0123456789ABCDEFGHJKLMNPRSTUVWXYZ'
+        });
+
+        const text = result.data.text.replace(/\s+/g, ''); // On enlève les espaces
+        console.log("Texte détecté :", text);
+
+        // On cherche un VIN (17 caractères alphanumériques)
+        const vinMatch = text.match(/[A-Z0-9]{17}/);
+
+        if (vinMatch) {
+            const foundVin = vinMatch[0];
+            document.getElementById('vin-input').value = foundVin;
+            
+            status.innerText = "VIN DÉTECTÉ !";
+            status.classList.replace('bg-red-600', 'bg-green-600');
+
+            // Petite vibration de succès
+            if (navigator.vibrate) navigator.vibrate(100);
+
+            // On ferme la caméra après 1.5s pour laisser l'utilisateur voir le résultat
+            setTimeout(stopCamera, 1500);
+        }
+    } catch (e) {
+        console.error("Erreur OCR:", e);
+    }
+}
+
+// Optionnel : Forcer la capture si l'OCR galère
+function forceCapture() {
+    const canvas = document.getElementById('cam-canvas');
+    // On pourrait ici enregistrer juste la photo du VIN
+    alert("Photo capturée (envoi manuel du VIN requis)");
+    stopCamera();
+}

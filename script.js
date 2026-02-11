@@ -1,276 +1,82 @@
-// --- 1. ÉTAT INITIAL ET SYSTÈME ---
+// ==========================================
+// 1. VARIABLES GLOBALES
+// ==========================================
 let state = JSON.parse(localStorage.getItem('appliFilmState')) || {
     batch: [],
-    signature: null,
-    editingIndex: null
+    signature: null
 };
 
 let selectedWindows = [];
 let envoiEnCours = false;
+let stream = null;
+let ocrInterval = null;
+let isRequesting = false; // Le fameux verrou anti-boucle
 
-// Initialisation des icônes Lucide
+// Initialisation au chargement de la page
 window.onload = () => {
-    lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
     renderBatch();
 };
 
 function saveState() {
     localStorage.setItem('appliFilmState', JSON.stringify(state));
-    const status = document.getElementById('storage-status');
-    if(status) {
-        status.classList.remove('hidden');
-        setTimeout(() => status.classList.add('hidden'), 2000);
-    }
 }
 
-// --- 2. GESTION DES VITRES ---
-function toggleWindow(id, btn) {
-    const el = document.getElementById('win-' + id);
-    if (!el) return;
-    
-    const index = selectedWindows.indexOf(id);
-    if (index > -1) {
-        selectedWindows.splice(index, 1);
-        el.classList.remove('selected');
-    } else {
-        selectedWindows.push(id);
-        el.classList.add('selected');
-    }
-}
-
-function clearWindows() {
-    selectedWindows = [];
-    document.querySelectorAll('.window-btn').forEach(b => b.classList.remove('selected'));
-}
-
-// --- 3. GESTION DU BATCH (VÉHICULES) ---
-function addToBatch() {
-    const vin = document.getElementById('vin-input').value.trim();
-    const type = document.querySelector('input[name="type_inter"]:checked').value;
-    const obs = document.getElementById('obs').value;
-
-    if (!vin) return alert("❌ Le VIN est obligatoire.");
-    if (selectedWindows.length === 0) return alert("❌ Sélectionnez au moins une vitre.");
-
-    const vehicule = {
-        vin: vin,
-        type: type,
-        windows: [...selectedWindows],
-        obs: obs,
-        timestamp: new Date().toLocaleString('fr-FR')
-    };
-
-    if (state.editingIndex !== null) {
-        state.batch[state.editingIndex] = vehicule;
-        state.editingIndex = null;
-    } else {
-        state.batch.push(vehicule);
-    }
-
-    saveState();
-    clearForm();
-    renderBatch();
-}
-
-function renderBatch() {
-    const container = document.getElementById('batch-container');
-    const countEl = document.getElementById('batch-count');
-    if (!container) return;
-
-    container.innerHTML = state.batch.map((v, i) => `
-        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-            <div class="flex justify-between items-start mb-2">
-                <div>
-                    <div class="text-[10px] font-black text-indigo-600 uppercase">${v.type}</div>
-                    <div class="font-mono font-bold text-sm">${v.vin}</div>
-                </div>
-                <button onclick="deleteVehicule(${i})" class="text-red-400 p-1"><i data-lucide="trash-2" size="18"></i></button>
-            </div>
-            <div class="text-[10px] text-slate-500 font-bold uppercase">${v.windows.join(' • ')}</div>
-            ${v.obs ? `<div class="mt-2 text-xs italic text-slate-600">"${v.obs}"</div>` : ''}
-        </div>
-    `).join('');
-    
-    if(countEl) countEl.innerText = state.batch.length;
-    lucide.createIcons();
-}
-
-function deleteVehicule(index) {
-    if(confirm("Supprimer ce véhicule ?")) {
-        state.batch.splice(index, 1);
-        saveState();
-        renderBatch();
-    }
-}
-
-function clearForm() {
-    document.getElementById('vin-input').value = "";
-    document.getElementById('obs').value = "";
-    clearWindows();
-}
-
-// --- 4. SIGNATURE ---
-function openSignature() {
-    document.getElementById('sig-modal').classList.remove('hidden');
-    const canvas = document.getElementById('sig-canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = canvas.offsetWidth;
-    canvas.height = canvas.offsetHeight;
-    
-    let drawing = false;
-    canvas.onmousedown = canvas.ontouchstart = (e) => { drawing = true; ctx.beginPath(); };
-    canvas.onmousemove = canvas.ontouchmove = (e) => {
-        if(!drawing) return;
-        const rect = canvas.getBoundingClientRect();
-        const x = (e.clientX || e.touches[0].clientX) - rect.left;
-        const y = (e.clientY || e.touches[0].clientY) - rect.top;
-        ctx.lineTo(x, y);
-        ctx.stroke();
-    };
-    canvas.onmouseup = canvas.ontouchend = () => drawing = false;
-}
-
-function saveSignature() {
-    state.signature = document.getElementById('sig-canvas').toDataURL();
-    saveState();
-    closeSignature();
-    alert("✅ Signature enregistrée.");
-}
-
-function closeSignature() { document.getElementById('sig-modal').classList.add('hidden'); }
-function clearSig() {
-    const canvas = document.getElementById('sig-canvas');
-    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
-}
-
-// --- 5. ENVOI FINAL VERS SHEETDB (CORRIGÉ) ---
-async function finalize() {
-    if (envoiEnCours) return;
-    if (state.batch.length === 0) return alert("❌ Ajoutez des véhicules avant d'envoyer.");
-    if (!state.signature) return alert("❌ Signature client manquante (bouton Signer).");
-
-    envoiEnCours = true;
-    const btn = document.querySelector('button[onclick="finalize()"]');
-    btn.disabled = true;
-    btn.innerHTML = "⏳ ENVOI EN COURS...";
-
-    try {
-        const payload = {
-            data: state.batch.map(v => ({
-                "Date": v.timestamp,
-                "VIN": v.vin.toUpperCase(),
-                "Type": v.type,
-                "Vitres": v.windows.join(', '),
-                "Observations": v.obs || "",
-                "Signature": state.signature
-            }))
-        };
-
-        const response = await fetch('https://sheetdb.io/api/v1/gc2df6w3b42tw', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        if (response.ok) {
-            alert("🚀 ENVOI RÉUSSI ! Le Google Sheet a été mis à jour.");
-            state.batch = [];
-            state.signature = null;
-            saveState();
-            location.reload();
-        } else {
-            alert("❌ Erreur SheetDB. Vérifiez votre quota ou l'URL.");
-        }
-    } catch (error) {
-        alert("❌ Erreur réseau. Vérifiez votre connexion.");
-    } finally {
-        envoiEnCours = false;
-        btn.disabled = false;
-        btn.innerHTML = `Envoyer <span id="batch-count" class="bg-white/20 px-2 py-0.5 rounded text-[10px] ml-1">${state.batch.length}</span>`;
-    }
-}
-
-// --- 6. CAMÉRA (SIMPLIFIÉE) ---
-function startCamera() {
-    alert("Fonction Caméra/OCR en cours de liaison. Tapez le VIN manuellement pour tester l'envoi.");
-}
-
-// --- 6. GESTION DE LA CAMÉRA ET OCR ---
-let stream = null;
-let ocrInterval = null;
-
+// ==========================================
+// 2. CAMÉRA ET SCAN (VERSION STABLE)
+// ==========================================
 async function startCamera() {
+    if (isRequesting) return; 
+    isRequesting = true;
+
     const overlay = document.getElementById('cam-overlay');
     const video = document.getElementById('hidden-video');
-    const canvas = document.getElementById('cam-canvas');
     const status = document.getElementById('cam-status');
     
     overlay.style.display = 'flex';
-    status.innerText = "DEMANDE D'ACCÈS...";
-
-    // 1. On vérifie si le navigateur supporte la caméra
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert("Votre navigateur ne supporte pas l'accès caméra.");
-        return stopCamera();
-    }
-
-    // 2. Réglages ultra-propres (Constraints)
-    const constraints = {
-        video: {
-            facingMode: { ideal: "environment" }, // "ideal" est moins agressif que "exact"
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-        },
-        audio: false
-    };
+    status.innerText = "INITIALISATION...";
 
     try {
-        // 3. LA DEMANDE OFFICIELLE
-        console.log("Demande d'autorisation en cours...");
-        const userStream = await navigator.mediaDevices.getUserMedia(constraints);
-        
-        // Si on arrive ici, l'utilisateur a accepté !
-        stream = userStream;
-        video.srcObject = stream;
-        
-        // Indispensable pour iOS en mode Appli
-        video.setAttribute("playsinline", true);
-        video.setAttribute("muted", true);
-        video.setAttribute("autoplay", true);
+        // Nettoyage avant de démarrer
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
 
-        video.play().then(() => {
-            console.log("Lecture vidéo démarrée");
-            requestAnimationFrame(() => updateCanvas(video, canvas));
-            ocrInterval = setInterval(captureAndScan, 1500);
-        }).catch(err => {
-            console.error("Erreur lecture vidéo:", err);
+        stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: "environment" }, 
+            audio: false 
         });
+        
+        video.srcObject = stream;
+        video.setAttribute("playsinline", true);
+        
+        video.onloadedmetadata = () => {
+            video.play();
+            status.innerText = "VISEZ LE CODE (VIN)";
+            isRequesting = false;
+            
+            if (ocrInterval) clearInterval(ocrInterval);
+            // On scanne toutes les 1.5 secondes pour laisser le temps à l'appareil de faire le point
+            ocrInterval = setInterval(captureAndScan, 1500);
+            requestAnimationFrame(() => updateCanvas(video));
+        };
 
     } catch (err) {
-        console.error("Erreur getUserMedia:", err);
-        
-        // Diagnostic précis
-        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-            alert("❌ ACCÈS REFUSÉ : Le téléphone bloque la caméra. \n\nAllez dans Réglages > Safari (ou Chrome) > Appareil Photo > AUTORISER.");
-        } else {
-            alert("Erreur technique : " + err.name);
-        }
+        isRequesting = false;
+        console.error("Erreur Caméra:", err);
+        alert("🔒 Accès bloqué. Vérifiez les réglages de votre téléphone.");
         stopCamera();
     }
 }
 
-function updateCanvas(video, canvas) {
+function updateCanvas(video) {
     if (!stream) return;
+    const canvas = document.getElementById('cam-canvas');
     const ctx = canvas.getContext('2d');
-    
-    // On adapte le canvas à la taille de la vidéo
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-    
-    // Dessiner l'image
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    
-    requestAnimationFrame(() => updateCanvas(video, canvas));
+    requestAnimationFrame(() => updateCanvas(video));
 }
 
 function stopCamera() {
@@ -278,71 +84,120 @@ function stopCamera() {
         stream.getTracks().forEach(track => track.stop());
         stream = null;
     }
-    if (ocrInterval) {
-        clearInterval(ocrInterval);
-        ocrInterval = null;
-    }
+    if (ocrInterval) clearInterval(ocrInterval);
     document.getElementById('cam-overlay').style.display = 'none';
 }
 
-// --- 7. L'INTELLIGENCE : LECTURE DU VIN ---
+// ==========================================
+// 3. LOGIQUE DE DÉCODAGE (VIN & BARCODE)
+// ==========================================
 async function captureAndScan() {
     const canvas = document.getElementById('cam-canvas');
     const status = document.getElementById('cam-status');
     
-    // 1. TENTATIVE CODE-BARRES (Instantané et 100% fiable si détecté)
+    // TENTATIVE CODE-BARRES
     if ('BarcodeDetector' in window) {
-        const detector = new BarcodeDetector({ formats: ['code_128', 'code_39', 'vin'] });
+        const detector = new BarcodeDetector({ formats: ['code_128', 'code_39'] });
         try {
             const barcodes = await detector.detect(canvas);
             if (barcodes.length > 0) {
                 const val = barcodes[0].rawValue.toUpperCase().replace(/\s+/g, '');
-                if (val.length >= 10) { // Certains codes-barres sont partiels, on prend ce qu'on peut
-                    return successScan(val, "LASER");
-                }
+                if (val.length >= 10) return successScan(val, "CODE-BARRES");
             }
-        } catch (e) { console.error(e); }
+        } catch (e) {}
     }
 
-    // 2. TENTATIVE TEXTE (OCR optimisé)
-    status.innerText = "Mise au point...";
+    // TENTATIVE TEXTE (OCR)
     try {
         const result = await Tesseract.recognize(canvas, 'eng', {
-            // ON FORCE LES CARACTÈRES VIN UNIQUEMENT (Pas de I, O, Q)
-            tessedit_char_whitelist: '0123456789ABCDEFGHJKLMNPRSTUVWXYZ',
-            tessedit_pageseg_mode: '7', // Mode "Single Line" (optimise pour une ligne de texte)
+            tessedit_char_whitelist: '0123456789ABCDEFGHJKLMNPRSTUVWXYZ', // Uniquement caractères VIN
+            tessedit_pageseg_mode: '7'
         });
 
-        // Nettoyage strict : on enlève tout sauf lettres et chiffres
         let text = result.data.text.toUpperCase().replace(/[^A-Z0-9]/g, '');
-        
-        // On cherche une suite de 17 caractères
         const vinMatch = text.match(/[A-Z0-9]{17}/);
 
         if (vinMatch) {
             successScan(vinMatch[0], "TEXTE");
-        } else if (text.length >= 10) {
-            // Si on trouve un bout de code cohérent mais pas 17 car.
-            status.innerText = "Texte partiel... Approchez";
         }
     } catch (e) { console.error(e); }
 }
 
-// Petite fonction pour gérer le succès proprement
 function successScan(vin, source) {
     const status = document.getElementById('cam-status');
     document.getElementById('vin-input').value = vin;
-    status.innerText = "DÉTECTÉ (" + source + ")";
-    status.classList.replace('bg-red-600', 'bg-green-600');
-    
-    if (navigator.vibrate) navigator.vibrate([100, 50, 100]); // Triple vibration "pro"
-    
+    status.innerText = "VIN TROUVÉ (" + source + ")";
+    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
     setTimeout(stopCamera, 1200);
 }
-// Optionnel : Forcer la capture si l'OCR galère
-function forceCapture() {
-    const canvas = document.getElementById('cam-canvas');
-    // On pourrait ici enregistrer juste la photo du VIN
-    alert("Photo capturée (envoi manuel du VIN requis)");
-    stopCamera();
+
+// ==========================================
+// 4. GESTION DES VITRES ET ENVOI
+// ==========================================
+function toggleWindow(id) {
+    const btn = document.getElementById('win-' + id);
+    const index = selectedWindows.indexOf(id);
+    if (index > -1) {
+        selectedWindows.splice(index, 1);
+        if(btn) btn.classList.remove('selected');
+    } else {
+        selectedWindows.push(id);
+        if(btn) btn.classList.add('selected');
+    }
+}
+
+function addToBatch() {
+    const vin = document.getElementById('vin-input').value;
+    if (!vin) return alert("Scannez ou tapez un VIN");
+    
+    state.batch.push({
+        vin: vin,
+        windows: [...selectedWindows],
+        type: document.querySelector('input[name="type_inter"]:checked').value,
+        timestamp: new Date().toLocaleString()
+    });
+    
+    saveState();
+    renderBatch();
+    document.getElementById('vin-input').value = "";
+    selectedWindows = [];
+    document.querySelectorAll('.window-btn').forEach(b => b.classList.remove('selected'));
+}
+
+function renderBatch() {
+    const container = document.getElementById('batch-container');
+    if(!container) return;
+    container.innerHTML = state.batch.map((v, i) => `
+        <div class="bg-white p-3 rounded-xl mb-2 shadow-sm border border-slate-200">
+            <div class="font-bold text-indigo-600">${v.vin}</div>
+            <div class="text-[10px] text-slate-500">${v.windows.join(', ')}</div>
+        </div>
+    `).join('');
+    document.getElementById('batch-count').innerText = state.batch.length;
+}
+
+async function finalize() {
+    if (envoiEnCours || state.batch.length === 0) return alert("Rien à envoyer");
+    envoiEnCours = true;
+    try {
+        const response = await fetch('https://sheetdb.io/api/v1/gc2df6w3b42tw', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                data: state.batch.map(v => ({
+                    "Date": v.timestamp,
+                    "VIN": v.vin,
+                    "Vitres": v.windows.join(', '),
+                    "Type": v.type
+                }))
+            })
+        });
+        if (response.ok) {
+            alert("✅ Données envoyées !");
+            state.batch = [];
+            saveState();
+            location.reload();
+        }
+    } catch (err) { alert("Erreur : " + err); }
+    finally { envoiEnCours = false; }
 }

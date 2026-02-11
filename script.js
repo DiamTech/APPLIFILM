@@ -290,33 +290,42 @@ async function captureAndScan() {
     const canvas = document.getElementById('cam-canvas');
     const status = document.getElementById('cam-status');
     
-    // --- ÉTAPE 1 : TENTER DE LIRE LE CODE-BARRES ---
+    // 1. TENTATIVE CODE-BARRES (Instantané et 100% fiable si détecté)
     if ('BarcodeDetector' in window) {
-        const detector = new BarcodeDetector({ formats: ['code_128', 'code_39', 'ean_13'] });
+        const detector = new BarcodeDetector({ formats: ['code_128', 'code_39', 'vin'] });
         try {
             const barcodes = await detector.detect(canvas);
             if (barcodes.length > 0) {
-                const val = barcodes[0].rawValue.toUpperCase();
-                // On vérifie si c'est un format VIN (17 caractères)
-                if (val.length === 17) {
-                    successScan(val, "CODE-BARRES");
-                    return; // On arrête là si on a trouvé
+                const val = barcodes[0].rawValue.toUpperCase().replace(/\s+/g, '');
+                if (val.length >= 10) { // Certains codes-barres sont partiels, on prend ce qu'on peut
+                    return successScan(val, "LASER");
                 }
             }
-        } catch (e) { console.error("Erreur BarcodeDetector:", e); }
+        } catch (e) { console.error(e); }
     }
 
-    // --- ÉTAPE 2 : SI PAS DE CODE-BARRES, ON TENTE LE TEXTE (OCR) ---
-    status.innerText = "LECTURE TEXTE...";
+    // 2. TENTATIVE TEXTE (OCR optimisé)
+    status.innerText = "Mise au point...";
     try {
-        const result = await Tesseract.recognize(canvas, 'eng');
-        const text = result.data.text.replace(/\s+/g, '').toUpperCase();
+        const result = await Tesseract.recognize(canvas, 'eng', {
+            // ON FORCE LES CARACTÈRES VIN UNIQUEMENT (Pas de I, O, Q)
+            tessedit_char_whitelist: '0123456789ABCDEFGHJKLMNPRSTUVWXYZ',
+            tessedit_pageseg_mode: '7', // Mode "Single Line" (optimise pour une ligne de texte)
+        });
+
+        // Nettoyage strict : on enlève tout sauf lettres et chiffres
+        let text = result.data.text.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        
+        // On cherche une suite de 17 caractères
         const vinMatch = text.match(/[A-Z0-9]{17}/);
 
         if (vinMatch) {
             successScan(vinMatch[0], "TEXTE");
+        } else if (text.length >= 10) {
+            // Si on trouve un bout de code cohérent mais pas 17 car.
+            status.innerText = "Texte partiel... Approchez";
         }
-    } catch (e) { console.error("Erreur OCR:", e); }
+    } catch (e) { console.error(e); }
 }
 
 // Petite fonction pour gérer le succès proprement

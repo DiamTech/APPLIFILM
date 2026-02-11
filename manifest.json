@@ -1,15 +1,13 @@
 {
-  "name": "APPLI FILM PRO",
-  "short_name": "AppliFilm",
-  "description": "Gestion du filmage des véhicules",
-  "start_url": "./index.html",
+  "name": "Applifilm Pro",
+  "short_name": "Applifilm",
+  "start_url": "index.html",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#007bff",
-  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#4f46e5",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/705/705061.png",
+      "src": "https://www.applifilm.fr/wp-content/uploads/2020/07/applifilm.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

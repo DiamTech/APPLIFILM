@@ -1,72 +1,83 @@
 let envoiEnCours = false;
 
 // --- 1. GESTION DE LA SUPPRESSION ---
-function supprimerVehicule(index) {
-    // 1. On retire l'élément du tableau state.batch
-    state.batch.splice(index, 1);
-    
-    // 2. On sauvegarde le nouvel état dans le localStorage
-    saveState(); 
-    
-    // 3. On rafraîchit l'affichage de la liste
-    renderBatch(); 
-    
-    // Optionnel : un petit message discret
-    console.log("Véhicule supprimé, index:", index);
+// On l'attache à window pour être sûr que le HTML la trouve
+window.supprimerVehicule = function(index) {
+    if (confirm("Supprimer ce véhicule ?")) {
+        state.batch.splice(index, 1);
+        saveState(); 
+        renderBatch(); 
+        console.log("Véhicule supprimé, index:", index);
+    }
 }
 
-// --- 2. FONCTION D'ENVOI (VERSION NETTOYÉE) ---
+// --- 2. FONCTION D'ENVOI ---
 async function finalize() {
     if (envoiEnCours) return;
     
-    if (state.batch.length === 0) return alert("❌ Lot vide.");
-    if (!state.signature) return alert("❌ Signature manquante.");
+    // Vérifications de base
+    if (state.batch.length === 0) return alert("❌ La liste est vide.");
+    
+    // Note: J'ai commenté la signature pour que tu puisses tester sans bloquer
+    // if (!state.signature) return alert("❌ Signature manquante.");
 
     envoiEnCours = true;
-    const btn = document.querySelector('button[onclick="finalize()"]');
-    btn.disabled = true;
-    btn.innerHTML = "⏳ Envoi...";
+    
+    // On cherche le bouton pour changer son état
+    const btn = document.querySelector('button[onclick="finalize()"]') || document.getElementById('btn-envoyer');
+    if(btn) {
+        btn.disabled = true;
+        btn.innerHTML = "⏳ Envoi vers Google Sheets...";
+    }
 
     try {
-        const resBefore = await fetch('https://sheetdb.io/api/v1/gc2df6w3b42tw?keys=VIN');
-        const dataBefore = await resBefore.json();
-        const nbAvant = Array.isArray(dataBefore) ? dataBefore.length : 0;
+        // Préparation des données pour SheetDB
+        const payload = {
+            data: state.batch.map(v => ({
+                "Date": new Date().toLocaleString('fr-FR'),
+                "VIN": v.vin ? v.vin.toUpperCase() : "INCONNU",
+                "Type": v.type || "Non spécifié",
+                "Vitres": Array.isArray(v.windows) ? v.windows.join(', ') : (v.windows || ""),
+                "Observations": v.obs || "",
+                "Signature": state.signature || "Sans signature"
+            }))
+        };
 
-        await fetch('https://sheetdb.io/api/v1/gc2df6w3b42tw', {
+        console.log("Envoi en cours...", payload);
+
+        const response = await fetch('https://sheetdb.io/api/v1/gc2df6w3b42tw', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                data: state.batch.map(v => ({
-                    "Date": new Date().toLocaleString('fr-FR'),
-                    "VIN": v.vin.toUpperCase(),
-                    "Type": v.type,
-                    "Vitres": v.windows.join(', '),
-                    "Observations": v.obs || "",
-                    "Signature": state.signature
-                }))
-            })
+            headers: { 
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(payload)
         });
 
-        await new Promise(r => setTimeout(r, 5000)); 
-
-        const resAfter = await fetch('https://sheetdb.io/api/v1/gc2df6w3b42tw?keys=VIN');
-        const dataAfter = await resAfter.json();
-        const nbApres = Array.isArray(dataAfter) ? dataAfter.length : 0;
-
-        if (nbApres > nbAvant) {
-            alert("Envoi réussi");
+        if (response.ok) {
+            alert("✅ Données envoyées avec succès !");
+            
+            // Nettoyage
             state.batch = [];
             state.signature = null;
             localStorage.removeItem('appliFilmState');
-            window.location.reload();
-            return; 
+            
+            // Rafraîchir l'affichage au lieu de recharger toute la page (plus fluide)
+            renderBatch(); 
+            if(btn) btn.innerHTML = "FINALISER ET ENVOYER";
+        } else {
+            const errorData = await response.json();
+            alert("❌ Erreur SheetDB: " + (errorData.error || "Problème de connexion"));
         }
 
     } catch (error) {
-        console.error("Erreur silencieuse:", error);
+        console.error("Erreur d'envoi:", error);
+        alert("❌ Erreur réseau. Vérifiez votre connexion internet.");
+    } finally {
+        envoiEnCours = false;
+        if(btn) {
+            btn.disabled = false;
+            btn.innerHTML = "FINALISER ET ENVOYER";
+        }
     }
-
-    envoiEnCours = false;
-    btn.disabled = false;
-    btn.innerHTML = "FINALISER ET ENVOYER";
 }

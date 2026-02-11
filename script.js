@@ -249,6 +249,15 @@ function clearSignature() {
     ctx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
     state.signature = null;
     saveState();
+
+    // Si on efface, on redonne au bouton son aspect normal
+    const btnSigner = document.querySelector('button[onclick="openSignature()"]');
+    btnSigner.classList.remove('bg-slate-400', 'cursor-not-allowed');
+    btnSigner.classList.add('bg-amber-500');
+    btnSigner.disabled = false;
+    btnSigner.innerHTML = '<i data-lucide="pen-tool"></i> SIGNER LE BON';
+    
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function closeSignature() {

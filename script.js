@@ -297,11 +297,11 @@ async function finalize() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
             data: state.batch.map(v => ({
-                // L'apostrophe force Sheets à garder le format texte lisible
-                "Date": "'" + v.timestamp, 
+                "Date": "'" + v.timestamp, // Ajoute l'apostrophe ici pour corriger le format
                 "VIN": v.vin,
                 "Vitres": v.windows.join(', '),
                 "Type": v.type,
+                "Observations": v.obs || "RAS", // Ajoute cette ligne pour les remarques
                 "Signature": state.signature
             }))
         })

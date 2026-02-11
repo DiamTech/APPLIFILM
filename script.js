@@ -184,11 +184,12 @@ async function finalize() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                data: state.batch.map(v => ({
-                    "Date": v.timestamp,
-                    "VIN": v.vin,
-                    "Vitres": v.windows.join(', '),
-                    "Type": v.type
+    data: state.batch.map(v => ({
+        "Date": v.timestamp,
+        "VIN": v.vin,
+        "Vitres": v.windows.join(', '),
+        "Type": v.type,
+        "Signature": state.signature // Cela enverra le code de l'image
                 }))
             })
         });

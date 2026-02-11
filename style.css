@@ -1,0 +1,12 @@
+<style>
+  body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; margin: 0; padding: 20px; }
+  .container { max-width: 600px; margin: auto; }
+  button { 
+    width: 100%; padding: 15px; background: #007bff; color: white; 
+    border: none; border-radius: 8px; font-weight: bold; cursor: pointer;
+  }
+  .lot-item { 
+    background: white; padding: 15px; border-radius: 10px; 
+    margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
+  }
+</style>

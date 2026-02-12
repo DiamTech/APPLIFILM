@@ -285,7 +285,7 @@ async function finalize() {
     const originalContent = btn.innerHTML;
     btn.innerHTML = "<span>ENVOI EN COURS...</span>";
     
-    const GOOGLE_URL = 'https://script.google.com/macros/s/AKfycbxLVos-LwU_iV4h8skP7IHemI9yCjnGBC8LInFc7VXH93QxIOGOBDLAcDTyTA1klU_d/exec';
+    const GOOGLE_URL = 'https://script.google.com/macros/s/AKfycbx127X1JbcpO4hwYuNzKC9tmBsB51Fi4XnOn4ve65YBnvWsVuq9If5cwJBv0tQ5Rm6t/exec';
 
     try {
         await fetch(GOOGLE_URL, {

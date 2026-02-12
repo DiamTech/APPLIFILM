@@ -23,8 +23,37 @@ function saveState() {
     localStorage.setItem('scannerState', JSON.stringify(state));
 }
 
+let html5QrCode;
+
 function startScan() {
-    showModal("Caméra", "La fonction scan nécessite une licence ou une bibliothèque spécifique. En attendant, saisissez le VIN manuellement.", "info");
+    const reader = document.getElementById('reader');
+    reader.classList.remove('hidden'); // On montre la zone caméra
+
+    html5QrCode = new Html5Qrcode("reader");
+    
+    const config = { fps: 10, qrbox: { width: 250, height: 150 } };
+
+    html5QrCode.start(
+        { facingMode: "environment" }, // Caméra arrière
+        config,
+        (decodedText) => {
+            // Quand le VIN est détecté :
+            document.getElementById('vin-input').value = decodedText;
+            stopScan();
+            showModal("Succès", "Code détecté : " + decodedText, "success");
+        },
+        (errorMessage) => { /* On ignore les erreurs de lecture continue */ }
+    ).catch(err => {
+        showModal("Erreur", "Impossible d'ouvrir la caméra.", "info");
+    });
+}
+
+function stopScan() {
+    if (html5QrCode) {
+        html5QrCode.stop().then(() => {
+            document.getElementById('reader').classList.add('hidden');
+        });
+    }
 }
 
 // --- 3. GESTION DES MODALES (FENÊTRES CUSTOM) ---

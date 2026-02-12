@@ -21,7 +21,7 @@ let state = {
 
 // Mets tes vraies URLs ici
 const URL_VITRAGE = "https://script.google.com/macros/s/AKfycbyl-hYWhxxK8-1jLGxHC_QNFgrVFZtbUv69Ozr2hMAdqWz2iQvP5oG92Div0LbG-L5x/exec";
-const URL_PRET = "https://script.google.com/macros/s/AKfycbyzru5XY6IHzRPoaHJ4hFI-b1phKYjB1EAU_V_ym-Xhw8iMPiKnuYvPODPqZfV6rk2RVg/exec";
+const URL_PRET = "https://script.google.com/macros/s/AKfycbzLFCi4ao6VCkzJmNltxaMEWMRiwfHC-RJ3feTnmWePYTIsa0tJj5kxIcHAyWLAlfgwYA/exec";
 
 let scanner, canvas, ctx, drawing = false;
 
@@ -1064,15 +1064,14 @@ function selectLoanForReturn(immat) {
     const previewRecto = document.getElementById('preview-recto');
     const previewVerso = document.getElementById('preview-verso');
     
-    if (loan.recto && loan.recto.length > 10) {
-        previewRecto.innerHTML = `<img src="${loan.recto}" class="w-full h-full object-cover rounded-xl">`;
+    if (loan.recto && loan.recto.startsWith('http')) {
+        previewRecto.innerHTML = `<img src="${loan.recto}" referrerpolicy="no-referrer" class="w-full h-full object-cover rounded-xl shadow-inner">`;
         state.pret.permis_recto = loan.recto;
     }
-    if (loan.verso && loan.verso.length > 10) {
-        previewVerso.innerHTML = `<img src="${loan.verso}" class="w-full h-full object-cover rounded-xl">`;
+    if (loan.verso && loan.verso.startsWith('http')) {
+        previewVerso.innerHTML = `<img src="${loan.verso}" referrerpolicy="no-referrer" class="w-full h-full object-cover rounded-xl shadow-inner">`;
         state.pret.permis_verso = loan.verso;
     }
-
     // 5. RÉCUPÉRATION DES DÉGÂTS (Le cœur du problème)
     try {
         // On récupère la colonne L (degats_coords)

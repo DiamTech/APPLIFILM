@@ -46,6 +46,87 @@ async function stopScanner() {
     }
 }
 
+// On ajoute sentHistory dans ton objet state
+let state = { 
+    vin: "", 
+    selectedWindows: [], 
+    photos: [], 
+    batch: [], 
+    signature: null,
+    sentHistory: [] // Pour stocker ce qui est déjà parti
+};
+
+// Fonction pour mettre à jour l'affichage du menu déroulant
+function updateHistoryUI() {
+    const counter = document.getElementById('sent-counter');
+    const list = document.getElementById('sent-list');
+    
+    counter.innerText = `${state.sentHistory.length} ENVOYÉS`;
+    
+    if (state.sentHistory.length === 0) {
+        list.innerHTML = '<p class="text-center py-6 text-slate-400 text-[10px]">Aucun envoi effectué</p>';
+        return;
+    }
+
+    list.innerHTML = state.sentHistory.map((item, i) => `
+        <div class="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-700">
+            <div class="flex justify-between items-start mb-1">
+                <span class="font-black text-[11px] text-indigo-600 dark:text-indigo-400">${item.vin}</span>
+                <span class="text-[8px] font-bold opacity-50">${item.sentTime}</span>
+            </div>
+            <div class="flex flex-wrap gap-1 mb-1">
+                <span class="px-1.5 py-0.5 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 rounded text-[8px] font-bold uppercase">${item.type}</span>
+                <span class="text-[9px] text-slate-500">${item.windowsCount} vitres</span>
+            </div>
+            ${item.obs ? `<p class="text-[9px] italic text-slate-400 truncate">"${item.obs}"</p>` : ''}
+        </div>
+    `).reverse().join(''); // .reverse() pour avoir le plus récent en haut
+}
+
+// MODIFICATION DE LA FONCTION FINALIZE
+async function finalize() {
+    if(!state.batch.length) return alert("Le lot est vide !");
+    
+    const btn = document.getElementById('btn-final');
+    btn.disabled = true;
+    btn.innerHTML = `<span>ENVOI...</span>`;
+    
+    try {
+        // Envoi réel vers Google
+        await fetch('TA_URL_GOOGLE_SCRIPT', {
+            method: 'POST',
+            mode: 'no-cors',
+            body: JSON.stringify({ interventions: state.batch })
+        });
+
+        // Succès : On prépare les infos pour l'historique visuel
+        const now = new Date().toLocaleTimeString('fr-FR', {hour: '2min', minute: '2min'});
+        
+        state.batch.forEach(vehicule => {
+            state.sentHistory.push({
+                vin: vehicule.vin,
+                type: vehicule.type,
+                windowsCount: vehicule.windows.length,
+                obs: vehicule.obs,
+                sentTime: now
+            });
+        });
+
+        // On vide le lot actuel et on met à jour l'historique
+        state.batch = [];
+        updateBatchUI(); // Vide la liste d'attente
+        updateHistoryUI(); // Remplit le menu déroulant
+        
+        alert("TERMINÉ ! Les données sont enregistrées.");
+    } catch(e) {
+        alert("Erreur réseau");
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<span>FINALISER L'ENVOI</span><i data-lucide="send" class="w-5 h-5"></i>`;
+        lucide.createIcons();
+    }
+}
+
 function renderPhotos() {
     const container = document.getElementById('photo-preview-container');
     // On garde uniquement le premier élément (le bouton "Ajouter")

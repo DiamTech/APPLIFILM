@@ -1032,11 +1032,11 @@ function selectLoanForReturn(immat) {
     const loan = state.activeLoans.find(l => l.immat === immat);
     if (!loan) return alert("❌ Dossier introuvable.");
 
-    // A. ACTIVATION DU MODE RETOUR ET VERROUILLAGE
+    // A. MODE RETOUR ET VERROUILLAGE
     state.pretMode = 'RETOUR';
-    toggleFormLock(true); // <--- Ici on bloque les champs identité
+    toggleFormLock(true); 
 
-    // B. REMPLISSAGE IDENTITÉ (Lecture seule)
+    // B. REMPLISSAGE IDENTITÉ
     document.getElementById('pret-vehicule-select').value = loan.immat;
     document.getElementById('pret-nom').value = loan.nom || "";
     document.getElementById('pret-lieu-naiss').value = loan.lieu_naiss || "";
@@ -1050,27 +1050,37 @@ function selectLoanForReturn(immat) {
         }
     }
 
-    // C. CHAMPS ÉDITABLES (Kilométrage, Essence, Obs)
+    // C. CHAMPS ÉDITABLES
     state.pret.km_depart_initial = parseInt(loan.km) || 0;
     const kmInput = document.getElementById('pret-km-depart');
     if(kmInput) {
         kmInput.placeholder = "Départ : " + loan.km + " km";
-        kmInput.value = ""; // Vide pour saisir le retour
+        kmInput.value = ""; 
     }
-    
-    // Le champ Carburant reste éditable par défaut (car non listé dans toggleFormLock)
 
-    // D. PHOTOS DU PERMIS (Affichage seulement)
+    // D. TRANSFORMATION DES ZONES D'UPLOAD EN GALERIE
     const renderPhoto = (id, url) => {
         const zone = document.getElementById(id);
-        if (url && url.length > 10) {
-            zone.innerHTML = `<img src="${url}" referrerpolicy="no-referrer" class="w-full h-full object-cover rounded-xl border-2 border-indigo-200">`;
+        if (url && url.startsWith('http')) {
+            // On remplace tout le contenu de la zone par l'image
+            // referrerpolicy="no-referrer" est CRUCIAL pour Google Drive
+            zone.innerHTML = `
+                <img src="${url}" 
+                     referrerpolicy="no-referrer" 
+                     class="w-full h-full object-cover rounded-xl border-2 border-indigo-500 shadow-lg">
+            `;
+            // On désactive physiquement le clic pour ne pas ouvrir l'appareil photo
+            zone.style.pointerEvents = "none";
+            zone.style.border = "none";
+        } else {
+            zone.innerHTML = `<div class="text-[10px] text-slate-400 italic">Pas de photo</div>`;
         }
     };
+    
     renderPhoto('preview-recto', loan.recto);
     renderPhoto('preview-verso', loan.verso);
 
-    // E. RÉCUPÉRATION DES DÉGÂTS (Anciens en gris)
+    // E. RÉCUPÉRATION DES DÉGÂTS
     try {
         const savedCoords = loan.degats_coords || loan.coords; 
         const oldCoords = JSON.parse(savedCoords || "[]");
@@ -1086,10 +1096,33 @@ function selectLoanForReturn(immat) {
         obsField.value = "PRÉCÉDEMMENT : " + (loan.details || "RAS") + "\n--- NOTES RETOUR ---\n";
     }
 
-    // G. CHANGEMENT DE VUE (Si tu as la fonction)
     if (typeof switchView === 'function') switchView('pret');
+    alert("✅ Dossier chargé. Photos du permis affichées.");
+}
 
-    alert("📂 Dossier " + immat + " prêt.\nNotez les nouveaux dégâts (ROUGE) et le KM retour.");
+function resetPretForm() {
+    state.pretMode = 'DEPART';
+    toggleFormLock(false);
+
+    // On remet le contenu d'origine dans les boites de photos
+    const resetZone = (id, label) => {
+        const zone = document.getElementById(id);
+        zone.style.pointerEvents = "auto";
+        zone.style.border = "2px dashed #e2e8f0"; // Style d'origine
+        zone.innerHTML = `
+            <input type="file" accept="image/*" capture="environment" class="hidden" onchange="handlePhoto(this, '${id}')">
+            <i data-lucide="camera" class="w-5 h-5 text-slate-400"></i>
+            <span class="text-[8px] mt-1 text-slate-400 font-bold uppercase">${label}</span>
+        `;
+    };
+
+    resetZone('preview-recto', 'Recto');
+    resetZone('preview-verso', 'Verso');
+
+    // Relancer les icônes Lucide
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    
+    // ... reste de ton reset (vider les inputs etc) ...
 }
 
 function renderDamages() {

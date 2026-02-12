@@ -272,11 +272,22 @@ async function finalize() {
     }
 }
 
-function toggleDarkMode() { 
-    const isDark = document.documentElement.classList.toggle('dark'); 
+function toggleDarkMode() {
+    const isDark = document.documentElement.classList.toggle('dark');
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    
+    // Mise à jour de l'icône si nécessaire
     const icon = document.getElementById('dark-icon');
-    if(icon) icon.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
-    lucide.createIcons();
+    if (icon) {
+        icon.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
+        lucide.createIcons();
+    }
+}
+
+// Au chargement de la page, appliquer le thème sauvegardé
+if (localStorage.getItem('theme') === 'dark' || 
+    (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    document.documentElement.classList.add('dark');
 }
 
 // --- GESTION DU MENU ---

@@ -295,23 +295,25 @@ function closeSignature() {
 // 6. ENVOI FINAL (SHEETDB)
 // ==========================================
 async function finalize() {
-    if (state.batch.length === 0) return alert("Le lot est vide !");
-    if (!state.signature) return alert("Merci de signer avant d'envoyer.");
+    if (state.batch.length === 0) return alert("⚠️ Le lot est vide !");
+    if (!state.signature) return alert("⚠️ Merci de signer avant d'envoyer.");
 
-    // 1. Animation du bouton
     const finalBtn = document.querySelector('button[onclick="finalize()"]');
     const originalContent = finalBtn.innerHTML;
+
+    // Bloquer le bouton et lancer l'animation
     finalBtn.disabled = true;
     finalBtn.innerHTML = `
-        <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <svg class="animate-spin h-5 w-5 mr-2 text-white" viewBox="0 0 24 24" style="display:inline-block; vertical-align:middle;">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
         </svg>
         <span>ENVOI EN COURS...</span>
     `;
 
     try {
-        const response = await fetch("TON_URL_SHEETDB", {
+        console.log("Tentative d'envoi...");
+        const response = await fetch("TON_URL_SHEETDB", { // <--- VÉRIFIE BIEN TON URL ICI
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -326,19 +328,26 @@ async function finalize() {
             })
         });
 
+        console.log("Réponse reçue:", response.status);
+
         if (response.ok) {
-            finalBtn.innerHTML = `<i data-lucide="check"></i> TRANSMIS !`;
-            finalBtn.classList.replace('bg-green-600', 'bg-blue-600');
+            finalBtn.innerHTML = "✅ TRANSMIS !";
+            finalBtn.style.backgroundColor = "#2563eb"; // Devient bleu
             
+            // Petit délai pour laisser le temps de voir le succès
             setTimeout(() => {
                 alert("🚀 Données envoyées avec succès !");
                 localStorage.clear();
                 location.reload();
-            }, 1000);
+            }, 500);
+        } else {
+            throw new Error("Erreur serveur");
         }
+
     } catch (error) {
-        finalBtn.innerHTML = originalContent;
+        console.error("Erreur détaillée:", error);
         finalBtn.disabled = false;
-        alert("Erreur réseau. Réessayez.");
+        finalBtn.innerHTML = originalContent;
+        alert("❌ Erreur d'envoi. Vérifiez votre connexion internet ou l'URL de l'API.");
     }
 }

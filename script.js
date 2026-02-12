@@ -1,37 +1,103 @@
 let state = { vin: "", selectedWindows: [], photos: [], batch: [], signature: null };
+let scanner;
 let canvas, ctx, drawing = false;
 
 // --- INITIALISATION ---
 window.addEventListener('DOMContentLoaded', () => {
-    initCanvas();
+    initSignature();
+    lucide.createIcons();
     setTimeout(() => {
-        document.getElementById('splash-screen').style.opacity = '0';
-        setTimeout(() => document.getElementById('splash-screen').remove(), 500);
-    }, 1000);
+        const splash = document.getElementById('splash-screen');
+        if(splash) {
+            splash.style.opacity = '0';
+            setTimeout(() => splash.remove(), 500);
+        }
+    }, 1200);
 });
 
-// --- SIGNATURE MODALE ---
-function initCanvas() {
+// --- SCANNER VIN (Correction) ---
+async function startScanner() {
+    const readerDiv = document.getElementById('reader');
+    readerDiv.classList.toggle('hidden');
+    
+    if (readerDiv.classList.contains('hidden')) {
+        if(scanner) await scanner.stop();
+        return;
+    }
+
+    scanner = new Html5Qrcode("reader");
+    const config = { fps: 10, qrbox: { width: 250, height: 150 } };
+
+    try {
+        await scanner.start({ facingMode: "environment" }, config, (text) => {
+            document.getElementById('vin-input').value = text;
+            stopScanner();
+        });
+    } catch (err) {
+        alert("Erreur caméra : Vérifiez les autorisations.");
+        readerDiv.classList.add('hidden');
+    }
+}
+
+async function stopScanner() {
+    if (scanner) {
+        await scanner.stop();
+        document.getElementById('reader').classList.add('hidden');
+    }
+}
+
+// --- SIGNATURE (Tracé Fiabilisé) ---
+function initSignature() {
     canvas = document.getElementById('canvas');
     ctx = canvas.getContext('2d');
+    
     const resize = () => {
-        canvas.width = canvas.offsetWidth;
-        canvas.height = canvas.offsetHeight;
-        ctx.strokeStyle = "#4f46e5"; ctx.lineWidth = 3; ctx.lineCap = "round";
+        const parent = canvas.parentElement;
+        canvas.width = parent.clientWidth;
+        canvas.height = 256; // h-64
+        ctx.strokeStyle = "#4f46e5";
+        ctx.lineWidth = 3;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
     };
-    window.addEventListener('resize', resize); resize();
+    
+    window.addEventListener('resize', resize);
+    resize();
 
     const getPos = (e) => {
         const rect = canvas.getBoundingClientRect();
         const ev = e.touches ? e.touches[0] : e;
-        return { x: ev.clientX - rect.left, y: ev.clientY - rect.top };
+        return {
+            x: (ev.clientX - rect.left) * (canvas.width / rect.width),
+            y: (ev.clientY - rect.top) * (canvas.height / rect.height)
+        };
     };
-    const start = (e) => { drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); };
-    const move = (e) => { if(!drawing) return; e.preventDefault(); const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); };
-    const stop = () => drawing = false;
 
-    canvas.addEventListener('mousedown', start); canvas.addEventListener('mousemove', move); window.addEventListener('mouseup', stop);
-    canvas.addEventListener('touchstart', start, {passive: false}); canvas.addEventListener('touchmove', move, {passive: false}); canvas.addEventListener('touchend', stop);
+    const start = (e) => {
+        e.preventDefault();
+        drawing = true;
+        const p = getPos(e);
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+    };
+
+    const move = (e) => {
+        if (!drawing) return;
+        e.preventDefault();
+        const p = getPos(e);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+    };
+
+    const stop = () => { drawing = false; ctx.closePath(); };
+
+    canvas.addEventListener('mousedown', start);
+    canvas.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', stop);
+    
+    canvas.addEventListener('touchstart', start, { passive: false });
+    canvas.addEventListener('touchmove', move, { passive: false });
+    canvas.addEventListener('touchend', stop);
 }
 
 function openSignature() { document.getElementById('modal-sig').classList.remove('hidden'); }
@@ -39,6 +105,7 @@ function closeSignature() { document.getElementById('modal-sig').classList.add('
 function clearCanvas() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
 
 function saveSignature() {
+    // Vérifier si le canvas est vide (optionnel)
     state.signature = canvas.toDataURL();
     document.getElementById('btn-sig-open').classList.add('hidden');
     document.getElementById('sig-status').classList.remove('hidden');
@@ -52,7 +119,7 @@ function resetSignature() {
     document.getElementById('sig-status').classList.add('hidden');
 }
 
-// --- MÉTIER ---
+// --- LOGIQUE MÉTIER ---
 function toggleWindow(id) {
     const btn = document.getElementById('win-' + id);
     if(state.selectedWindows.includes(id)) {
@@ -70,13 +137,15 @@ function handlePhotos(input) {
         r.onload = (e) => state.photos.push(e.target.result);
         r.readAsDataURL(f);
     });
-    setTimeout(() => document.getElementById('photo-count').innerText = state.photos.length, 500);
+    setTimeout(() => {
+        document.getElementById('photo-count').innerText = state.photos.length;
+    }, 500);
 }
 
 function addToBatch() {
     const vin = document.getElementById('vin-input').value;
-    if(!vin && state.selectedWindows.length === 0) return alert("Saisie vide !");
-    
+    if(!vin && state.selectedWindows.length === 0) return alert("Remplissez le VIN ou cochez une vitre.");
+
     state.batch.push({
         vin: vin || "SANS VIN",
         type: document.querySelector('input[name="type"]:checked').value,
@@ -84,43 +153,60 @@ function addToBatch() {
         windows: [...state.selectedWindows],
         photos: [...state.photos],
         sig: state.signature,
-        date: new Date().toLocaleTimeString()
+        date: new Date().toLocaleTimeString('fr-FR')
     });
 
-    // Reset UI
+    // Reset
     document.getElementById('vin-input').value = "";
     document.getElementById('obs').value = "";
     document.querySelectorAll('.window-btn').forEach(b => b.classList.remove('selected'));
     state.selectedWindows = []; state.photos = []; resetSignature();
     document.getElementById('photo-count').innerText = "0";
     updateBatchUI();
+    alert("Véhicule ajouté au lot !");
 }
 
 function updateBatchUI() {
     document.getElementById('batch-counter').innerText = `${state.batch.length} lot(s)`;
     const list = document.getElementById('batch-list');
     list.innerHTML = state.batch.map((item, i) => `
-        <div class="flex justify-between p-3 border-b dark:border-slate-700 last:border-0 bg-slate-50 dark:bg-slate-900 rounded-xl mb-1">
-            <span class="font-bold font-mono">${item.vin}</span>
-            <button onclick="state.batch.splice(${i},1); updateBatchUI()" class="text-red-500">✕</button>
+        <div class="flex justify-between items-center p-3 mb-2 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-700">
+            <div class="flex flex-col">
+                <span class="font-black text-indigo-600 text-[10px]">${item.vin}</span>
+                <span class="text-[8px] text-slate-400 uppercase">${item.type} • ${item.windows.length} vitres</span>
+            </div>
+            <button onclick="state.batch.splice(${i},1); updateBatchUI()" class="text-red-400 p-2">✕</button>
         </div>
-    `).join('') || '<p class="p-4 text-center text-slate-400">Aucun lot</p>';
+    `).join('') || '<p class="text-center text-slate-400 py-4">Aucun lot en attente</p>';
 }
 
-function toggleHistoryMenu() { document.getElementById('history-menu').classList.toggle('hidden'); }
+function toggleHistoryMenu() { 
+    document.getElementById('history-menu').classList.toggle('hidden'); 
+}
 
 async function finalize() {
-    if(!state.batch.length) return alert("Aucun lot à envoyer");
+    if(!state.batch.length) return alert("Le lot est vide !");
     const btn = document.getElementById('btn-final');
-    btn.disabled = true; btn.innerText = "ENVOI EN COURS...";
+    btn.disabled = true;
+    btn.innerHTML = `<span>ENVOI EN COURS...</span>`;
+    
     try {
+        // Remplace par ton URL Google Script /exec
         await fetch('https://script.google.com/macros/s/AKfycbybQoN5JD72b3o3KlePS3ZCFtr2nL5TJJizmnGGLxZopWAQFwB9aPiJZGSWYMmIxwSX/exec', {
-            method: 'POST', mode: 'no-cors', body: JSON.stringify({interventions: state.batch})
+            method: 'POST',
+            mode: 'no-cors',
+            body: JSON.stringify({ interventions: state.batch })
         });
-        alert("BRAVO ! Tournée envoyée avec succès.");
-        state.batch = []; updateBatchUI();
-    } catch(e) { alert("Erreur de connexion"); }
-    btn.disabled = false; btn.innerText = "FINALISER L'ENVOI";
+        alert("TERMINÉ ! Toutes les données sont sur Google Drive.");
+        state.batch = [];
+        updateBatchUI();
+    } catch(e) {
+        alert("Erreur de connexion. Vérifiez votre 4G/5G.");
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<span>FINALISER L'ENVOI</span><i data-lucide="send" class="w-5 h-5"></i>`;
+        lucide.createIcons();
+    }
 }
 
 function toggleDarkMode() {

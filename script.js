@@ -30,6 +30,49 @@ window.addEventListener('load', () => {
     }, 1500); // Temps d'affichage du logo (1.5 seconde)
 });
 
+// On ajoute un tableau d'images dans l'état actuel
+state.photos = [];
+
+function handlePhotos(input) {
+    const files = Array.from(input.files);
+    
+    files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const base64Image = e.target.result;
+            state.photos.push(base64Image);
+            renderPhotos();
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function renderPhotos() {
+    const container = document.getElementById('photo-preview-container');
+    // On garde seulement le premier élément (le bouton +)
+    const addButton = container.firstElementChild;
+    container.innerHTML = '';
+    container.appendChild(addButton);
+
+    state.photos.forEach((photo, index) => {
+        const div = document.createElement('div');
+        div.className = "relative aspect-square rounded-2xl overflow-hidden border border-slate-200 shadow-sm animate-in";
+        div.innerHTML = `
+            <img src="${photo}" class="w-full h-full object-cover">
+            <button onclick="removePhoto(${index})" class="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 shadow-lg">
+                <i data-lucide="x" class="w-3 h-3"></i>
+            </button>
+        `;
+        container.appendChild(div);
+    });
+    if (window.lucide) lucide.createIcons();
+}
+
+function removePhoto(index) {
+    state.photos.splice(index, 1);
+    renderPhotos();
+}
+
 function toggleHistory() {
     const sidebar = document.getElementById('history-sidebar');
     const overlay = document.getElementById('history-overlay');
@@ -186,35 +229,46 @@ function toggleWindow(windowId) {
 
 // --- 5. AJOUT AU LOT ---
 function addToBatch() {
-    const vinInput = document.getElementById('vin-input');
-    const obsInput = document.getElementById('observation-input');
-    const vin = vinInput.value.trim();
-
-    if (!vin) return showModal("Champ vide", "Merci de scanner ou saisir un VIN.", "info");
-    if (selectedWindows.length === 0) return showModal("Plan vide", "Sélectionnez au moins une vitre.", "info");
-
+    const vin = document.getElementById('vin-input').value.trim();
     const typeInter = document.querySelector('input[name="type_inter"]:checked').value;
+    const obs = document.getElementById('observation-input').value;
 
-    state.batch.push({
-        vin: vin.toUpperCase(),
-        windows: [...selectedWindows],
+    // 1. On vérifie qu'il y a au moins un VIN ou une vitre sélectionnée
+    if (!vin && state.selectedWindows.length === 0) {
+        showModal('Erreur', 'Veuillez saisir un VIN ou sélectionner des vitres.', 'error');
+        return;
+    }
+
+    // 2. ON CRÉE L'ENTRÉE AVEC LES PHOTOS
+    const entry = {
+        id: Date.now(),
+        vin: vin || "NON SPÉCIFIÉ",
         type: typeInter,
-        timestamp: new Date().toLocaleString('fr-FR'),
-        obs: obsInput.value.trim() || "RAS"
-    });
+        windows: [...state.selectedWindows],
+        observations: obs,
+        photos: [...state.photos], // <--- ON AJOUTE LES PHOTOS ICI
+        date: new Date().toLocaleString()
+    };
 
-    saveState();
+    // 3. On ajoute à la liste globale
+    state.batch.push(entry);
+
+    // 4. ON RÉINITIALISE TOUT POUR LE PROCHAIN SCAN
+    state.selectedWindows = [];
+    state.photos = []; // On vide les photos stockées
+    document.getElementById('observation-input').value = '';
+    document.getElementById('vin-input').value = '';
+    
+    // On met à jour l'affichage
     renderBatch();
-
-    // Reset interface
-    vinInput.value = "";
-    obsInput.value = "";
-    selectedWindows = [];
+    renderPhotos(); // Pour vider les miniatures à l'écran
+    updateBatchCount();
+    
+    // On remet les boutons des vitres en blanc
     document.querySelectorAll('.window-btn').forEach(btn => btn.classList.remove('selected'));
     
-    showModal("Ajouté !", "Le véhicule est dans la liste.", "success");
+    showModal('Ajouté !', 'L\'intervention a été ajoutée au lot.', 'success');
 }
-
 function renderBatch() {
     const container = document.getElementById('batch-container');
     document.getElementById('batch-count').innerText = state.batch.length;

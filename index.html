@@ -129,5 +129,17 @@
     </div>
 
     <script src="script.js?v=73"></script>
+    <div id="custom-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[300] hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-xs rounded-3xl p-6 shadow-2xl scale-95 transition-all">
+        <div id="modal-icon" class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <i data-lucide="info" class="w-8 h-8"></i>
+        </div>
+        <h3 id="modal-title" class="text-center font-bold text-slate-800 text-lg">Message</h3>
+        <p id="modal-text" class="text-center text-slate-500 text-sm mt-2 mb-6">Description du message ici.</p>
+        <button onclick="closeModal()" class="w-full bg-slate-800 text-white p-4 rounded-2xl font-bold shadow-lg active:scale-95 transition-all">
+            D'ACCORD
+        </button>
+    </div>
+</div>
 </body>
 </html>

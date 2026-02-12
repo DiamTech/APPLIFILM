@@ -590,7 +590,20 @@ async function finalizePret() {
     
     // 1. RÉCUPÉRATION DES DONNÉES DE BASE
     const selectVehicule = document.getElementById('pret-vehicule-select');
-    const plaqueAuto = selectVehicule ? selectVehicule.value : "";
+    const fullSelectValue = selectVehicule ? selectVehicule.value : ""; // "Citroen C3 : DC-580-DS"
+
+    // --- NOUVEAU : DÉCOUPAGE MODÈLE ET PLAQUE ---
+    let modeleExtraite = "Véhicule";
+    let plaqueAuto = "";
+
+    if (fullSelectValue.includes(':')) {
+        const parts = fullSelectValue.split(':');
+        modeleExtraite = parts[0].trim();
+        plaqueAuto = parts[1].trim();
+    } else {
+        plaqueAuto = fullSelectValue;
+    }
+
     const kmSaisi = parseInt(document.getElementById('pret-km-depart')?.value) || 0;
 
     const inputs = {
@@ -602,12 +615,13 @@ async function finalizePret() {
     };
 
     // 2. VÉRIFICATIONS DE SÉCURITÉ
-    if (!plaqueAuto || plaqueAuto === "N/C") return alert("⚠️ Veuillez choisir un véhicule !");
+    if (!plaqueAuto || plaqueAuto === "N/C" || plaqueAuto === "-- Choisir un véhicule --") {
+        return alert("⚠️ Veuillez choisir un véhicule !");
+    }
     if (!kmSaisi || kmSaisi <= 0) return alert("⚠️ Veuillez saisir le kilométrage !");
     if (!state.signature) return alert("⚠️ La signature du client est obligatoire !");
     if (!state.pret.inspectionValidated) return alert("⚠️ Vous devez valider l'inspection (bouton Confirmer) !");
 
-    // Sécurité supplémentaire : si c'est un DÉPART, on exige les infos client
     if (state.pretMode === "DEPART") {
         if (!inputs.nom || !inputs.dob || !inputs.permis_num) {
             return alert("⚠️ Infos client incomplètes pour un départ !");
@@ -626,7 +640,6 @@ async function finalizePret() {
             : "Aucun dégât signalé (Véhicule intact)";
     }
 
-    // --- CALCUL DES KM SI C'EST UN RETOUR ---
     let kmInfoMessage = "";
     if (state.pretMode === "RETOUR" && state.pret.km_depart_initial) {
         const diff = kmSaisi - state.pret.km_depart_initial;
@@ -637,8 +650,9 @@ async function finalizePret() {
     // 4. PRÉPARATION DU PAQUET (PAYLOAD)
     const payload = {
         type: "PRET",
-        status: state.pretMode, // DEPART ou RETOUR
-        immat: plaqueAuto,
+        status: state.pretMode, 
+        immat: plaqueAuto,      // Va en colonne B
+        modele: modeleExtraite, // VA EN COLONNE O (C'est ce qui manquait !)
         km: kmSaisi,
         nom: inputs.nom,
         dob: inputs.dob,
@@ -679,7 +693,6 @@ async function finalizePret() {
         btn.innerText = originalText;
     }
 }
-
 // Petite fonction pour tout vider proprement
 function resetPretForm() {
     state.signature = null;

@@ -6,6 +6,8 @@ let state = {
     batch: [], 
     signature: null,
     sentHistory: [],
+    // AJOUTE BIEN CETTE LIGNE CI-DESSOUS :
+    pret: { permis_recto: null, permis_verso: null },
     vehiculeType: 'VOITURE'
 };
 
@@ -60,24 +62,32 @@ function switchView(view) {
 // ==========================================
 
 // 1. Gestion des photos Permis (Recto/Verso)
-function handlePermis(input, face) {
+function handlePermis(input, type) {
     const file = input.files[0];
     if (!file) return;
-    
+
     const reader = new FileReader();
     reader.onload = (e) => {
-        // Sauvegarde l'image dans le state
-        state.pret[face === 'recto' ? 'permis_recto' : 'permis_verso'] = e.target.result;
+        // 1. On enregistre la photo dans l'état
+        if (type === 'recto') state.pret.permis_recto = e.target.result;
+        if (type === 'verso') state.pret.permis_verso = e.target.result;
+
+        // 2. On affiche la miniature dans le carré correspondant
+        const previewId = type === 'recto' ? 'preview-recto' : 'preview-verso';
+        const container = document.getElementById(previewId);
         
-        // Mise à jour visuelle du cadre (Devient Vert)
-        const parent = input.parentElement;
-        parent.className = "aspect-[1.6/1] flex flex-col items-center justify-center border-2 border-solid border-green-500 bg-green-50 dark:bg-green-900/20 rounded-2xl cursor-pointer";
-        parent.querySelector('span').innerText = face.toUpperCase() + " OK";
-        parent.querySelector('i').classList.replace('text-slate-400', 'text-green-500');
+        if (container) {
+            container.innerHTML = `
+                <img src="${e.target.result}" class="w-full h-full object-cover rounded-xl">
+                <div class="absolute top-1 right-1 bg-green-500 text-white rounded-full p-1">
+                    <i data-lucide="check" class="w-3 h-3"></i>
+                </div>
+            `;
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
     };
     reader.readAsDataURL(file);
 }
-
 // 2. Valider le départ (Fonction du bouton "Valider le départ")
 function savePret() {
     try {

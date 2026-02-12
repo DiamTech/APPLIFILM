@@ -851,4 +851,68 @@ function validateInspection() {
     alert("Inspection validée. Vous pouvez maintenant faire signer le client.");
 }
 
+// On définit le mode par défaut
+state.pretMode = 'DEPART'; 
+
+function setPretMode(mode) {
+    state.pretMode = mode;
+    const isDepart = mode === 'DEPART';
+    
+    // 1. Mise à jour visuelle des boutons du haut
+    const btnDepart = document.getElementById('btn-mode-depart');
+    const btnRetour = document.getElementById('btn-mode-retour');
+    const btnFinal = document.getElementById('btn-final-pret');
+    const title = document.querySelector('#view-pret h2');
+
+    if (isDepart) {
+        btnDepart.className = "flex-1 py-3 rounded-xl font-black text-[10px] uppercase bg-white shadow-sm text-indigo-600";
+        btnRetour.className = "flex-1 py-3 rounded-xl font-black text-[10px] uppercase text-slate-500";
+        btnFinal.innerHTML = '<span>Valider le départ</span> <i data-lucide="check" class="w-4 h-4"></i>';
+        title.innerText = "Nouveau Prêt";
+        document.getElementById('active-loans-list').classList.add('hidden');
+        resetPretForm(); // On vide tout pour un nouveau prêt
+    } else {
+        btnRetour.className = "flex-1 py-3 rounded-xl font-black text-[10px] uppercase bg-white shadow-sm text-indigo-600";
+        btnDepart.className = "flex-1 py-3 rounded-xl font-black text-[10px] uppercase text-slate-500";
+        btnFinal.innerHTML = '<span>Enregistrer le retour</span> <i data-lucide="log-in" class="w-4 h-4"></i>';
+        title.innerText = "Retour de Véhicule";
+        document.getElementById('active-loans-list').classList.remove('hidden');
+        
+        // On lance la récupération des véhicules dehors
+        fetchActiveLoans();
+    }
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+async function fetchActiveLoans() {
+    const container = document.getElementById('loans-container');
+    container.innerHTML = '<div class="text-[10px] font-bold text-center py-4 text-slate-400">CHARGEMENT DES PRÊTS...</div>';
+
+    try {
+        // IMPORTANT : On demande au sheet de nous donner la liste
+        const response = await fetch(URL_PRET + "?action=get_active");
+        const loans = await response.json();
+        
+        if (!loans || loans.length === 0) {
+            container.innerHTML = '<div class="text-[10px] font-bold text-center py-4 text-slate-400 italic">AUCUN VÉHICULE DEHORS</div>';
+            return;
+        }
+
+        container.innerHTML = loans.map(loan => `
+            <button type="button" onclick="selectLoanForReturn('${loan.immat}')" class="w-full bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 text-left flex justify-between items-center active:scale-95 transition-all shadow-sm">
+                <div>
+                    <div class="font-black text-indigo-600 text-sm">${loan.immat}</div>
+                    <div class="text-[10px] font-bold text-slate-400 uppercase">${loan.nom}</div>
+                </div>
+                <div class="text-right">
+                    <div class="text-[9px] font-bold text-slate-300">${loan.date}</div>
+                    <div class="text-[9px] font-black text-indigo-400 uppercase">${loan.km_depart} KM</div>
+                </div>
+            </button>
+        `).join('');
+    } catch (e) {
+        container.innerHTML = '<div class="text-[10px] font-bold text-center py-4 text-red-400">ERREUR DE CHARGEMENT</div>';
+    }
+}
+
 setTimeout(() => setVehicle('VOITURE'), 200);

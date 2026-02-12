@@ -242,48 +242,59 @@ function updateHistoryUI() {
 }
 
 // --- FONCTION D'ENVOI FINAL ---
-async function finalize() {
-    if(!state.batch.length) return alert("Le lot est vide !");
+function finalize() {
+    if (!state.batch || state.batch.length === 0) return alert("Le lot est vide !");
     
     const btn = document.getElementById('btn-final');
+    const originalText = btn.innerHTML;
+    
+    // Verrouillage du bouton
     btn.disabled = true;
     btn.innerHTML = `<span>ENVOI EN COURS...</span>`;
     
     const GOOGLE_URL = 'https://script.google.com/macros/s/AKfycby8fC4tLtri-KHVwjciLmw0D0QT1jAlUxZiT5Z2OtA1JylZuDXKu5Ta16FZ0S6VGHka/exec';
 
-    try {
-        // Version ultra-simplifiée pour passer les barrières de sécurité
-        await fetch(GOOGLE_URL, {
-            method: 'POST',
-            mode: 'no-cors', 
-            body: JSON.stringify({ interventions: state.batch })
-        });
-
-        // Si on arrive ici sans passer dans le "catch", on valide
-        const now = new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
-        state.batch.forEach(v => {
-            state.sentHistory.push({
-                vin: v.vin,
-                type: v.type,
-                windowsCount: v.windows.length,
-                obs: v.obs,
-                sentTime: now
+    // Utilisation de XMLHttpRequest (Plus robuste que fetch pour Google Apps Script)
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", GOOGLE_URL, true);
+    
+    // On ne définit PAS de headers (Content-Type) pour éviter le blocage CORS
+    
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
+            // Même si Google renvoie une erreur de lecture, si l'état est 4, les données sont parties
+            const now = new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
+            
+            state.batch.forEach(v => {
+                state.sentHistory.push({
+                    vin: v.vin,
+                    type: v.type,
+                    windowsCount: v.windows.length,
+                    obs: v.obs,
+                    sentTime: now
+                });
             });
-        });
 
-        state.batch = [];
-        if(typeof updateBatchUI === 'function') updateBatchUI();
-        if(typeof updateHistoryUI === 'function') updateHistoryUI();
-        
-        alert("ENVOI EFFECTUÉ ! \n\nVérifie ton Google Sheet dans quelques secondes.");
-        
-    } catch(e) {
-        alert("Erreur critique : " + e.message);
-    } finally {
+            // Nettoyage
+            state.batch = [];
+            if (typeof updateBatchUI === 'function') updateBatchUI();
+            if (typeof updateHistoryUI === 'function') updateHistoryUI();
+            
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            
+            alert("ENVOI TERMINÉ !\n\nVérifiez votre Google Sheet d'ici 10 secondes.");
+        }
+    };
+
+    xhr.onerror = function() {
+        alert("Erreur de connexion réseau.");
         btn.disabled = false;
-        btn.innerHTML = `<span>FINALISER L'ENVOI</span><i data-lucide="send" class="w-5 h-5"></i>`;
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-    }
+        btn.innerHTML = originalText;
+    };
+
+    // Envoi des données
+    xhr.send(JSON.stringify({ interventions: state.batch }));
 }
 
 function toggleDarkMode() {

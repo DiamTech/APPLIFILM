@@ -105,33 +105,39 @@
         <section class="bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
     <label class="block text-[10px] font-black text-slate-400 uppercase mb-6 text-center tracking-[0.2em]">Plan d'intervention</label>
     
-    <div class="relative mx-auto" style="width: 260px; height: 500px;">
+    <div class="relative mx-auto" style="width: 280px; height: 520px;">
         
         <svg viewBox="0 0 200 450" class="absolute inset-0 w-full h-full fill-none stroke-slate-300 dark:stroke-slate-600 transition-colors" stroke-width="1.5">
-            <path d="M50 20 C50 10, 150 10, 150 20 L160 80 L160 400 C160 420, 40 420, 40 400 L40 80 Z" />
-            <path d="M55 35 C55 25, 145 25, 145 35 L150 70 L50 70 Z" />
-            <rect x="75" y="110" width="50" height="35" rx="5" />
-            <rect x="75" y="320" width="50" height="35" rx="5" />
-            <path d="M40 50 L30 50 C25 50, 25 65, 30 65 L40 65" />
-            <path d="M160 50 L170 50 C175 50, 175 65, 170 65 L160 65" />
-            <path d="M60 410 L140 410" stroke-width="3" />
+            <path d="M50 20 C50 10, 150 10, 150 20 L165 90 L165 400 C165 425, 35 425, 35 400 L35 90 Z" />
+            <path d="M55 35 C55 25, 145 25, 145 35 L155 80 L45 80 Z" />
+            <rect x="65" y="125" width="70" height="45" rx="5" />
+            <rect x="65" y="325" width="70" height="45" rx="5" />
+            <path d="M35 60 L20 60 C15 60, 15 75, 20 75 L35 75" />
+            <path d="M165 60 L180 60 C185 60, 185 75, 180 75 L165 75" />
         </svg>
 
-        <button onclick="toggleWindow('Pare-Brise')" id="win-Pare-Brise" class="window-btn absolute top-[15px] left-1/2 -translate-x-1/2 w-32 h-10 rounded-xl text-[9px] font-bold bg-white shadow-sm">PARE-BRISE</button>
-        <button onclick="toggleWindow('Toit-Av')" id="win-Toit-Av" class="window-btn absolute top-[112px] left-1/2 -translate-x-1/2 w-16 h-8 rounded-lg text-[8px] font-bold bg-white">TOIT AV</button>
-        <button onclick="toggleWindow('Toit-Ar')" id="win-Toit-Ar" class="window-btn absolute top-[322px] left-1/2 -translate-x-1/2 w-16 h-8 rounded-lg text-[8px] font-bold bg-white">TOIT AR</button>
-        <button onclick="toggleWindow('Lunette')" id="win-Lunette" class="window-btn absolute bottom-[10px] left-1/2 -translate-x-1/2 w-28 h-10 rounded-xl text-[9px] font-bold bg-white shadow-sm">LUNETTE</button>
+        <button onclick="toggleWindow('Pare-Brise')" id="win-Pare-Brise" 
+            class="window-btn absolute top-[20px] left-1/2 w-40 h-14 rounded-2xl text-[10px] font-bold bg-white shadow-md -ml-20">PARE-BRISE</button>
+        
+        <button onclick="toggleWindow('Toit-Av')" id="win-Toit-Av" 
+            class="window-btn absolute top-[125px] left-1/2 w-20 h-12 rounded-xl text-[9px] font-bold bg-white shadow-sm -ml-10">TOIT AV</button>
+        
+        <button onclick="toggleWindow('Toit-Ar')" id="win-Toit-Ar" 
+            class="window-btn absolute top-[325px] left-1/2 w-20 h-12 rounded-xl text-[9px] font-bold bg-white shadow-sm -ml-10">TOIT AR</button>
+        
+        <button onclick="toggleWindow('Lunette')" id="win-Lunette" 
+            class="window-btn absolute bottom-[15px] left-1/2 w-32 h-14 rounded-2xl text-[10px] font-bold bg-white shadow-md -ml-16">LUNETTE</button>
 
-        <div class="absolute left-[-20px] top-[80px] bottom-[60px] flex flex-col justify-between items-end py-10 w-20">
-            <button onclick="toggleWindow('AV-G')" id="win-AV-G" class="window-btn w-14 h-14 rounded-xl text-[8px] bg-white font-bold">AV-G</button>
-            <button onclick="toggleWindow('CT-G')" id="win-CT-G" class="window-btn w-14 h-20 rounded-xl text-[8px] bg-white font-bold">MILIEU-G</button>
-            <button onclick="toggleWindow('AR-G')" id="win-AR-G" class="window-btn w-14 h-14 rounded-xl text-[8px] bg-white font-bold">AR-G</button>
+        <div class="absolute left-[-25px] top-[90px] bottom-[70px] flex flex-col justify-between items-end py-8 w-24">
+            <button onclick="toggleWindow('AV-G')" id="win-AV-G" class="window-btn w-16 h-16 rounded-2xl text-[9px] bg-white font-bold shadow-sm">AV-G</button>
+            <button onclick="toggleWindow('CT-G')" id="win-CT-G" class="window-btn w-16 h-24 rounded-2xl text-[9px] bg-white font-bold shadow-sm">MILIEU-G</button>
+            <button onclick="toggleWindow('AR-G')" id="win-AR-G" class="window-btn w-16 h-16 rounded-2xl text-[9px] bg-white font-bold shadow-sm">AR-G</button>
         </div>
 
-        <div class="absolute right-[-20px] top-[80px] bottom-[60px] flex flex-col justify-between items-start py-10 w-20">
-            <button onclick="toggleWindow('AV-D')" id="win-AV-D" class="window-btn w-14 h-14 rounded-xl text-[8px] bg-white font-bold">AV-D</button>
-            <button onclick="toggleWindow('CT-D')" id="win-CT-D" class="window-btn w-14 h-20 rounded-xl text-[8px] bg-white font-bold">MILIEU-D</button>
-            <button onclick="toggleWindow('AR-D')" id="win-AR-D" class="window-btn w-14 h-14 rounded-xl text-[8px] bg-white font-bold">AR-D</button>
+        <div class="absolute right-[-25px] top-[90px] bottom-[70px] flex flex-col justify-between items-start py-8 w-24">
+            <button onclick="toggleWindow('AV-D')" id="win-AV-D" class="window-btn w-16 h-16 rounded-2xl text-[9px] bg-white font-bold shadow-sm">AV-D</button>
+            <button onclick="toggleWindow('CT-D')" id="win-CT-D" class="window-btn w-16 h-24 rounded-2xl text-[9px] bg-white font-bold shadow-sm">MILIEU-D</button>
+            <button onclick="toggleWindow('AR-D')" id="win-AR-D" class="window-btn w-16 h-16 rounded-2xl text-[9px] bg-white font-bold shadow-sm">AR-D</button>
         </div>
 
     </div>

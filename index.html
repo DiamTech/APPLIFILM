@@ -3,16 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Applifilm Pro v5</title>
+    <title>Applifilm Pro v6</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script>tailwind.config = { darkMode: 'class' }</script>
     <style>
-        .window-btn.selected { background-color: #4f46e5 !important; color: white !important; border-color: #4338ca; }
-        canvas { touch-action: none; background: #f8fafc; border-radius: 1rem; }
-        .fixed-bottom { position: fixed; bottom: 0; left: 0; right: 0; padding: 1rem; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); z-index: 50; }
-        .dark .fixed-bottom { background: rgba(15,23,42,0.9); }
+        .window-btn.selected { background-color: #4f46e5 !important; color: white !important; border-color: #4338ca; transform: scale(0.98); }
+        canvas { touch-action: none !important; background: #f1f5f9; cursor: crosshair; }
+        .fixed-bottom { position: fixed; bottom: 0; left: 0; right: 0; padding: 1rem; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); z-index: 50; border-top: 1px solid #e2e8f0; }
+        .dark .fixed-bottom { background: rgba(15,23,42,0.9); border-color: #1e293b; }
+        #reader { width: 100%; max-width: 400px; margin: 0 auto; }
     </style>
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans pb-40">
@@ -26,48 +27,51 @@
             <img src="https://www.applifilm.fr/wp-content/uploads/2020/07/applifilm.png" class="h-7">
             <div class="flex items-center gap-2">
                 <button onclick="toggleDarkMode()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800"><i data-lucide="moon" id="dark-icon" class="w-5 h-5"></i></button>
-                <button onclick="toggleHistoryMenu()" class="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-                    <span id="batch-counter">0 lot</span> <i data-lucide="chevron-down" class="w-3 h-3"></i>
-                </button>
+                <div class="relative">
+                    <button onclick="toggleHistoryMenu()" class="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+                        <span id="batch-counter">0 lot</span> <i data-lucide="chevron-down" class="w-3 h-3"></i>
+                    </button>
+                    <div id="history-menu" class="hidden absolute right-0 top-10 w-64 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border p-2 z-[110]">
+                        <div id="batch-list" class="space-y-2 max-h-60 overflow-y-auto text-[10px] p-2"></div>
+                    </div>
+                </div>
             </div>
-        </div>
-        <div id="history-menu" class="hidden absolute right-4 top-16 w-64 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border p-2 z-[110]">
-            <div id="batch-list" class="space-y-2 max-h-60 overflow-y-auto text-[10px]"></div>
         </div>
     </header>
 
     <main class="max-w-lg mx-auto p-4 space-y-6">
-        <section class="relative flex items-center">
-            <input type="text" id="vin-input" placeholder="Scanner ou saisir VIN..." class="w-full bg-white dark:bg-slate-800 rounded-2xl py-4 pl-5 pr-14 shadow-sm border-none text-sm font-mono tracking-wider dark:text-white">
-            <button onclick="startScanner()" class="absolute right-2 bg-indigo-600 text-white p-3 rounded-xl shadow-lg"><i data-lucide="camera" class="w-5 h-5"></i></button>
+        <section class="space-y-4">
+            <div id="reader" class="hidden rounded-2xl overflow-hidden bg-black border-2 border-indigo-600 shadow-2xl"></div>
+            <div class="relative flex items-center">
+                <input type="text" id="vin-input" placeholder="Scanner ou saisir VIN..." class="w-full bg-white dark:bg-slate-800 rounded-2xl py-4 pl-5 pr-14 shadow-sm border-none text-sm font-mono tracking-wider dark:text-white ring-1 ring-slate-200 dark:ring-slate-700 focus:ring-2 focus:ring-indigo-500">
+                <button onclick="startScanner()" class="absolute right-2 bg-indigo-600 text-white p-3 rounded-xl shadow-lg active:scale-90"><i data-lucide="camera" class="w-5 h-5"></i></button>
+            </div>
         </section>
-        <div id="reader" class="hidden rounded-2xl overflow-hidden bg-black border-2 border-indigo-600"></div>
 
-        <section class="bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 relative">
-            <p class="text-[10px] text-center text-slate-400 font-black uppercase mb-4 tracking-widest">Sélection des vitrages</p>
-            <div class="relative mx-auto" style="width: 280px; height: 520px;">
+        <section class="bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 relative overflow-hidden">
+            <p class="text-[10px] text-center text-slate-400 font-black uppercase mb-4 tracking-widest">Vitrages</p>
+            <div class="relative mx-auto" style="width: 280px; height: 500px;">
                 <svg viewBox="0 0 200 480" class="absolute inset-0 w-full h-full fill-none stroke-slate-200 dark:stroke-slate-700" stroke-width="1.5">
                     <path d="M50 20 C50 10, 150 10, 150 20 L165 90 L165 420 C165 440, 35 440, 35 420 L35 90 Z" />
                 </svg>
 
-                <button onclick="toggleWindow('TOIT-AV')" id="win-TOIT-AV" class="window-btn absolute top-[100px] left-1/2 -ml-8 w-16 h-8 rounded-lg text-[8px] font-bold bg-white border shadow-sm">TOIT AV</button>
-                <button onclick="toggleWindow('TOIT-AR')" id="win-TOIT-AR" class="window-btn absolute top-[250px] left-1/2 -ml-8 w-16 h-8 rounded-lg text-[8px] font-bold bg-white border shadow-sm">TOIT AR</button>
-
+                <button onclick="toggleWindow('TOIT-AV')" id="win-TOIT-AV" class="window-btn absolute top-[100px] left-1/2 -ml-10 w-20 h-8 rounded-lg text-[8px] font-bold bg-white border shadow-sm">TOIT AV</button>
+                <button onclick="toggleWindow('TOIT-AR')" id="win-TOIT-AR" class="window-btn absolute top-[250px] left-1/2 -ml-10 w-20 h-8 rounded-lg text-[8px] font-bold bg-white border shadow-sm">TOIT AR</button>
                 <button onclick="toggleWindow('PARE-BRISE')" id="win-PARE-BRISE" class="window-btn absolute top-[15px] left-1/2 -ml-20 w-40 h-14 rounded-2xl text-[10px] font-bold bg-white border shadow-md">PARE-BRISE</button>
 
-                <div class="absolute left-[-25px] top-[90px] bottom-[100px] flex flex-col justify-between w-20">
+                <div class="absolute left-[-20px] top-[90px] bottom-[110px] flex flex-col justify-between w-20">
                     <button onclick="toggleWindow('PORT-G')" id="win-PORT-G" class="window-btn w-16 h-16 rounded-2xl text-[9px] bg-white border font-bold shadow-sm">PORT. G</button>
                     <button onclick="toggleWindow('LAT-G1')" id="win-LAT-G1" class="window-btn w-16 h-20 rounded-2xl text-[9px] bg-white border font-bold shadow-sm">LAT. G1</button>
                     <button onclick="toggleWindow('LAT-G2')" id="win-LAT-G2" class="window-btn w-16 h-20 rounded-2xl text-[9px] bg-white border font-bold shadow-sm">LAT. G2</button>
                 </div>
 
-                <div class="absolute right-[-25px] top-[90px] bottom-[100px] flex flex-col justify-between items-end w-20">
+                <div class="absolute right-[-20px] top-[90px] bottom-[110px] flex flex-col justify-between items-end w-20">
                     <button onclick="toggleWindow('PORT-D')" id="win-PORT-D" class="window-btn w-16 h-16 rounded-2xl text-[9px] bg-white border font-bold shadow-sm">PORT. D</button>
                     <button onclick="toggleWindow('LAT-D1')" id="win-LAT-D1" class="window-btn w-16 h-20 rounded-2xl text-[9px] bg-white border font-bold shadow-sm">LAT. D1</button>
                     <button onclick="toggleWindow('LAT-D2')" id="win-LAT-D2" class="window-btn w-16 h-20 rounded-2xl text-[9px] bg-white border font-bold shadow-sm">LAT. D2</button>
                 </div>
 
-                <div class="absolute bottom-[10px] left-1/2 -ml-24 w-48 flex gap-2">
+                <div class="absolute bottom-[20px] left-1/2 -ml-24 w-48 flex gap-2">
                     <button onclick="toggleWindow('LUN-G')" id="win-LUN-G" class="window-btn flex-1 h-14 rounded-2xl text-[9px] font-bold bg-white border shadow-md">LUN. G</button>
                     <button onclick="toggleWindow('LUN-D')" id="win-LUN-D" class="window-btn flex-1 h-14 rounded-2xl text-[9px] font-bold bg-white border shadow-md">LUN. D</button>
                 </div>
@@ -76,51 +80,56 @@
 
         <section class="space-y-4">
             <div class="flex gap-2">
-                <input type="radio" name="type" value="POSE" id="t1" checked class="hidden peer/p"><label for="t1" class="flex-1 p-3 text-center bg-white dark:bg-slate-800 rounded-2xl border peer-checked/p:bg-indigo-600 peer-checked/p:text-white text-[10px] font-bold">POSE</label>
-                <input type="radio" name="type" value="SAV" id="t2" class="hidden peer/s"><label for="t2" class="flex-1 p-3 text-center bg-white dark:bg-slate-800 rounded-2xl border peer-checked/s:bg-indigo-600 peer-checked/s:text-white text-[10px] font-bold">SAV</label>
+                <input type="radio" name="type" value="POSE" id="t1" checked class="hidden peer/p"><label for="t1" class="flex-1 p-3 text-center bg-white dark:bg-slate-800 rounded-2xl border peer-checked/p:bg-indigo-600 peer-checked/p:text-white text-[10px] font-black uppercase">POSE</label>
+                <input type="radio" name="type" value="SAV" id="t2" class="hidden peer/s"><label for="t2" class="flex-1 p-3 text-center bg-white dark:bg-slate-800 rounded-2xl border peer-checked/s:bg-indigo-600 peer-checked/s:text-white text-[10px] font-black uppercase">SAV</label>
+                <input type="radio" name="type" value="GARANTIE" id="t3" class="hidden peer/g"><label for="t3" class="flex-1 p-3 text-center bg-white dark:bg-slate-800 rounded-2xl border peer-checked/g:bg-indigo-600 peer-checked/g:text-white text-[10px] font-black uppercase">GARANTIE</label>
             </div>
-            <textarea id="obs" placeholder="Observations (ex: rayures, accès difficile...)" class="w-full p-4 rounded-2xl border-none bg-white dark:bg-slate-800 shadow-sm text-sm focus:ring-2 focus:ring-indigo-500 min-h-[80px]"></textarea>
+            <textarea id="obs" placeholder="Observations éventuelles..." class="w-full p-4 rounded-2xl border-none bg-white dark:bg-slate-800 shadow-sm text-sm dark:text-white min-h-[80px] focus:ring-2 focus:ring-indigo-500"></textarea>
         </section>
 
         <section class="grid grid-cols-2 gap-3">
-            <button onclick="document.getElementById('file-in').click()" class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-dashed flex flex-col items-center justify-center gap-2">
+            <button onclick="document.getElementById('file-in').click()" class="bg-white dark:bg-slate-800 p-5 rounded-3xl border border-dashed border-slate-300 flex flex-col items-center justify-center gap-2 active:bg-slate-50 transition-colors">
                 <i data-lucide="plus" class="text-slate-400"></i>
-                <span class="text-[10px] font-bold">PHOTOS (<span id="photo-count">0</span>)</span>
+                <span class="text-[10px] font-black">PHOTOS (<span id="photo-count">0</span>)</span>
                 <input type="file" id="file-in" accept="image/*" capture="environment" class="hidden" multiple onchange="handlePhotos(this)">
             </button>
             <div id="sig-area">
-                <button id="btn-sig-open" onclick="openSignature()" class="w-full h-full bg-white dark:bg-slate-800 p-4 rounded-2xl border border-indigo-200 flex flex-col items-center justify-center gap-2">
+                <button id="btn-sig-open" onclick="openSignature()" class="w-full h-full bg-white dark:bg-slate-800 p-5 rounded-3xl border-2 border-indigo-100 flex flex-col items-center justify-center gap-2 active:bg-indigo-50 transition-colors">
                     <i data-lucide="pen-tool" class="text-indigo-500"></i>
-                    <span class="text-[10px] font-bold text-indigo-600">SIGNER</span>
+                    <span class="text-[10px] font-black text-indigo-600 uppercase">Signer</span>
                 </button>
-                <div id="sig-status" class="hidden w-full h-full bg-green-50 dark:bg-green-900/20 p-4 rounded-2xl border border-green-200 flex flex-col items-center justify-center gap-2 relative">
+                <div id="sig-status" class="hidden w-full h-full bg-green-50 dark:bg-green-900/20 p-5 rounded-3xl border-2 border-green-200 flex flex-col items-center justify-center gap-1 relative animate-in">
                     <i data-lucide="check-circle" class="text-green-500"></i>
-                    <span class="text-[8px] font-bold text-green-600 uppercase">Signé OK</span>
-                    <button onclick="resetSignature()" class="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full"><i data-lucide="x" class="w-3 h-3"></i></button>
+                    <span class="text-[8px] font-black text-green-600 uppercase">Signé OK</span>
+                    <button onclick="resetSignature()" class="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-full shadow-lg"><i data-lucide="x" class="w-3 h-3"></i></button>
                 </div>
             </div>
         </section>
 
-        <button onclick="addToBatch()" class="w-full bg-slate-900 dark:bg-slate-100 dark:text-slate-900 py-4 rounded-2xl font-bold shadow-lg">Ajouter au lot</button>
+        <button onclick="addToBatch()" class="w-full bg-slate-900 dark:bg-white dark:text-slate-900 py-5 rounded-3xl font-black text-xs uppercase tracking-widest shadow-lg active:scale-95 transition-all">Ajouter au lot</button>
     </main>
 
-    <div class="fixed-bottom border-t border-slate-200 dark:border-slate-800">
-        <button id="btn-final" onclick="finalize()" class="max-w-lg mx-auto w-full bg-indigo-600 text-white py-4 rounded-2xl font-black text-lg shadow-xl flex items-center justify-center gap-3">
-            <span>FINALISER L'ENVOI</span>
-            <i data-lucide="send" class="w-5 h-5"></i>
-        </button>
+    <div class="fixed-bottom">
+        <div class="max-w-lg mx-auto">
+            <button id="btn-final" onclick="finalize()" class="w-full bg-indigo-600 text-white py-5 rounded-3xl font-black text-lg shadow-2xl shadow-indigo-300 flex items-center justify-center gap-3 active:scale-95 transition-all">
+                <span>FINALISER L'ENVOI</span>
+                <i data-lucide="send" class="w-5 h-5"></i>
+            </button>
+        </div>
     </div>
 
-    <div id="modal-sig" class="hidden fixed inset-0 bg-slate-900/90 z-[200] flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white dark:bg-slate-800 w-full max-w-md rounded-3xl p-6 space-y-4">
-            <div class="flex justify-between items-center">
-                <h3 class="font-black text-xs uppercase tracking-widest">Signature Client</h3>
-                <button onclick="closeSignature()" class="text-slate-400"><i data-lucide="x"></i></button>
+    <div id="modal-sig" class="hidden fixed inset-0 bg-slate-950/90 z-[1000] flex items-center justify-center p-4 backdrop-blur-md">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-md rounded-[2.5rem] p-6 space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center px-2">
+                <h3 class="font-black text-xs uppercase tracking-tighter">Signature Client</h3>
+                <button onclick="closeSignature()" class="p-2 bg-slate-100 dark:bg-slate-700 rounded-full"><i data-lucide="x" class="w-4 h-4 text-slate-400"></i></button>
             </div>
-            <canvas id="canvas" class="w-full h-64 border-2 border-slate-100 dark:border-slate-700"></canvas>
+            <div class="overflow-hidden rounded-3xl border-2 border-slate-100 dark:border-slate-700">
+                <canvas id="canvas" class="w-full h-64"></canvas>
+            </div>
             <div class="flex gap-2">
-                <button onclick="clearCanvas()" class="flex-1 py-3 border rounded-xl font-bold text-xs uppercase">Effacer</button>
-                <button onclick="saveSignature()" class="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold text-xs uppercase shadow-lg shadow-indigo-200">Valider</button>
+                <button onclick="clearCanvas()" class="flex-1 py-4 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-black text-[10px] uppercase">Effacer</button>
+                <button onclick="saveSignature()" class="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase shadow-lg shadow-indigo-200">Valider</button>
             </div>
         </div>
     </div>

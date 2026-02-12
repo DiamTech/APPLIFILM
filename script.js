@@ -171,15 +171,17 @@ function addToBatch() {
     const vin = vinInput.value.trim();
     if(!vin && state.selectedWindows.length === 0) return alert("Veuillez saisir un VIN ou sélectionner une vitre.");
     
-    state.batch.push({
-        vin: vin || "SANS VIN",
-        type: document.querySelector('input[name="type"]:checked').value,
-        obs: document.getElementById('obs').value,
-        windows: [...state.selectedWindows],
-        photos: [...state.photos],
-        signature: state.signature,
-        date: new Date().toLocaleString('fr-FR')
-    });
+    // APRÈS (Ce que tu dois mettre) :
+state.batch.push({
+    vin: vin || "SANS VIN",
+    type: document.querySelector('input[name="type"]:checked').value,
+    obs: document.getElementById('obs').value,
+    // MODIFICATION ICI :
+    windows: state.selectedWindows.map(w => `${w.id} (${w.tint})`), 
+    photos: [...state.photos],
+    signature: state.signature,
+    date: new Date().toLocaleString('fr-FR')
+});
     
     // Reset
     vinInput.value = ""; document.getElementById('obs').value = "";

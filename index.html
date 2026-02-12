@@ -9,32 +9,60 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
-        .window-btn { transition: all 0.2s; border: 2px solid #e2e8f0; cursor: pointer; }
-        .window-btn.selected { background-color: #4f46e5 !important; color: white !important; border-color: #4338ca !important; transform: scale(0.95); }
-        #signature-pad { touch-action: none; cursor: crosshair; }
-        .animate-in { animation: fadeIn 0.3s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    </style>
+    /* Effet de background dégradé "Mesh" */
+    body {
+        background-color: #f8fafc;
+        background-image: 
+            radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.05) 0px, transparent 50%),
+            radial-gradient(at 100% 100%, rgba(79, 70, 229, 0.05) 0px, transparent 50%);
+        background-attachment: fixed;
+    }
+
+    /* Mode Sombre */
+    @media (prefers-color-scheme: dark) {
+        body { background-color: #0f172a; background-image: none; }
+        .bg-white { background-color: #1e293b !important; color: white; }
+        .text-slate-700, .text-slate-800 { color: #f1f5f9 !important; }
+        .border-slate-200 { border-color: #334155 !important; }
+        input, textarea { background-color: #334155 !important; color: white !important; }
+        .window-btn { background-color: #1e293b !important; border-color: #475569 !important; color: #94a3b8 !important; }
+    }
+
+    .window-btn { transition: all 0.2s ease; border: 2px solid #e2e8f0; cursor: pointer; }
+    .window-btn.selected { 
+        background-color: #4f46e5 !important; 
+        color: white !important; 
+        border-color: #4338ca !important; 
+        transform: scale(0.95);
+        shadow: 0 0 15px rgba(79, 70, 229, 0.4);
+    }
+    
+    #signature-pad { touch-action: none; cursor: crosshair; }
+    .animate-in { animation: fadeIn 0.3s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
 </head>
 <body class="bg-slate-50 font-sans pb-40">
 
-   <header class="bg-white border-b border-slate-200 p-3 shadow-sm sticky top-0 z-[100]">
+   <header class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 p-4 sticky top-0 z-[100]">
     <div class="flex justify-between items-center max-w-md mx-auto">
+        
         <div class="flex items-center">
             <img src="https://www.applifilm.fr/wp-content/uploads/2020/07/applifilm.png" 
                  alt="Applifilm Logo" 
-                 class="h-8 w-auto object-contain">
+                 class="h-10 w-auto object-contain drop-shadow-sm">
         </div>
 
         <div class="flex items-center gap-3">
-            <div class="flex items-center bg-slate-100 rounded-full px-2 py-1 gap-1.5 border border-slate-200">
-                <div class="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></div>
-                <span id="batch-count" class="text-[11px] font-black text-slate-700">0</span>
+            
+            <div class="flex items-center bg-indigo-50 dark:bg-indigo-900/30 rounded-full px-3 py-1 gap-2 border border-indigo-100 dark:border-indigo-800">
+                <div class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse shadow-[0_0_8px_rgba(79,70,229,0.6)]"></div>
+                <span id="batch-count" class="text-xs font-black text-indigo-700 dark:text-indigo-300">0</span>
             </div>
             
-            <button onclick="toggleHistory()" class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-xl transition-all relative">
-                <i data-lucide="history" class="w-5 h-5"></i>
-                <div id="hist-dot" class="absolute top-1.5 right-1.5 w-2 h-2 bg-indigo-500 rounded-full hidden border-2 border-white"></div>
+            <button onclick="toggleHistory()" class="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all relative">
+                <i data-lucide="history" class="w-6 h-6"></i>
+                <div id="hist-dot" class="absolute top-2 right-2 w-2.5 h-2.5 bg-indigo-500 rounded-full hidden border-2 border-white dark:border-slate-900"></div>
             </button>
         </div>
     </div>

@@ -176,7 +176,7 @@ async function finalize() {
     btn.innerHTML = "<span>ENVOI EN COURS...</span>";
     
     // Ton URL Google Script exacte
-    const GOOGLE_URL = 'https://script.google.com/macros/s/AKfycby8fC4tLtri-KHVwjciLmw0D0QT1jAlUxZiT5Z2OtA1JylZuDXKu5Ta16FZ0S6VGHka/exec';
+    const GOOGLE_URL = 'https://script.google.com/macros/s/AKfycbxNU3VrpgcdShsFfG_ETvgpis7x1nJCIQChoUTideIU4pxS1NZgr46hj8xEQiZEdq8y/exec';
 
     try {
         // On utilise NO-CORS pour éviter le blocage du téléphone

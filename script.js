@@ -742,4 +742,57 @@ function renderVitraux() {
     }).join('');
 }
 
+// On complète le state au début du fichier
+state.pret.damages = [];
+state.pret.inspectionValidated = false;
+
+function addDamage(event) {
+    if (state.pret.inspectionValidated) return; // Empêche de modifier après validation
+
+    const container = document.getElementById('damage-container');
+    const rect = container.getBoundingClientRect();
+    
+    // Calcul de la position en % pour que ce soit responsive
+    const x = ((event.clientX - rect.left) / rect.width) * 100;
+    const y = ((event.clientY - rect.top) / rect.height) * 100;
+
+    // Ajouter au state
+    state.pret.damages.push({ x, y });
+    
+    renderDamages();
+}
+
+function renderDamages() {
+    const overlay = document.getElementById('crosses-overlay');
+    overlay.innerHTML = state.pret.damages.map((d, index) => `
+        <div style="position: absolute; left: ${d.x}%; top: ${d.y}%; transform: translate(-50%, -50%); color: #ef4444; font-weight: bold; font-size: 20px; text-shadow: 0 0 3px white;">
+            X
+        </div>
+    `).join('');
+}
+
+function validateInspection() {
+    const obs = document.getElementById('pret-degats-obs').value;
+    
+    if (state.pret.damages.length === 0 && !confirm("Aucun dégât marqué. Confirmer que le véhicule est intact ?")) {
+        return;
+    }
+
+    state.pret.inspectionValidated = true;
+    state.pret.damage_obs = obs;
+
+    // Débloquer la signature
+    const sigSection = document.getElementById('signature-section');
+    sigSection.classList.remove('opacity-30', 'pointer-events-none');
+    
+    // UI du bouton
+    const btn = document.getElementById('btn-lock-inspection');
+    btn.innerHTML = "✅ INSPECTION TERMINÉE";
+    btn.classList.replace('bg-slate-100', 'bg-green-100');
+    btn.classList.replace('text-slate-600', 'text-green-600');
+    btn.disabled = true;
+
+    alert("Inspection validée. Vous pouvez maintenant faire signer le client.");
+}
+
 setTimeout(() => setVehicle('VOITURE'), 200);

@@ -207,10 +207,9 @@
         </section>
 
         <section>
-            <button type="button" id="btn-sig-open" onclick="openSignature()" class="w-full bg-white dark:bg-slate-800 p-6 rounded-[2.5rem] border-2 border-indigo-100 dark:border-indigo-900/30 flex items-center justify-center gap-3 shadow-sm active:scale-95 transition-all">
-                <i data-lucide="pen-tool" class="text-indigo-500"></i>
-                <span class="text-xs font-black text-indigo-600 uppercase tracking-widest">Signer l'intervention</span>
-            </button>
+            <button type="button" class="btn-primary" onclick="generatePDF()">
+                <i data-lucide="pen-tool"></i> <span>Signer et Terminer</span>
+            </button>    
             <div id="sig-status" class="hidden w-full bg-green-50 dark:bg-green-900/20 p-6 rounded-[2.5rem] border-2 border-green-200 dark:border-green-900 flex items-center justify-between animate-in">
                 <div class="flex items-center gap-3 text-green-600 font-black text-xs uppercase"><i data-lucide="check-circle"></i> Signature ok</div>
                 <button type="button" onclick="resetSignature()" class="btn-icon bg-red-100 text-red-600 p-2 rounded-xl"><i data-lucide="trash-2" class="w-4 h-4"></i></button>

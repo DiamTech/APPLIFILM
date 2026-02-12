@@ -249,19 +249,17 @@ async function finalize() {
     btn.disabled = true;
     btn.innerHTML = `<span>ENVOI EN COURS...</span>`;
     
-    // TON URL GOOGLE APPS SCRIPT
     const GOOGLE_URL = 'https://script.google.com/macros/s/AKfycby8fC4tLtri-KHVwjciLmw0D0QT1jAlUxZiT5Z2OtA1JylZuDXKu5Ta16FZ0S6VGHka/exec';
 
     try {
+        // Version ultra-simplifiée pour passer les barrières de sécurité
         await fetch(GOOGLE_URL, {
             method: 'POST',
-            mode: 'no-cors',
-            cache: 'no-cache',
-            headers: { 'Content-Type': 'application/json' },
+            mode: 'no-cors', 
             body: JSON.stringify({ interventions: state.batch })
         });
 
-        // Mise à jour de l'historique local après succès estimé
+        // Si on arrive ici sans passer dans le "catch", on valide
         const now = new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
         state.batch.forEach(v => {
             state.sentHistory.push({
@@ -274,17 +272,17 @@ async function finalize() {
         });
 
         state.batch = [];
-        updateBatchUI();
-        updateHistoryUI();
-        alert("TERMINÉ ! Toutes les données sont envoyées.");
+        if(typeof updateBatchUI === 'function') updateBatchUI();
+        if(typeof updateHistoryUI === 'function') updateHistoryUI();
+        
+        alert("ENVOI EFFECTUÉ ! \n\nVérifie ton Google Sheet dans quelques secondes.");
         
     } catch(e) {
-        console.error(e);
-        alert("Erreur de connexion. Vérifiez votre réseau.");
+        alert("Erreur critique : " + e.message);
     } finally {
         btn.disabled = false;
         btn.innerHTML = `<span>FINALISER L'ENVOI</span><i data-lucide="send" class="w-5 h-5"></i>`;
-        lucide.createIcons();
+        if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 }
 

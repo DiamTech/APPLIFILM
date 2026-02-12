@@ -314,35 +314,52 @@ function switchView(view) {
 
 const VEHICLES_CONFIG = {
     VOITURE: {
-        shape: '<svg viewBox="0 0 200 450" class="w-full h-full stroke-slate-300 dark:stroke-slate-600 fill-none" stroke-width="2"><path d="M50 20 C50 10, 150 10, 150 20 L170 100 L170 400 C170 430, 30 430, 30 400 L30 100 Z"/><path d="M40 110 L160 110 M40 280 L160 280"/></svg>',
+        shape: '<svg viewBox="0 0 200 550" class="w-full h-full stroke-slate-300 dark:stroke-slate-600 fill-none" stroke-width="2"><path d="M50 20 C50 10, 150 10, 150 20 L175 100 L175 480 C175 510, 25 510, 25 480 L25 100 Z"/><path d="M30 110 L170 110 M30 350 L170 350"/></svg>',
         vitres: [
-            { id: "PARE-BRISE", pos: "top: 40px; left: 50%; transform: translateX(-50%); width: 140px; height: 60px;" },
-            { id: "AV-G", pos: "top: 120px; left: 10px; width: 50px; height: 70px;" },
-            { id: "AV-D", pos: "top: 120px; right: 10px; width: 50px; height: 70px;" },
-            { id: "AR-G", pos: "top: 200px; left: 10px; width: 50px; height: 70px;" },
-            { id: "AR-D", pos: "top: 200px; right: 10px; width: 50px; height: 70px;" },
-            { id: "LUNETTE", pos: "bottom: 40px; left: 50%; transform: translateX(-50%); width: 120px; height: 50px;" }
+            { id: "P-BRISE", pos: "top: 30px; left: 50%; transform: translateX(-50%); width: 160px; height: 60px;" },
+            { id: "CUST. AV-G", pos: "top: 105px; left: 5px; width: 55px; height: 45px;" },
+            { id: "CUST. AV-D", pos: "top: 105px; right: 5px; width: 55px; height: 45px;" },
+            { id: "VITRE AV-G", pos: "top: 160px; left: 5px; width: 60px; height: 75px;" },
+            { id: "VITRE AV-D", pos: "top: 160px; right: 5px; width: 60px; height: 75px;" },
+            { id: "TOIT 1", pos: "top: 150px; left: 50%; transform: translateX(-50%); width: 80px; height: 55px;" },
+            { id: "TOIT 2", pos: "top: 230px; left: 50%; transform: translateX(-50%); width: 80px; height: 55px;" },
+            { id: "VITRE AR-G", pos: "top: 245px; left: 5px; width: 60px; height: 75px;" },
+            { id: "VITRE AR-D", pos: "top: 245px; right: 5px; width: 60px; height: 75px;" },
+            { id: "DEMI AR-G", pos: "top: 330px; left: 5px; width: 60px; height: 50px;" },
+            { id: "DEMI AR-D", pos: "top: 330px; right: 5px; width: 60px; height: 50px;" },
+            { id: "CUST. EXT-G", pos: "top: 390px; left: 5px; width: 55px; height: 70px;" },
+            { id: "CUST. EXT-D", pos: "top: 390px; right: 5px; width: 55px; height: 70px;" },
+            { id: "LUNETTE", pos: "bottom: 75px; left: 50%; transform: translateX(-50%); width: 150px; height: 50px;" },
+            { id: "LUN. G (X2)", pos: "bottom: 15px; left: 30px; width: 75px; height: 50px;" },
+            { id: "LUN. D (X2)", pos: "bottom: 15px; right: 30px; width: 75px; height: 50px;" }
         ]
     },
     FOURGON: {
-        shape: '<svg viewBox="0 0 200 450" class="w-full h-full stroke-slate-300 dark:stroke-slate-600 fill-none" stroke-width="2"><rect x="30" y="20" width="140" height="400" rx="15"/><path d="M30 100 L170 100 M30 380 L170 380"/></svg>',
+        shape: '<svg viewBox="0 0 200 550" class="w-full h-full stroke-slate-300 dark:stroke-slate-600 fill-none" stroke-width="2"><rect x="25" y="15" width="150" height="520" rx="10"/><path d="M25 110 L175 110 M25 450 L175 450"/></svg>',
         vitres: [
-            { id: "PARE-BRISE", pos: "top: 35px; left: 50%; transform: translateX(-50%); width: 150px; height: 60px;" },
-            { id: "LAT-G", pos: "top: 110px; left: 5px; width: 40px; height: 120px;" },
-            { id: "LAT-D", pos: "top: 110px; right: 5px; width: 40px; height: 120px;" },
-            { id: "LUN-G", pos: "bottom: 30px; left: 35px; width: 60px; height: 40px;" },
-            { id: "LUN-D", pos: "bottom: 30px; right: 35px; width: 60px; height: 40px;" },
-            { id: "TOIT", pos: "top: 250px; left: 50%; transform: translateX(-50%); width: 80px; height: 60px;" }
+            { id: "P-BRISE", pos: "top: 35px; left: 50%; transform: translateX(-50%); width: 165px; height: 70px;" },
+            { id: "VITRE AV-G", pos: "top: 125px; left: 5px; width: 60px; height: 90px;" },
+            { id: "VITRE AV-D", pos: "top: 125px; right: 5px; width: 60px; height: 90px;" },
+            { id: "LAT. G", pos: "top: 230px; left: 5px; width: 50px; height: 150px;" },
+            { id: "LAT. D", pos: "top: 230px; right: 5px; width: 50px; height: 150px;" },
+            { id: "TOIT 1", pos: "top: 140px; left: 50%; transform: translateX(-50%); width: 90px; height: 65px;" },
+            { id: "TOIT 2", pos: "top: 250px; left: 50%; transform: translateX(-50%); width: 90px; height: 65px;" },
+            { id: "LUNETTE", pos: "bottom: 90px; left: 50%; transform: translateX(-50%); width: 155px; height: 60px;" },
+            { id: "LUN. G (X2)", pos: "bottom: 20px; left: 30px; width: 80px; height: 60px;" },
+            { id: "LUN. D (X2)", pos: "bottom: 20px; right: 30px; width: 80px; height: 60px;" }
         ]
     },
     VDL: {
-        shape: '<svg viewBox="0 0 200 450" class="w-full h-full stroke-slate-300 dark:stroke-slate-600 fill-none" stroke-width="2"><rect x="20" y="10" width="160" height="430" rx="5"/><path d="M20 90 L180 90"/></svg>',
+        shape: '<svg viewBox="0 0 200 550" class="w-full h-full stroke-slate-300 dark:stroke-slate-600 fill-none" stroke-width="2"><rect x="15" y="10" width="170" height="530" rx="5"/><path d="M15 100 L185 100"/></svg>',
         vitres: [
-            { id: "PARE-BRISE", pos: "top: 25px; left: 50%; transform: translateX(-50%); width: 160px; height: 60px;" },
-            { id: "BAIE-G", pos: "top: 120px; left: 5px; width: 35px; height: 100px;" },
-            { id: "BAIE-D", pos: "top: 120px; right: 5px; width: 35px; height: 100px;" },
-            { id: "LANT-1", pos: "top: 150px; left: 50%; transform: translateX(-50%); width: 70px; height: 70px;" },
-            { id: "LANT-2", pos: "top: 300px; left: 50%; transform: translateX(-50%); width: 70px; height: 70px;" }
+            { id: "P-BRISE", pos: "top: 30px; left: 50%; transform: translateX(-50%); width: 170px; height: 70px;" },
+            { id: "BAIE G1", pos: "top: 120px; left: 5px; width: 45px; height: 110px;" },
+            { id: "BAIE G2", pos: "top: 240px; left: 5px; width: 45px; height: 110px;" },
+            { id: "BAIE D1", pos: "top: 120px; right: 5px; width: 45px; height: 110px;" },
+            { id: "BAIE D2", pos: "top: 240px; right: 5px; width: 45px; height: 110px;" },
+            { id: "LANT. AV", pos: "top: 140px; left: 50%; transform: translateX(-50%); width: 90px; height: 90px;" },
+            { id: "LANT. AR", pos: "top: 320px; left: 50%; transform: translateX(-50%); width: 90px; height: 90px;" },
+            { id: "LUNETTE", pos: "bottom: 25px; left: 50%; transform: translateX(-50%); width: 160px; height: 65px;" }
         ]
     }
 };
@@ -371,17 +388,20 @@ function renderVitraux() {
     container.innerHTML = config.vitres.map(v => {
         const selection = state.selectedWindows.find(sw => sw.id === v.id);
         const isSelected = selection ? 'selected' : '';
-        const label = selection ? `<span class="text-[7px] leading-none">${v.id}</span><br><b>${selection.tint}</b>` : v.id;
+        
+        // Police agrandie à text-[10px] et interlignage serré
+        const label = selection 
+            ? `<span class="text-[9px] leading-tight opacity-80">${v.id}</span><span class="text-[11px] font-black leading-none">${selection.tint}</span>` 
+            : `<span class="text-[10px] font-bold leading-tight">${v.id}</span>`;
         
         return `
             <button type="button" onclick="toggleWindow('${v.id}')" id="win-${v.id}" 
                 style="position: absolute; ${v.pos}"
-                class="window-btn rounded-xl border border-slate-300 dark:border-slate-600 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm text-[8px] font-bold uppercase transition-all flex flex-col items-center justify-center ${isSelected}">
+                class="window-btn rounded-2xl border border-slate-300 dark:border-slate-600 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm shadow-sm transition-all flex flex-col items-center justify-center p-1 text-center ${isSelected}">
                 ${label}
             </button>
         `;
     }).join('');
 }
-
 // Initialisation au chargement
 setTimeout(() => setVehicle('VOITURE'), 200);

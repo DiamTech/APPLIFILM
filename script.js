@@ -6,10 +6,7 @@ let state = {
     batch: [], 
     signature: null,
     sentHistory: [],
-    dailyHistory: [],
-    pret: { permis_recto: null, permis_verso: null },
-    // On charge la mémoire des véhicules sortis (LocalStorage)
-    activeLoans: JSON.parse(localStorage.getItem('activeLoans')) || [] 
+    vehiculeType: 'VOITURE'
 };
 
 let scanner, canvas, ctx, drawing = false;
@@ -25,36 +22,37 @@ window.addEventListener('load', () => {
             splash.style.opacity = '0';
             setTimeout(() => splash.remove(), 600);
         }
-        // Affiche les véhicules déjà sortis (si on recharge la page)
-        renderActiveLoans(); 
+        
+        // On force l'affichage voiture
+        setVehicle('VOITURE');
     }, 100);
 });
 
 // --- NAVIGATION ENTRE LES PAGES ---
 function switchView(view) {
-    toggleMenu(false); // On ferme le menu
+    // 1. On essaie de fermer le menu (si la fonction existe)
+    if (typeof toggleMenu === 'function') toggleMenu(false);
 
-    // 1. On récupère tes vues (J'ai corrigé le nom pour coller à ton HTML)
-    const vVitrage = document.getElementById('view-intervention'); // C'est ici que ça bloquait
+    // 2. On récupère les vues avec les BONS ID du HTML
+    const vVitrage = document.getElementById('view-intervention'); 
     const vPret = document.getElementById('view-pret');
     const vHistory = document.getElementById('view-history');
 
-    // 2. On cache tout par sécurité
+    // 3. On cache tout par sécurité
     if(vVitrage) vVitrage.classList.add('hidden');
     if(vPret) vPret.classList.add('hidden');
     if(vHistory) vHistory.classList.add('hidden');
 
-    // 3. On affiche la vue demandée
+    // 4. On affiche la vue demandée
     if (view === 'pret') {
         if(vPret) vPret.classList.remove('hidden');
     } 
     else if (view === 'history') {
         if(vHistory) vHistory.classList.remove('hidden');
-        // Si la fonction existe, on met à jour la liste
         if(typeof updateHistoryUI === 'function') updateHistoryUI();
     }
     else {
-        // Par défaut (ou si on clique sur Vitrage), on affiche l'intervention
+        // Par défaut (ou 'intervention'), on affiche le vitrage
         if(vVitrage) vVitrage.classList.remove('hidden');
     }
 }
@@ -606,6 +604,9 @@ function toggleMenu(open) {
     const menu = document.getElementById('side-menu');
     const overlay = document.getElementById('menu-overlay');
     const panel = document.getElementById('menu-panel');
+    
+    if (!menu || !overlay || !panel) return; // Sécurité si les éléments manquent
+
     if (open) {
         menu.classList.remove('invisible');
         setTimeout(() => {

@@ -21,7 +21,7 @@ let state = {
 
 // Mets tes vraies URLs ici
 const URL_VITRAGE = "https://script.google.com/macros/s/AKfycbyl-hYWhxxK8-1jLGxHC_QNFgrVFZtbUv69Ozr2hMAdqWz2iQvP5oG92Div0LbG-L5x/exec";
-const URL_PRET = "https://script.google.com/macros/s/AKfycbzLFCi4ao6VCkzJmNltxaMEWMRiwfHC-RJ3feTnmWePYTIsa0tJj5kxIcHAyWLAlfgwYA/exec";
+const URL_PRET = "https://script.google.com/macros/s/AKfycbz5tLzk0kEFBaV_25iXTE3M1mbzPXOOEN8C_bcgKwWpJj8uXd_dD1iWRvyVnCTTF3i-UQ/exec";
 
 let scanner, canvas, ctx, drawing = false;
 
@@ -1060,31 +1060,44 @@ function selectLoanForReturn(immat) {
 
     // D. TRANSFORMATION DES ZONES D'UPLOAD EN GALERIE
     // À mettre à l'intérieur de selectLoanForReturn
-const renderPhoto = (id, url) => {
-    const zone = document.getElementById(id);
-    if (!zone) return;
+// D. TRANSFORMATION DES ZONES D'UPLOAD EN GALERIE
+    const renderPhoto = (id, url) => {
+        const zone = document.getElementById(id);
+        if (!zone) return;
 
-    if (url && url.startsWith('http')) {
-        // --- LE HACK ULTIME POUR GOOGLE DRIVE ---
-        // On transforme n'importe quel lien Drive en lien de miniature haute résolution
-        let cleanUrl = url;
-        if (url.includes('id=')) {
-            const id = url.split('id=')[1].split('&')[0];
-            cleanUrl = `https://drive.google.com/thumbnail?id=${id}&sz=w1000`;
+        if (url && url.length > 10) {
+            // --- EXTRACTEUR D'ID UNIVERSEL ---
+            let fileId = "";
+            try {
+                if (url.includes('id=')) {
+                    fileId = url.split('id=')[1].split('&')[0];
+                } else if (url.includes('/d/')) {
+                    fileId = url.split('/d/')[1].split('/')[0];
+                } else {
+                    // Si c'est le lien "googleusercontent", l'ID est à la fin
+                    fileId = url.match(/[-\w]{25,}/); 
+                }
+            } catch(e) { console.error("Erreur ID", e); }
+
+            // On utilise le lien Thumbnail qui est le plus fiable du monde
+            const finalUrl = fileId 
+                ? `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000` 
+                : url;
+
+            console.log("Tentative d'affichage photo ID:", fileId); // Pour debug
+
+            zone.innerHTML = `
+                <img src="${finalUrl}" 
+                     referrerpolicy="no-referrer" 
+                     class="w-full h-full object-cover rounded-xl border-2 border-indigo-500 shadow-lg"
+                     style="display: block !important;">
+            `;
+            zone.style.pointerEvents = "none";
+            zone.style.border = "none";
+        } else {
+            zone.innerHTML = `<div class="text-[10px] text-slate-400 italic font-bold">AUCUN DOCUMENT</div>`;
         }
-
-        zone.innerHTML = `
-            <img src="${cleanUrl}" 
-                 referrerpolicy="no-referrer" 
-                 class="w-full h-full object-cover rounded-xl border-2 border-indigo-500 shadow-lg"
-                 onerror="this.src='https://via.placeholder.com/300?text=Image+introuvable'">
-        `;
-        zone.style.pointerEvents = "none";
-        zone.style.border = "none";
-    } else {
-        zone.innerHTML = `<div class="text-[10px] text-slate-400 italic font-bold">AUCUN DOCUMENT</div>`;
-    }
-};
+    };
     
     renderPhoto('preview-recto', loan.recto);
     renderPhoto('preview-verso', loan.verso);
@@ -1184,19 +1197,22 @@ function toggleFormLock(isReturn) {
             if (el.tagName === 'SELECT') el.disabled = isReturn;
             else el.readOnly = isReturn;
             
-            // --- FIX VISIBILITÉ ---
-            // Fond gris clair (#e2e8f0) et Texte bleu ardoise foncé (#1e293b)
-            el.style.backgroundColor = isReturn ? "#e2e8f0" : ""; 
-            el.style.color = isReturn ? "#1e293b" : ""; 
-            el.style.fontWeight = isReturn ? "800" : "normal";
+            // On force les couleurs pour éviter le blanc sur blanc
+            if (isReturn) {
+                el.style.setProperty('background-color', '#e2e8f0', 'important'); // Gris clair
+                el.style.setProperty('color', '#0f172a', 'important');            // Noir Ardoise
+                el.style.setProperty('font-weight', '800', 'important');          // Texte Gras
+            } else {
+                el.style.backgroundColor = "";
+                el.style.color = "";
+                el.style.fontWeight = "";
+            }
         }
     });
 
-    // 2. VERROUILLAGE PHYSIQUE DES INPUTS PHOTOS
-    const allFileInputs = document.querySelectorAll('input[type="file"]');
-    allFileInputs.forEach(input => {
-        input.disabled = isReturn; 
-        if (isReturn) input.value = ""; 
+    // Blocage des inputs fichiers
+    document.querySelectorAll('input[type="file"]').forEach(input => {
+        input.disabled = isReturn;
     });
 }
 

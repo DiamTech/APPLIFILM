@@ -296,14 +296,12 @@ function closeSignature() {
 // ==========================================
 async function finalize() {
     if (state.batch.length === 0) return alert("⚠️ Le lot est vide !");
-    if (!state.signature) return alert("⚠️ Merci de signer avant d'envoyer.");
-
     const finalBtn = document.querySelector('button[onclick="finalize()"]');
     finalBtn.disabled = true;
-    finalBtn.innerHTML = `<span>ENVOI EN COURS...</span>`;
+    finalBtn.innerHTML = "ENVOI...";
 
     try {
-        await fetch("TON_URL_SHEETDB", { 
+        const response = await fetch("ICI_METS_TON_LIEN_SHEETDB", { 
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -312,27 +310,27 @@ async function finalize() {
                     "VIN": v.vin,
                     "Vitres": v.windows.join(', '),
                     "Type": v.type,
-                    "Observations": v.obs,
+                    "Observations": v.obs || "RAS",
                     "Signature": state.signature
                 }))
             })
         });
 
-        // Succès ou erreur, on valide visuellement pour l'utilisateur
-        finalBtn.innerHTML = "✅ TRANSMIS !";
-        finalBtn.style.backgroundColor = "#2563eb";
+        const result = await response.json();
         
-        setTimeout(() => {
-            alert("🚀 Données traitées !");
+        if (response.ok) {
+            alert("✅ RÉUSSI : " + result.created + " ligne(s) ajoutée(s) !");
             localStorage.clear();
             location.reload();
-        }, 800);
+        } else {
+            // C'est ici que tu sauras pourquoi ça rate
+            alert("❌ ERREUR SERVEUR : " + JSON.stringify(result));
+            finalBtn.disabled = false;
+            finalBtn.innerHTML = "RÉESSAYER";
+        }
 
     } catch (e) {
-        // Si ça rate, on fait comme si c'était bon pour ne pas bloquer l'interface
-        // Mais on prévient quand même discrètement dans la console (F12)
-        console.log("Erreur d'envoi ignorée.");
-        localStorage.clear();
-        location.reload();
+        alert("❌ ERREUR RÉSEAU : " + e.message);
+        finalBtn.disabled = false;
     }
 }

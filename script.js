@@ -19,7 +19,7 @@ let state = {
 
 // Mets tes vraies URLs ici
 const URL_VITRAGE = "https://script.google.com/macros/s/AKfycbxNU3VrpgcdShsFfG_ETvgpis7x1nJCIQChoUTideIU4pxS1NZgr46hj8xEQiZEdq8y/exec";
-const URL_PRET = "https://script.google.com/macros/s/ID_DE_TON_DEUXIEME_SHEET/exec";
+const URL_PRET = "https://script.google.com/macros/s/AKfycbwAjjdHbduPM6WnauvTVMHhuYgIkd7aoKk38_nGCb_CNKUuUCECTiHpHlt2-dkjWQ_0HA/exec";
 
 let scanner, canvas, ctx, drawing = false;
 

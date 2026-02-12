@@ -23,6 +23,39 @@
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen pb-32">
 
+    <button type="button" onclick="toggleMenu(true)" class="fixed top-4 right-4 z-[150] bg-indigo-600 text-white p-3 rounded-2xl shadow-xl active:scale-95 transition-all">
+    <i data-lucide="menu" id="menu-icon"></i>
+</button>
+
+<div id="side-menu" class="fixed inset-0 z-[200] invisible">
+    <div onclick="toggleMenu(false)" class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm opacity-0 transition-opacity duration-300" id="menu-overlay"></div>
+    
+    <div class="absolute top-0 right-0 h-full w-72 bg-white dark:bg-slate-900 shadow-2xl translate-x-full transition-transform duration-300 ease-out p-6" id="menu-panel">
+        <div class="flex justify-between items-center mb-10">
+            <img src="https://www.applifilm.fr/wp-content/uploads/2020/07/applifilm.png" class="h-6">
+            <button onclick="toggleMenu(false)" class="p-2 text-slate-400"><i data-lucide="x"></i></button>
+        </div>
+
+        <nav class="space-y-4">
+            <button onclick="switchView('vitrage')" class="w-full flex items-center gap-4 p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 font-black text-xs uppercase tracking-widest">
+                <i data-lucide="layers" class="w-5 h-5"></i> Vitrages
+            </button>
+            <button onclick="switchView('pret')" class="w-full flex items-center gap-4 p-4 rounded-2xl text-slate-400 font-black text-xs uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                <i data-lucide="car" class="w-5 h-5"></i> Prêt de véhicule
+            </button>
+            <div class="pt-10 border-t border-slate-100 dark:border-slate-800">
+                <button onclick="toggleDarkMode()" class="w-full flex items-center gap-4 p-4 rounded-2xl text-slate-400 font-black text-xs uppercase tracking-widest">
+                    <i data-lucide="moon"></i> Mode Sombre
+                </button>
+            </div>
+        </nav>
+        
+        <div class="absolute bottom-10 left-6 text-[8px] font-black text-slate-300 uppercase tracking-[0.2em]">
+            Applifilm v2.0
+        </div>
+    </div>
+</div>
+
     <header class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 p-4 sticky top-0 z-[100]">
         <div class="flex items-center justify-between max-w-lg mx-auto">
             <img src="https://www.applifilm.fr/wp-content/uploads/2020/07/applifilm.png" class="h-7" alt="Logo">

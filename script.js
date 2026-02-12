@@ -46,35 +46,39 @@ async function stopScanner() {
     }
 }
 
-// --- SIGNATURE (Tracé Fiabilisé) ---
 function initSignature() {
     canvas = document.getElementById('canvas');
+    if (!canvas) return;
     ctx = canvas.getContext('2d');
     
-    const resize = () => {
-        const parent = canvas.parentElement;
-        canvas.width = parent.clientWidth;
-        canvas.height = 256; // h-64
-        ctx.strokeStyle = "#4f46e5";
+    // Force la taille du dessin à correspondre à l'affichage écran
+    const fixSize = () => {
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+        // On doit redéfinir les styles après un changement de taille
+        ctx.strokeStyle = "#4f46e5"; 
         ctx.lineWidth = 3;
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
     };
-    
-    window.addEventListener('resize', resize);
-    resize();
+
+    // On attend un peu que la modale soit affichée pour calculer la taille
+    window.addEventListener('resize', fixSize);
+    setTimeout(fixSize, 100);
 
     const getPos = (e) => {
         const rect = canvas.getBoundingClientRect();
         const ev = e.touches ? e.touches[0] : e;
         return {
-            x: (ev.clientX - rect.left) * (canvas.width / rect.width),
-            y: (ev.clientY - rect.top) * (canvas.height / rect.height)
+            x: ev.clientX - rect.left,
+            y: ev.clientY - rect.top
         };
     };
 
     const start = (e) => {
-        e.preventDefault();
+        // Empêche la page de bouger pendant qu'on signe
+        if (e.target === canvas) e.preventDefault();
         drawing = true;
         const p = getPos(e);
         ctx.beginPath();
@@ -83,24 +87,39 @@ function initSignature() {
 
     const move = (e) => {
         if (!drawing) return;
-        e.preventDefault();
+        if (e.target === canvas) e.preventDefault();
         const p = getPos(e);
         ctx.lineTo(p.x, p.y);
         ctx.stroke();
     };
 
-    const stop = () => { drawing = false; ctx.closePath(); };
+    const stop = () => {
+        drawing = false;
+    };
 
+    // Événements Souris
     canvas.addEventListener('mousedown', start);
     canvas.addEventListener('mousemove', move);
     window.addEventListener('mouseup', stop);
     
+    // Événements Tactiles (Mobile)
     canvas.addEventListener('touchstart', start, { passive: false });
     canvas.addEventListener('touchmove', move, { passive: false });
     canvas.addEventListener('touchend', stop);
 }
 
-function openSignature() { document.getElementById('modal-sig').classList.remove('hidden'); }
+function openSignature() {
+    document.getElementById('modal-sig').classList.remove('hidden');
+    // On laisse 50ms à la modale pour apparaître puis on ajuste le canvas
+    setTimeout(() => {
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+        ctx.strokeStyle = "#4f46e5";
+        ctx.lineWidth = 3;
+        ctx.lineCap = "round";
+    }, 50);
+}
 function closeSignature() { document.getElementById('modal-sig').classList.add('hidden'); }
 function clearCanvas() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
 

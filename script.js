@@ -1059,23 +1059,32 @@ function selectLoanForReturn(immat) {
     }
 
     // D. TRANSFORMATION DES ZONES D'UPLOAD EN GALERIE
-    const renderPhoto = (id, url) => {
-        const zone = document.getElementById(id);
-        if (url && url.startsWith('http')) {
-            // On remplace tout le contenu de la zone par l'image
-            // referrerpolicy="no-referrer" est CRUCIAL pour Google Drive
-            zone.innerHTML = `
-                <img src="${url}" 
-                     referrerpolicy="no-referrer" 
-                     class="w-full h-full object-cover rounded-xl border-2 border-indigo-500 shadow-lg">
-            `;
-            // On désactive physiquement le clic pour ne pas ouvrir l'appareil photo
-            zone.style.pointerEvents = "none";
-            zone.style.border = "none";
-        } else {
-            zone.innerHTML = `<div class="text-[10px] text-slate-400 italic">Pas de photo</div>`;
+    // À mettre à l'intérieur de selectLoanForReturn
+const renderPhoto = (id, url) => {
+    const zone = document.getElementById(id);
+    if (!zone) return;
+
+    if (url && url.startsWith('http')) {
+        // --- LE HACK ULTIME POUR GOOGLE DRIVE ---
+        // On transforme n'importe quel lien Drive en lien de miniature haute résolution
+        let cleanUrl = url;
+        if (url.includes('id=')) {
+            const id = url.split('id=')[1].split('&')[0];
+            cleanUrl = `https://drive.google.com/thumbnail?id=${id}&sz=w1000`;
         }
-    };
+
+        zone.innerHTML = `
+            <img src="${cleanUrl}" 
+                 referrerpolicy="no-referrer" 
+                 class="w-full h-full object-cover rounded-xl border-2 border-indigo-500 shadow-lg"
+                 onerror="this.src='https://via.placeholder.com/300?text=Image+introuvable'">
+        `;
+        zone.style.pointerEvents = "none";
+        zone.style.border = "none";
+    } else {
+        zone.innerHTML = `<div class="text-[10px] text-slate-400 italic font-bold">AUCUN DOCUMENT</div>`;
+    }
+};
     
     renderPhoto('preview-recto', loan.recto);
     renderPhoto('preview-verso', loan.verso);
@@ -1167,23 +1176,27 @@ function addDamage(event) {
 }
 
 function toggleFormLock(isReturn) {
-    // 1. Verrouillage des textes et sélecteurs
     const fieldsToLock = ['pret-vehicule-select', 'pret-nom', 'pret-dob', 'pret-lieu-naiss', 'pret-permis-num', 'pret-permis-lieu'];
+    
     fieldsToLock.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
             if (el.tagName === 'SELECT') el.disabled = isReturn;
             else el.readOnly = isReturn;
-            el.style.backgroundColor = isReturn ? "#f1f5f9" : "";
+            
+            // --- FIX VISIBILITÉ ---
+            // Fond gris clair (#e2e8f0) et Texte bleu ardoise foncé (#1e293b)
+            el.style.backgroundColor = isReturn ? "#e2e8f0" : ""; 
+            el.style.color = isReturn ? "#1e293b" : ""; 
+            el.style.fontWeight = isReturn ? "800" : "normal";
         }
     });
 
     // 2. VERROUILLAGE PHYSIQUE DES INPUTS PHOTOS
-    // On désactive TOUS les sélecteurs de fichiers pour qu'ils ne s'ouvrent plus
     const allFileInputs = document.querySelectorAll('input[type="file"]');
     allFileInputs.forEach(input => {
         input.disabled = isReturn; 
-        if (isReturn) input.value = ""; // On vide la sélection en cours
+        if (isReturn) input.value = ""; 
     });
 }
 

@@ -2,15 +2,17 @@
 let state = { 
     vin: "", 
     selectedWindows: [], 
-    photos: [], // Pour les photos d'intervention
+    photos: [], 
     batch: [], 
     signature: null,
     sentHistory: [],
-    // AJOUTE BIEN CE BLOC POUR LE PRÊT :
+    // AJOUTE BIEN CES LIGNES :
+    activeLoans: [], 
+    dailyHistory: [],
     pret: { 
         permis_recto: null, 
         permis_verso: null,
-        photos_depart: [] // C'est ici que le .push() risque de chercher
+        photos_depart: [] // Même si tu n'as pas de bouton, laisse-le pour éviter l'erreur
     },
     vehiculeType: 'VOITURE'
 };
@@ -70,20 +72,20 @@ function handlePermis(input, type) {
     const file = input.files[0];
     if (!file) return;
 
-    // SECURITÉ : On vérifie que state.pret existe
-    if (!state.pret) {
-        state.pret = { permis_recto: null, permis_verso: null, photos_depart: [] };
-    }
-
     const reader = new FileReader();
     reader.onload = (e) => {
-        if (type === 'recto') state.pret.permis_recto = e.target.result;
-        if (type === 'verso') state.pret.permis_verso = e.target.result;
+        // Sécurité : on vérifie que l'objet pret existe
+        if (!state.pret) state.pret = {};
 
-        // Affichage miniature (avec tes IDs du message précédent)
-        const container = document.getElementById(type === 'recto' ? 'preview-recto' : 'preview-verso');
+        // On assigne l'image (ICI PAS DE .PUSH)
+        if (type === 'recto') state.pret.permis_recto = e.target.result;
+        else state.pret.permis_verso = e.target.result;
+
+        // Affichage miniature
+        const targetId = type === 'recto' ? 'preview-recto' : 'preview-verso';
+        const container = document.getElementById(targetId);
         if (container) {
-            container.innerHTML = `<img src="${e.target.result}" class="absolute inset-0 w-full h-full object-cover">`;
+            container.innerHTML = `<img src="${e.target.result}" class="absolute inset-0 w-full h-full object-cover rounded-2xl">`;
         }
     };
     reader.readAsDataURL(file);

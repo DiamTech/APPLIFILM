@@ -389,18 +389,15 @@ function renderVitraux() {
         const selection = state.selectedWindows.find(sw => sw.id === v.id);
         const isSelected = selection ? 'selected' : '';
         
-        // TAILLE UNIQUE : On utilise text-[9px] pour l'état normal ET l'état sélectionné
         const label = selection 
-            ? `<div class="flex flex-col items-center justify-center w-full h-full">
-                 <span style="font-size: 7px;" class="uppercase opacity-60 leading-none">${v.id}</span>
-                 <span style="font-size: 9px;" class="font-black leading-none text-indigo-600 dark:text-indigo-400 mt-0.5">${selection.tint}</span>
-               </div>` 
-            : `<span style="font-size: 9px;" class="font-bold leading-tight px-0.5 text-center">${v.id}</span>`;
+            ? `<div style="font-size: 7px; opacity: 0.6;">${v.id}</div>
+               <div style="font-weight: 900; color: #4f46e5;">${selection.tint}</div>` 
+            : `<div>${v.id}</div>`;
         
         return `
             <button type="button" onclick="toggleWindow('${v.id}')" id="win-${v.id}" 
-                style="position: absolute; ${v.pos} display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 0;"
-                class="window-btn rounded-xl border border-slate-300 dark:border-slate-600 bg-white/90 dark:bg-slate-800/90 shadow-sm transition-none overflow-hidden ${isSelected}">
+                style="position: absolute; ${v.pos}"
+                class="window-btn rounded-xl border border-slate-300 dark:border-slate-600 bg-white/90 dark:bg-slate-800/90 shadow-sm ${isSelected}">
                 ${label}
             </button>
         `;

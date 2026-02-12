@@ -571,42 +571,63 @@ async function finalize() {
 async function finalizePret() {
     const btn = document.getElementById('btn-final-pret');
     
-    // 1. ON RÉCUPÈRE LA PLAQUE DEPUIS LE MENU DÉROULANT
+    // 1. RÉCUPÉRATION DES DONNÉES
     const selectVehicule = document.getElementById('pret-vehicule-select');
-    const plaqueAuto = selectVehicule ? selectVehicule.value : "N/C";
+    const plaqueAuto = selectVehicule ? selectVehicule.value : "";
 
-    if (!state.pret.inspectionValidated) {
-        return alert("⚠️ Vous devez d'abord valider l'inspection de la carrosserie !");
+    const inputs = {
+        nom: document.getElementById('pret-nom')?.value.trim(),
+        dob: document.getElementById('pret-dob')?.value,
+        lieu_naiss: document.getElementById('pret-lieu-naiss')?.value.trim(),
+        permis_num: document.getElementById('pret-permis-num')?.value.trim(),
+        permis_lieu: document.getElementById('pret-permis-lieu')?.value.trim()
+    };
+
+    // 2. VÉRIFICATION DES CHAMPS OBLIGATOIRES (Le "Sauf si")
+    if (!plaqueAuto || plaqueAuto === "N/C") return alert("⚠️ Veuillez choisir un véhicule !");
+    if (!inputs.nom) return alert("⚠️ Le nom du client est obligatoire !");
+    if (!inputs.dob) return alert("⚠️ La date de naissance est obligatoire !");
+    if (!inputs.lieu_naiss) return alert("⚠️ Le lieu de naissance est obligatoire !");
+    if (!inputs.permis_num) return alert("⚠️ Le numéro de permis est obligatoire !");
+    if (!inputs.permis_lieu) return alert("⚠️ Le lieu de délivrance du permis est obligatoire !");
+    
+    // VÉRIFICATION DES DOCUMENTS (Photos & Signature)
+    if (!state.pret.permis_recto) return alert("⚠️ La photo du permis (Recto) est obligatoire !");
+    if (!state.signature) return alert("⚠️ La signature du client est obligatoire !");
+    if (!state.pret.inspectionValidated) return alert("⚠️ Vous devez valider l'inspection (bouton Confirmer) avant d'envoyer !");
+
+    // 3. LOGIQUE POUR LES DÉGÂTS (Facultatif)
+    let texteSaisi = document.getElementById('pret-degats-obs')?.value.trim() || "";
+    const nbCroix = state.pret.damages ? state.pret.damages.length : 0;
+    
+    let degatsFinalText = texteSaisi;
+    if (texteSaisi === "") {
+        degatsFinalText = nbCroix > 0 
+            ? "Dégâts marqués sur le schéma (" + nbCroix + " impact(s))" 
+            : "Aucun dégât signalé (Véhicule intact)";
     }
 
-    if (!state.signature) {
-        return alert("⚠️ Signature client obligatoire !");
-    }
-
-    // 2. ON RÉCUPÈRE LES AUTRES INFOS
+    // 4. PRÉPARATION DU PAQUET (PAYLOAD)
     const payload = {
         type: "PRET",
-        immat: plaqueAuto, // Utilise la plaque du menu déroulant
-        nom: document.getElementById('pret-nom')?.value || "Inconnu",
-        dob: document.getElementById('pret-dob')?.value || "N/C",
-        lieu_naiss: document.getElementById('pret-lieu-naiss')?.value || "N/C",
-        permis_num: document.getElementById('pret-permis-num')?.value || "N/C",
-        permis_lieu: document.getElementById('pret-permis-lieu')?.value || "N/C",
-        degats_details: document.getElementById('pret-degats-obs')?.value || "Aucun dégât signalé",
-        degats_coords: JSON.stringify(state.pret.damages), // Transforme la liste de croix en texte
+        immat: plaqueAuto,
+        nom: inputs.nom,
+        dob: inputs.dob,
+        lieu_naiss: inputs.lieu_naiss,
+        permis_num: inputs.permis_num,
+        permis_lieu: inputs.permis_lieu,
+        degats_details: degatsFinalText,
+        degats_coords: JSON.stringify(state.pret.damages || []), 
         permis_recto: state.pret.permis_recto,
-        permis_verso: state.pret.permis_verso,
+        permis_verso: state.pret.permis_verso || "Non fournie", // Le verso est souvent optionnel
         signature: state.signature,
         date: new Date().toLocaleString('fr-FR')
     };
 
-    // Sécurités
-    if (plaqueAuto === "") return alert("⚠️ Veuillez choisir un véhicule !");
-    if (!payload.permis_recto) return alert("⚠️ Photo du permis manquante !");
-    if (!payload.signature) return alert("⚠️ Signature client manquante !");
-
+    // 5. ENVOI AU SHEET
     btn.disabled = true;
-    btn.innerText = "ENVOI EN COURS...";
+    const originalText = btn.innerText;
+    btn.innerText = "TRANSMISSION...";
 
     try {
         await fetch(URL_PRET, {
@@ -614,20 +635,43 @@ async function finalizePret() {
             mode: 'no-cors',
             body: JSON.stringify(payload)
         });
-        alert("✅ Prêt pour le véhicule " + plaqueAuto + " enregistré !");
+
+        alert("✅ DOSSIER COMPLET ! Le prêt pour " + plaqueAuto + " a été enregistré.");
         
-        // On réinitialise tout
-        state.signature = null;
-        if(selectVehicule) selectVehicule.value = ""; 
+        // 6. RÉINITIALISATION COMPLÈTE
+        resetPretForm(); // On appelle une petite fonction de nettoyage
         switchView('vitrage');
+
     } catch(e) {
-        alert("Erreur d'envoi");
+        alert("❌ Erreur réseau. Vérifiez votre connexion.");
     } finally {
         btn.disabled = false;
-        btn.innerText = "Valider le départ";
+        btn.innerText = originalText;
     }
 }
 
+// Petite fonction pour tout vider proprement
+function resetPretForm() {
+    state.signature = null;
+    state.pret.damages = [];
+    state.pret.inspectionValidated = false;
+    state.pret.permis_recto = null;
+    state.pret.permis_verso = null;
+
+    ["pret-nom", "pret-dob", "pret-lieu-naiss", "pret-permis-num", "pret-permis-lieu", "pret-degats-obs"].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.value = "";
+    });
+    
+    const sel = document.getElementById('pret-vehicule-select');
+    if(sel) sel.value = "";
+    
+    document.getElementById('crosses-overlay').innerHTML = "";
+    // Remise à zéro des aperçus photos (si tu as les IDs)
+    if(document.getElementById('preview-recto')) document.getElementById('preview-recto').innerHTML = '<i data-lucide="camera" class="w-5 h-5 text-slate-400"></i>';
+    if(document.getElementById('preview-verso')) document.getElementById('preview-verso').innerHTML = '<i data-lucide="camera" class="w-5 h-5 text-slate-400"></i>';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
 function toggleDarkMode() {
     const isDark = document.documentElement.classList.toggle('dark');
     localStorage.setItem('theme', isDark ? 'dark' : 'light');

@@ -19,7 +19,7 @@ let state = {
 
 // Mets tes vraies URLs ici
 const URL_VITRAGE = "https://script.google.com/macros/s/AKfycbyl-hYWhxxK8-1jLGxHC_QNFgrVFZtbUv69Ozr2hMAdqWz2iQvP5oG92Div0LbG-L5x/exec";
-const URL_PRET = "https://script.google.com/macros/s/AKfycbxfQhA9fhTSG-pDFAXuJpBcSJ-Y3qgOXpJpBt3Xk6x9rdamM5yEyrRe_OCuG9-GfdTU2Q/exec";
+const URL_PRET = "https://script.google.com/macros/s/AKfycbxu8BWG3Y7E6L1xXfqlevefJbPrjeQwaI0mopRQNaHpbqcoiWLPWXJcjbfY1fVlkvF9EA/exec";
 
 let scanner, canvas, ctx, drawing = false;
 
@@ -567,42 +567,46 @@ async function finalize() {
 }
 
 async function finalizePret() {
-    // Vérification de sécurité pour éviter le crash
-    if (!state.pret || !state.pret.permis_recto) {
-        return alert("⚠️ Photo du permis (Recto) obligatoire !");
-    }
-
     const btn = document.getElementById('btn-final-pret');
-    if(btn) {
-        btn.disabled = true;
-        btn.innerText = "ENVOI EN COURS...";
-    }
-
+    
+    // On récupère les infos avec TES nouveaux IDs HTML
     const payload = {
         type: "PRET",
-        client: document.getElementById('client-name')?.value || "Inconnu",
-        immat: document.getElementById('pret-immat')?.value || "N/C",
+        nom: document.getElementById('pret-nom')?.value || "Inconnu",
+        dob: document.getElementById('pret-dob')?.value || "N/C",
+        lieu_naiss: document.getElementById('pret-lieu-naiss')?.value || "N/C",
+        permis_num: document.getElementById('pret-permis-num')?.value || "N/C",
+        permis_lieu: document.getElementById('pret-permis-lieu')?.value || "N/C",
+        // On n'oublie pas l'immat si tu as un champ pour ça
+        immat: document.getElementById('pret-immat')?.value || "N/C", 
+        // Les images
         permis_recto: state.pret.permis_recto,
         permis_verso: state.pret.permis_verso,
+        signature: state.signature, // La signature est ici !
         date: new Date().toLocaleString('fr-FR')
     };
 
+    if (!payload.permis_recto) return alert("⚠️ Photo du permis manquante !");
+    if (!payload.signature) return alert("⚠️ Signature client manquante !");
+
+    btn.disabled = true;
+    btn.innerText = "ENVOI EN COURS...";
+
     try {
-        await fetch(URL_PRET, { 
-            method: 'POST', 
-            mode: 'no-cors', 
-            body: JSON.stringify(payload) 
+        await fetch(URL_PRET, {
+            method: 'POST',
+            mode: 'no-cors',
+            body: JSON.stringify(payload)
         });
-        alert("✅ PRÊT ENREGISTRÉ DANS LE SHEET PRÊT !");
-        state.pret = { permis_recto: null, permis_verso: null };
-        switchView('vitrage'); // Retour auto à l'accueil
+        alert("✅ Dossier de prêt complet envoyé !");
+        // Reset après envoi
+        state.signature = null;
+        switchView('vitrage');
     } catch(e) {
-        alert("Erreur de connexion : " + e.message);
+        alert("Erreur d'envoi");
     } finally {
-        if(btn) {
-            btn.disabled = false;
-            btn.innerText = "Valider le départ";
-        }
+        btn.disabled = false;
+        btn.innerText = "Valider le départ";
     }
 }
 

@@ -244,6 +244,78 @@
             </button>
         </div>
 
+       <div id="view-pret" class="hidden space-y-6">
+            <h2 class="text-xl font-bold text-slate-800 dark:text-white px-2">Nouveau Prêt</h2>
+
+            <section class="bg-white dark:bg-slate-800 p-6 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
+                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Permis (Recto/Verso Obligatoire)</label>
+                <div class="grid grid-cols-2 gap-3" id="permis-preview-container">
+                    <label class="aspect-[1.6/1] flex flex-col items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl cursor-pointer bg-slate-50 dark:bg-slate-950 active:scale-95 transition-transform">
+                        <i data-lucide="camera" class="w-5 h-5 text-slate-400"></i>
+                        <span class="text-[8px] mt-1 text-slate-400 font-bold uppercase">Recto</span>
+                        <input type="file" accept="image/*" capture="environment" class="hidden" onchange="handlePermis(this, 'recto')">
+                    </label>
+                    <label class="aspect-[1.6/1] flex flex-col items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl cursor-pointer bg-slate-50 dark:bg-slate-950 active:scale-95 transition-transform">
+                        <i data-lucide="camera" class="w-5 h-5 text-slate-400"></i>
+                        <span class="text-[8px] mt-1 text-slate-400 font-bold uppercase">Verso</span>
+                        <input type="file" accept="image/*" capture="environment" class="hidden" onchange="handlePermis(this, 'verso')">
+                    </label>
+                </div>
+
+                <div class="space-y-3 pt-2">
+                    <input type="text" id="pret-nom" placeholder="Nom Prénom Client" class="w-full bg-slate-50 dark:bg-slate-950 border-none rounded-2xl py-4 px-5 text-sm font-bold">
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="date" id="pret-dob" class="bg-slate-50 dark:bg-slate-950 border-none rounded-2xl py-4 px-5 text-sm font-bold text-slate-500">
+                        <input type="text" id="pret-lieu-naiss" placeholder="Lieu Naissance" class="bg-slate-50 dark:bg-slate-950 border-none rounded-2xl py-4 px-5 text-sm font-bold">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="text" id="pret-permis-num" placeholder="N° Permis" class="bg-slate-50 dark:bg-slate-950 border-none rounded-2xl py-4 px-5 text-sm font-bold">
+                        <input type="text" id="pret-permis-lieu" placeholder="Lieu Délivrance" class="bg-slate-50 dark:bg-slate-950 border-none rounded-2xl py-4 px-5 text-sm font-bold">
+                    </div>
+                </div>
+            </section>
+
+            <section class="bg-white dark:bg-slate-800 p-6 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
+                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Véhicule de Prêt</label>
+                <select id="pret-vehicule-select" class="w-full bg-slate-50 dark:bg-slate-950 border-none rounded-2xl py-4 px-5 text-sm font-bold appearance-none">
+                    <option value="">-- Choisir un véhicule --</option>
+                    <option value="Citroen Jumpy : ES-852-JG">Citroen Jumpy : ES-852-JG</option>
+                    <option value="Renault Kangoo : BC-922-ZW">Renault Kangoo : BC-922-ZW</option>
+                    <option value="Citroen C3 : DC-580-DS">Citroen C3 : DC-580-DS</option>
+                    <option value="Citroen C3 : EK-850-QB">Citroen C3 : EK-850-QB</option>
+                    <option value="Peugeot 208 : EY-494-EN">Peugeot 208 : EY-494-EN</option>
+                    <option value="Peugeot 208 : EL-780-GP">Peugeot 208 : EL-780-GP</option>
+                    <option value="Camion Benne : BE-372-RW">Camion Benne : BE-372-RW</option>
+                </select>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <span class="text-[9px] font-bold text-slate-400 uppercase ml-2">KM Départ</span>
+                        <input type="number" id="pret-km-depart" placeholder="Ex: 15400" class="w-full mt-1 bg-slate-50 dark:bg-slate-950 border-none rounded-2xl py-4 px-5 text-sm font-bold">
+                    </div>
+                    <div>
+                        <span class="text-[9px] font-bold text-slate-400 uppercase ml-2">Carburant</span>
+                        <input type="text" id="pret-carburant" placeholder="Ex: 3/4" class="w-full mt-1 bg-slate-50 dark:bg-slate-950 border-none rounded-2xl py-4 px-5 text-sm font-bold">
+                    </div>
+                </div>
+            </section>
+
+            <div class="space-y-4 pt-2">
+                <button type="button" onclick="openSignature()" class="w-full bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-300 py-4 rounded-2xl font-black text-xs uppercase tracking-widest border-2 border-dashed border-indigo-200 dark:border-indigo-800">
+                    <i data-lucide="pen-tool" class="inline w-4 h-4 mr-2"></i> Faire signer le client
+                </button>
+                <div id="pret-sig-ok" class="hidden text-center text-green-500 font-bold text-xs uppercase">Signature OK</div>
+
+                <button type="button" onclick="savePret()" class="btn-primary py-6 rounded-[2.5rem] shadow-xl">
+                    <i data-lucide="check"></i> <span>Valider le départ</span>
+                </button>
+            </div>
+            
+            <div id="active-loans-list" class="mt-8 space-y-3">
+                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 text-center">Véhicules Sortis (En attente retour)</label>
+                </div>
+        </div>
+
     </main>
 
     <div id="modal-sig" class="hidden fixed inset-0 z-[200] bg-slate-950/90 backdrop-blur-sm p-4 flex items-center justify-center">

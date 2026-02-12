@@ -1,52 +1,38 @@
-// --- ÉTAT GLOBAL DE L'APP ---
 let state = {
-    vin: "",
     selectedWindows: [],
     photos: [],
     batch: []
 };
 
-// --- GESTION DU SPLASH SCREEN (LOGO AU LANCEMENT) ---
+let html5QrCode;
+
+// --- INITIALISATION ---
 window.addEventListener('load', () => {
     const splash = document.getElementById('splash-screen');
-    // On attend 1.5s pour le style, puis on lance le fondu
     setTimeout(() => {
         splash.style.opacity = '0';
-        // On retire complètement l'élément après le fondu pour libérer l'écran
-        setTimeout(() => {
-            splash.style.display = 'none';
-        }, 700);
+        setTimeout(() => splash.style.display = 'none', 700);
     }, 1500);
 });
 
-let html5QrCode;
-
+// --- SCANNER VIN ---
 async function startScanner() {
-    // 1. On affiche la zone du scanner (le div qui doit avoir l'id 'reader')
     const readerDiv = document.getElementById('reader');
     readerDiv.classList.remove('hidden');
-
     html5QrCode = new Html5Qrcode("reader");
     
-    const config = { fps: 10, qrbox: { width: 250, height: 150 } };
-
     try {
         await html5QrCode.start(
             { facingMode: "environment" }, 
-            config,
+            { fps: 10, qrbox: { width: 250, height: 150 } },
             (decodedText) => {
-                // 2. Quand on détecte le VIN
                 document.getElementById('vin-input').value = decodedText;
-                stopScanner(); // On arrête après détection
-                
-                // Petit retour visuel
-                document.getElementById('vin-input').classList.add('ring-4', 'ring-green-500');
-                setTimeout(() => document.getElementById('vin-input').classList.remove('ring-4', 'ring-green-500'), 1000);
+                stopScanner();
             }
         );
     } catch (err) {
-        console.error("Erreur caméra:", err);
-        alert("Impossible d'ouvrir la caméra pour le scan.");
+        alert("Caméra introuvable");
+        readerDiv.classList.add('hidden');
     }
 }
 
@@ -57,21 +43,20 @@ function stopScanner() {
         });
     }
 }
-// --- GESTION DES VITRES ---
+
+// --- VITRES ---
 function toggleWindow(id) {
     const btn = document.getElementById('win-' + id);
     if (state.selectedWindows.includes(id)) {
         state.selectedWindows = state.selectedWindows.filter(w => w !== id);
-        btn.classList.remove('bg-indigo-600', 'text-white', 'selected');
-        btn.classList.add('bg-white');
+        btn.classList.remove('selected');
     } else {
         state.selectedWindows.push(id);
-        btn.classList.add('bg-indigo-600', 'text-white', 'selected');
-        btn.classList.remove('bg-white');
+        btn.classList.add('selected');
     }
 }
 
-// --- GESTION DES PHOTOS ---
+// --- PHOTOS ---
 function handlePhotos(input) {
     const files = Array.from(input.files);
     files.forEach(file => {
@@ -92,10 +77,10 @@ function renderPhotos() {
 
     state.photos.forEach((photo, index) => {
         const div = document.createElement('div');
-        div.className = "relative aspect-square rounded-2xl overflow-hidden border border-slate-200 shadow-sm";
+        div.className = "relative aspect-square rounded-2xl overflow-hidden border animate-in";
         div.innerHTML = `
             <img src="${photo}" class="w-full h-full object-cover">
-            <button onclick="removePhoto(${index})" class="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 shadow-lg">✕</button>
+            <button onclick="removePhoto(${index})" class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 text-[10px]">✕</button>
         `;
         container.appendChild(div);
     });
@@ -106,69 +91,84 @@ function removePhoto(index) {
     renderPhotos();
 }
 
-// --- AJOUT AU LOT ---
+// --- LOGIQUE MÉTIER ---
 function addToBatch() {
-    const vinInput = document.getElementById('vin-input');
-    const obsInput = document.getElementById('observation-input');
+    const vin = document.getElementById('vin-input').value;
     const typeInter = document.querySelector('input[name="type_inter"]:checked').value;
+    const obs = document.getElementById('observation-input').value;
 
-    if (!vinInput.value && state.selectedWindows.length === 0) {
-        alert("Veuillez remplir au moins le VIN ou une vitre.");
-        return;
-    }
+    if (!vin && state.selectedWindows.length === 0) return alert("Saisie vide");
 
     const entry = {
         date: new Date().toLocaleString('fr-FR'),
-        vin: vinInput.value || "NON SPÉCIFIÉ",
+        vin: vin || "NON SPÉCIFIÉ",
         type: typeInter,
         windows: [...state.selectedWindows],
-        observations: obsInput.value,
+        observations: obs,
         photos: [...state.photos]
     };
 
     state.batch.push(entry);
     
-    // Reset Formulaire
+    // Reset
     state.selectedWindows = [];
     state.photos = [];
-    vinInput.value = "";
-    obsInput.value = "";
-    document.querySelectorAll('.window-btn').forEach(b => b.classList.remove('bg-indigo-600', 'text-white', 'selected'));
+    document.getElementById('vin-input').value = "";
+    document.getElementById('observation-input').value = "";
+    document.querySelectorAll('.window-btn').forEach(b => b.classList.remove('selected'));
     
     renderPhotos();
     updateBatchCount();
-    alert("Ajouté au lot avec succès !");
+    renderBatchList();
+}
+
+function renderBatchList() {
+    const list = document.getElementById('batch-list');
+    list.innerHTML = state.batch.length > 0 ? '<label class="block text-[10px] font-black text-slate-400 uppercase mb-3">Lot en attente</label>' : '';
+    
+    state.batch.forEach((item, index) => {
+        const div = document.createElement('div');
+        div.className = "bg-white p-3 rounded-2xl border border-slate-100 flex items-center justify-between animate-in";
+        div.innerHTML = `
+            <div>
+                <p class="text-xs font-mono font-bold text-indigo-600">${item.vin}</p>
+                <p class="text-[9px] text-slate-400">${item.windows.length} vitres • ${item.photos.length} photos</p>
+            </div>
+            <button onclick="removeFromBatch(${index})" class="text-slate-300 hover:text-red-500">✕</button>
+        `;
+        list.appendChild(div);
+    });
+}
+
+function removeFromBatch(index) {
+    state.batch.splice(index, 1);
+    updateBatchCount();
+    renderBatchList();
 }
 
 function updateBatchCount() {
     document.getElementById('batch-counter').innerText = state.batch.length + " lot(s)";
 }
 
-// --- ENVOI FINAL VERS GOOGLE DRIVE & SHEETS ---
+// --- ENVOI GOOGLE ---
 async function finalize() {
-    if (state.batch.length === 0) return alert("Le lot est vide !");
-
+    if (state.batch.length === 0) return;
     const btn = document.getElementById('btn-finaliser');
     btn.disabled = true;
-    btn.innerText = "Envoi en cours...";
+    btn.innerText = "Envoi au Drive...";
 
     try {
-        const response = await fetch('https://script.google.com/macros/s/AKfycbybQoN5JD72b3o3KlePS3ZCFtr2nL5TJJizmnGGLxZopWAQFwB9aPiJZGSWYMmIxwSX/exec', {
+        await fetch('https://script.google.com/macros/s/AKfycbybQoN5JD72b3o3KlePS3ZCFtr2nL5TJJizmnGGLxZopWAQFwB9aPiJZGSWYMmIxwSX/exec', {
             method: 'POST',
-            mode: 'no-cors', // Requis pour Google Apps Script
-            cache: 'no-cache',
-            headers: { 'Content-Type': 'application/json' },
+            mode: 'no-cors',
             body: JSON.stringify({ interventions: state.batch })
         });
-
-        // Avec no-cors on ne peut pas lire la réponse JSON, mais si on arrive ici, c'est ok.
-        alert("Bravo ! Les données et photos sont sur ton Drive.");
+        alert("Tout est envoyé !");
         state.batch = [];
         updateBatchCount();
-
-    } catch (error) {
-        console.error(error);
-        alert("Erreur d'envoi. Vérifie ta connexion.");
+        renderBatchList();
+    } catch (e) {
+        alert("Erreur connexion");
     } finally {
         btn.disabled = false;
         btn.innerText = "Finaliser l'envoi";

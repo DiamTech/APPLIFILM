@@ -46,6 +46,34 @@ async function stopScanner() {
     }
 }
 
+function renderPhotos() {
+    const container = document.getElementById('photo-preview-container');
+    // On garde uniquement le premier élément (le bouton "Ajouter")
+    const addButton = container.querySelector('label');
+    container.innerHTML = '';
+    container.appendChild(addButton);
+
+    // On boucle sur les photos stockées dans state.photos
+    state.photos.forEach((photoData, index) => {
+        const div = document.createElement('div');
+        div.className = "relative aspect-square rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-sm animate-in";
+        div.innerHTML = `
+            <img src="${photoData}" class="w-full h-full object-cover">
+            <button onclick="removePhoto(${index})" class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] shadow-lg border border-white">
+                <i data-lucide="x" class="w-3 h-3"></i>
+            </button>
+        `;
+        container.appendChild(div);
+    });
+    // On demande à Lucide de générer les icônes "x" ajoutées dynamiquement
+    lucide.createIcons();
+}
+
+function removePhoto(index) {
+    state.photos.splice(index, 1);
+    renderPhotos();
+}
+
 function initSignature() {
     canvas = document.getElementById('canvas');
     if (!canvas) return;

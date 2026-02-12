@@ -8,36 +8,38 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-  body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; margin: 0; padding: 20px; }
-  .container { max-width: 600px; margin: auto; }
-  
-  /* On ne cible que les boutons classiques (envois, etc.) */
-  button:not(.window-btn) { 
-    width: 100%; padding: 15px; background: #007bff; color: white; 
-    border: none; border-radius: 8px; font-weight: bold; cursor: pointer;
-  }
-
-  /* Configuration spécifique pour les boutons de vitres */
-  .window-btn {
-    width: auto; /* Empêche le 100% */
-    padding: 0 !important; /* Enlève les 15px qui font gonfler */
-    line-height: 1.1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-  }
-
-  /* État sélectionné : juste un changement de couleur, pas de taille */
-  .window-btn.selected {
-    background-color: #eef2ff !important;
-    border-color: #4f46e5 !important;
-  }
-
-  .lot-item { 
-    background: white; padding: 15px; border-radius: 10px; 
-    margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
-  }
+          body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; margin: 0; padding: 20px; }
+          .container { max-width: 600px; margin: auto; }
+          
+          /* On applique le style bleu uniquement aux boutons qui NE sont PAS des vitres */
+          button:not(.window-btn) { 
+            width: 100%; padding: 15px; background: #007bff; color: white; 
+            border: none; border-radius: 8px; font-weight: bold; cursor: pointer;
+          }
+        
+          /* Style spécifique pour les vitres : on bloque la taille et le padding */
+          .window-btn {
+            width: auto !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            line-height: 1 !important;
+            font-size: 9px !important; /* Taille fixe quoi qu'il arrive */
+          }
+        
+          /* Couleur quand c'est sélectionné */
+          .window-btn.selected {
+            background-color: #eef2ff !important;
+            border: 2px solid #4f46e5 !important;
+          }
+        
+          .lot-item { 
+            background: white; padding: 15px; border-radius: 10px; 
+            margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
+          }
 </style>
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen pb-32">

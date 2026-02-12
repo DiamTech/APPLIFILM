@@ -125,10 +125,45 @@ function renderPhotos() {
 function removePhoto(index) { state.photos.splice(index, 1); renderPhotos(); }
 
 // --- LOGIQUE METIER ---
+let currentPendingWindow = null; // Stocke la vitre en cours de sélection
+
 function toggleWindow(id) {
+    currentPendingWindow = id;
+    document.getElementById('tint-title').innerText = "TEINTE : " + id;
+    document.getElementById('modal-tint').classList.remove('hidden');
+}
+
+function closeTintModal() {
+    document.getElementById('modal-tint').classList.add('hidden');
+    currentPendingWindow = null;
+}
+
+function selectTint(tint) {
+    const id = currentPendingWindow;
+    // On cherche si la vitre est déjà dans la liste
+    const index = state.selectedWindows.findIndex(w => w.id === id);
+    
+    if (index > -1) {
+        state.selectedWindows[index].tint = tint; // On met à jour la teinte
+    } else {
+        state.selectedWindows.push({ id: id, tint: tint }); // On ajoute la vitre
+    }
+    
+    // Mise à jour visuelle du bouton sur le schéma
     const btn = document.getElementById('win-' + id);
-    if(state.selectedWindows.includes(id)) { state.selectedWindows = state.selectedWindows.filter(w => w !== id); btn.classList.remove('selected'); }
-    else { state.selectedWindows.push(id); btn.classList.add('selected'); }
+    btn.classList.add('selected');
+    btn.innerHTML = `<span class="block text-[7px] opacity-70">${id}</span><span class="block">${tint}</span>`;
+    
+    closeTintModal();
+}
+
+function deselectWindow() {
+    const id = currentPendingWindow;
+    state.selectedWindows = state.selectedWindows.filter(w => w.id !== id);
+    const btn = document.getElementById('win-' + id);
+    btn.classList.remove('selected');
+    btn.innerHTML = id; // On remet le nom d'origine
+    closeTintModal();
 }
 
 function addToBatch() {

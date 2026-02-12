@@ -1029,22 +1029,20 @@ function resetPretForm() {
 }
 
 function selectLoanForReturn(immat) {
-    // 1. Recherche du dossier
     const loan = state.activeLoans.find(l => l.immat === immat);
     if (!loan) return alert("❌ Dossier introuvable.");
 
-    // [NOUVEAU] On bascule l'affichage sur le formulaire de prêt pour voir les infos
-    state.pretMode = 'RETOUR'; 
-    // Si tu as une fonction switchView, appelle-la ici : switchView('pret');
+    // A. ACTIVATION DU MODE RETOUR ET VERROUILLAGE
+    state.pretMode = 'RETOUR';
+    toggleFormLock(true); // <--- Ici on bloque les champs identité
 
-    // 2. Remplissage Identité & Permis
+    // B. REMPLISSAGE IDENTITÉ (Lecture seule)
     document.getElementById('pret-vehicule-select').value = loan.immat;
     document.getElementById('pret-nom').value = loan.nom || "";
     document.getElementById('pret-lieu-naiss').value = loan.lieu_naiss || "";
     document.getElementById('pret-permis-num').value = loan.permis_num || "";
     document.getElementById('pret-permis-lieu').value = loan.permis_lieu || "";
     
-    // Date de naissance (Formatage sécurisé pour l'input date)
     if (loan.dob) {
         const d = new Date(loan.dob);
         if (!isNaN(d)) {
@@ -1052,52 +1050,46 @@ function selectLoanForReturn(immat) {
         }
     }
 
-    // 3. Kilométrage
+    // C. CHAMPS ÉDITABLES (Kilométrage, Essence, Obs)
     state.pret.km_depart_initial = parseInt(loan.km) || 0;
     const kmInput = document.getElementById('pret-km-depart');
     if(kmInput) {
         kmInput.placeholder = "Départ : " + loan.km + " km";
-        kmInput.value = ""; 
+        kmInput.value = ""; // Vide pour saisir le retour
     }
-
-    // 4. Photos du permis (Previews)
-    const previewRecto = document.getElementById('preview-recto');
-    const previewVerso = document.getElementById('preview-verso');
     
-    if (loan.recto && loan.recto.startsWith('http')) {
-        previewRecto.innerHTML = `<img src="${loan.recto}" referrerpolicy="no-referrer" class="w-full h-full object-cover rounded-xl shadow-inner">`;
-        state.pret.permis_recto = loan.recto;
-    }
-    if (loan.verso && loan.verso.startsWith('http')) {
-        previewVerso.innerHTML = `<img src="${loan.verso}" referrerpolicy="no-referrer" class="w-full h-full object-cover rounded-xl shadow-inner">`;
-        state.pret.permis_verso = loan.verso;
-    }
-    // 5. RÉCUPÉRATION DES DÉGÂTS (Le cœur du problème)
+    // Le champ Carburant reste éditable par défaut (car non listé dans toggleFormLock)
+
+    // D. PHOTOS DU PERMIS (Affichage seulement)
+    const renderPhoto = (id, url) => {
+        const zone = document.getElementById(id);
+        if (url && url.length > 10) {
+            zone.innerHTML = `<img src="${url}" referrerpolicy="no-referrer" class="w-full h-full object-cover rounded-xl border-2 border-indigo-200">`;
+        }
+    };
+    renderPhoto('preview-recto', loan.recto);
+    renderPhoto('preview-verso', loan.verso);
+
+    // E. RÉCUPÉRATION DES DÉGÂTS (Anciens en gris)
     try {
-        // On récupère la colonne L (degats_coords)
         const savedCoords = loan.degats_coords || loan.coords; 
         const oldCoords = JSON.parse(savedCoords || "[]");
-        
-        // On marque ces points comme 'old'
-        state.pret.damages = oldCoords.map(c => ({ 
-            x: c.x, 
-            y: c.y, 
-            type: 'old' 
-        }));
-        
+        state.pret.damages = oldCoords.map(c => ({ ...c, type: 'old' }));
         renderDamages(); 
     } catch(e) {
-        console.error("Erreur parsing dégâts:", e);
         state.pret.damages = [];
     }
 
-    // 6. Observations
+    // F. OBSERVATIONS
     const obsField = document.getElementById('pret-degats-obs');
     if (obsField) {
-        obsField.value = "PRÉCÉDEMMENT : " + (loan.details || "RAS");
+        obsField.value = "PRÉCÉDEMMENT : " + (loan.details || "RAS") + "\n--- NOTES RETOUR ---\n";
     }
 
-    alert("✅ Dossier " + immat + " chargé ! Les anciens dégâts sont en GRIS.");
+    // G. CHANGEMENT DE VUE (Si tu as la fonction)
+    if (typeof switchView === 'function') switchView('pret');
+
+    alert("📂 Dossier " + immat + " prêt.\nNotez les nouveaux dégâts (ROUGE) et le KM retour.");
 }
 
 function renderDamages() {
@@ -1128,6 +1120,44 @@ function addDamage(event) {
     // IMPORTANT : On marque les nouveaux clics comme 'new'
     state.pret.damages.push({ x, y, type: 'new' });
     renderDamages();
+}
+
+function toggleFormLock(isReturn) {
+    // 1. Liste des champs qui deviennent "Lecture seule" au retour
+    const fieldsToLock = [
+        'pret-nom', 
+        'pret-dob', 
+        'pret-lieu-naiss', 
+        'pret-permis-num', 
+        'pret-permis-lieu'
+    ];
+    
+    fieldsToLock.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.readOnly = isReturn;
+            // Style visuel pour montrer que c'est bloqué
+            el.style.backgroundColor = isReturn ? "#f8fafc" : ""; 
+            el.style.color = isReturn ? "#64748b" : "";
+        }
+    });
+
+    // 2. Blocage des zones photos (on ne peut plus cliquer pour changer la photo)
+    const photoZones = document.querySelectorAll('.photo-upload-zone');
+    photoZones.forEach(zone => {
+        zone.style.pointerEvents = isReturn ? "none" : "auto";
+        zone.style.opacity = isReturn ? "1" : "1"; // On garde l'opacité pour voir l'image
+    });
+
+    // 3. Les champs qui DOIVENT rester libres
+    const fieldsToKeepFree = ['pret-km-depart', 'pret-degats-obs', 'pret-carburant']; // Adapte l'ID carburant si besoin
+    fieldsToKeepFree.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.readOnly = false;
+            el.style.backgroundColor = "";
+        }
+    });
 }
 
 setTimeout(() => setVehicle('VOITURE'), 200);

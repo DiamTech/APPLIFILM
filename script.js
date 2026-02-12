@@ -21,7 +21,7 @@ let state = {
 
 // Mets tes vraies URLs ici
 const URL_VITRAGE = "https://script.google.com/macros/s/AKfycbyl-hYWhxxK8-1jLGxHC_QNFgrVFZtbUv69Ozr2hMAdqWz2iQvP5oG92Div0LbG-L5x/exec";
-const URL_PRET = "https://script.google.com/macros/s/AKfycbz5tLzk0kEFBaV_25iXTE3M1mbzPXOOEN8C_bcgKwWpJj8uXd_dD1iWRvyVnCTTF3i-UQ/exec";
+const URL_PRET = "https://script.google.com/macros/s/AKfycbyUHmpREU7w5uUJHe0JvpmgOpzGj1IW30c0HvUDp3pUxaVVmw_bF97L-WqR-EZkrDvWPw/exec";
 
 let scanner, canvas, ctx, drawing = false;
 

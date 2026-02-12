@@ -2,12 +2,16 @@
 let state = { 
     vin: "", 
     selectedWindows: [], 
-    photos: [], 
+    photos: [], // Pour les photos d'intervention
     batch: [], 
     signature: null,
     sentHistory: [],
-    // AJOUTE BIEN CETTE LIGNE CI-DESSOUS :
-    pret: { permis_recto: null, permis_verso: null },
+    // AJOUTE BIEN CE BLOC POUR LE PRÊT :
+    pret: { 
+        permis_recto: null, 
+        permis_verso: null,
+        photos_depart: [] // C'est ici que le .push() risque de chercher
+    },
     vehiculeType: 'VOITURE'
 };
 
@@ -66,24 +70,20 @@ function handlePermis(input, type) {
     const file = input.files[0];
     if (!file) return;
 
+    // SECURITÉ : On vérifie que state.pret existe
+    if (!state.pret) {
+        state.pret = { permis_recto: null, permis_verso: null, photos_depart: [] };
+    }
+
     const reader = new FileReader();
     reader.onload = (e) => {
-        // 1. On enregistre la photo dans l'état
         if (type === 'recto') state.pret.permis_recto = e.target.result;
         if (type === 'verso') state.pret.permis_verso = e.target.result;
 
-        // 2. On affiche la miniature dans le carré correspondant
-        const previewId = type === 'recto' ? 'preview-recto' : 'preview-verso';
-        const container = document.getElementById(previewId);
-        
+        // Affichage miniature (avec tes IDs du message précédent)
+        const container = document.getElementById(type === 'recto' ? 'preview-recto' : 'preview-verso');
         if (container) {
-            container.innerHTML = `
-                <img src="${e.target.result}" class="w-full h-full object-cover rounded-xl">
-                <div class="absolute top-1 right-1 bg-green-500 text-white rounded-full p-1">
-                    <i data-lucide="check" class="w-3 h-3"></i>
-                </div>
-            `;
-            if (typeof lucide !== 'undefined') lucide.createIcons();
+            container.innerHTML = `<img src="${e.target.result}" class="absolute inset-0 w-full h-full object-cover">`;
         }
     };
     reader.readAsDataURL(file);

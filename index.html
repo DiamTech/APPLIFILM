@@ -8,38 +8,50 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-          body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; margin: 0; padding: 20px; }
-          .container { max-width: 600px; margin: auto; }
-          
-          /* On applique le style bleu uniquement aux boutons qui NE sont PAS des vitres */
-          button:not(.window-btn) { 
-            width: 100%; padding: 15px; background: #007bff; color: white; 
-            border: none; border-radius: 8px; font-weight: bold; cursor: pointer;
-          }
-        
-          /* Style spécifique pour les vitres : on bloque la taille et le padding */
-          .window-btn {
-            width: auto !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            display: flex !important;
-            flex-direction: column !important;
-            align-items: center !important;
-            justify-content: center !important;
-            line-height: 1 !important;
-            font-size: 9px !important; /* Taille fixe quoi qu'il arrive */
-          }
-        
-          /* Couleur quand c'est sélectionné */
-          .window-btn.selected {
-            background-color: #eef2ff !important;
-            border: 2px solid #4f46e5 !important;
-          }
-        
-          .lot-item { 
-            background: white; padding: 15px; border-radius: 10px; 
-            margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
-          }
+  body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; margin: 0; padding: 20px; }
+  .container { max-width: 600px; margin: auto; }
+  
+  /* Boutons standards (Ajouter au lot, Finaliser) */
+  button:not(.window-btn):not(.btn-icon):not(.tab-btn) { 
+    width: 100%; padding: 15px; background: #007bff; color: white; 
+    border: none; border-radius: 8px; font-weight: bold; cursor: pointer;
+  }
+
+  /* Correction Bouton Scanner et Menu (btn-icon) */
+  .btn-icon {
+    width: auto !important; /* Empêche de prendre toute la largeur */
+    padding: 1rem !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Configuration Vitres */
+  .window-btn {
+    width: auto !important;
+    padding: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background-color: rgba(255, 255, 255, 0.9) !important; /* Force le fond clair */
+  }
+
+  /* Couleur quand la vitre est sélectionnée */
+  .window-btn.selected {
+    background-color: #eef2ff !important; /* Bleu très pâle */
+    border: 2px solid #4f46e5 !important;
+    color: #1e1b4b !important;
+  }
+
+  /* Correction des onglets (Voiture/Fourgon/VDL) */
+  .tab-btn {
+    width: auto !important;
+    flex: 1;
+    padding: 8px 0 !important;
+  }
+
+  .lot-item { background: white; padding: 15px; border-radius: 10px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
 </style>
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen pb-32">

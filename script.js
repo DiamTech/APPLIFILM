@@ -12,12 +12,10 @@ let canvas, ctx, drawing = false;
 
 // --- INITIALISATION ---
 window.addEventListener('load', () => {
-    // Laisser un court instant pour le rendu CSS
+    // On attend un peu que le DOM soit stable pour Lucide
     setTimeout(() => {
         initSignature();
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
+        if (typeof lucide !== 'undefined') lucide.createIcons();
         
         const splash = document.getElementById('splash-screen');
         if (splash) {
@@ -91,6 +89,7 @@ function initSignature() {
     const getPos = (e) => {
         const rect = canvas.getBoundingClientRect();
         const ev = e.touches ? e.touches[0] : e;
+        // Calcul précis pour éviter le décalage sous le doigt
         return { 
             x: ev.clientX - rect.left, 
             y: ev.clientY - rect.top 
@@ -98,7 +97,6 @@ function initSignature() {
     };
 
     const start = (e) => { 
-        // Empêche le défilement de la page quand on dessine
         if (e.target === canvas) e.preventDefault(); 
         drawing = true; 
         const p = getPos(e); 
@@ -121,7 +119,7 @@ function initSignature() {
     canvas.addEventListener('mousemove', move);
     window.addEventListener('mouseup', stop);
 
-    // Tactile (Mobile) - Crucial pour que ça dessine sur téléphone
+    // Tactile (Correction spécifique mobile)
     canvas.addEventListener('touchstart', start, { passive: false });
     canvas.addEventListener('touchmove', move, { passive: false });
     canvas.addEventListener('touchend', stop);
@@ -131,16 +129,29 @@ function openSignature() {
     const modal = document.getElementById('modal-sig');
     modal.classList.remove('hidden'); 
     
-    // Forcer le redimensionnement du canvas au moment de l'ouverture
+    // On recalcule la taille après l'ouverture pour que le dessin soit fluide
     setTimeout(() => {
         const rect = canvas.getBoundingClientRect();
         canvas.width = rect.width;
         canvas.height = rect.height;
-        // On doit redéfinir les styles après le redimensionnement
         ctx.strokeStyle = "#4f46e5"; 
         ctx.lineWidth = 3; 
         ctx.lineCap = "round";
-    }, 200);
+    }, 250);
+}
+
+function saveSignature() { 
+    state.signature = canvas.toDataURL('image/png'); 
+    document.getElementById('btn-sig-open').classList.add('hidden'); 
+    document.getElementById('sig-status').classList.remove('hidden'); 
+    closeSignature(); 
+}
+
+function resetSignature() { 
+    state.signature = null; 
+    clearCanvas(); 
+    document.getElementById('btn-sig-open').classList.remove('hidden'); 
+    document.getElementById('sig-status').classList.add('hidden'); 
 }
 // --- PHOTOS AVEC COMPRESSION (Vital pour éviter les erreurs de connexion) ---
 function handlePhotos(input) {

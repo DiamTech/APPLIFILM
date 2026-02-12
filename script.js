@@ -243,56 +243,47 @@ function updateHistoryUI() {
 
 // --- FONCTION D'ENVOI FINAL ---
 async function finalize() {
-    if (!state.batch || state.batch.length === 0) return alert("Le lot est vide !");
+    if(!state.batch.length) return alert("Le lot est vide !");
     
     const btn = document.getElementById('btn-final');
-    const originalText = btn.innerHTML;
-    
     btn.disabled = true;
-    btn.innerHTML = "<span>ENVOI EN COURS...</span>";
+    btn.innerHTML = "<span>TRANSMISSION...</span>";
     
-    const GOOGLE_URL = 'https://script.google.com/macros/s/AKfycbxp0FVZ6za1mQ7FF6-Qm15_ZNuIm73GZla8tAvtOb9OAEeYCKyfHIsSLoGbwIQbtZAr/exec';
+    const GOOGLE_URL = 'https://script.google.com/macros/s/AKfycby8fC4tLtri-KHVwjciLmw0D0QT1jAlUxZiT5Z2OtA1JylZuDXKu5Ta16FZ0S6VGHka/exec';
 
-    // On prépare les données
-    const payload = JSON.stringify({ interventions: state.batch });
+    // On prépare les données proprement
+    const blob = new Blob([JSON.stringify({ interventions: state.batch })], { type: 'application/json' });
 
     try {
-        // LE MODE "NAVIGATEUR MOBILE"
-        await fetch(GOOGLE_URL, {
-            method: 'POST',
-            mode: 'no-cors', // Force le mode "aveugle" pour éviter le blocage CORS
-            cache: 'no-cache',
-            headers: {
-                'Content-Type': 'text/plain', // On utilise text/plain pour éviter l'inspection de sécurité
-            },
-            body: payload
-        });
+        // Technique BEACON : Conçue pour envoyer des données même si on ferme l'appli
+        // C'est la méthode la plus fiable sur mobile
+        const success = navigator.sendBeacon(GOOGLE_URL, blob);
 
-        // SUR MOBILE, AVEC NO-CORS, ON NE PEUT PAS LIRE LA RÉPONSE. 
-        // SI ON ARRIVE ICI, C'EST QUE LE PAQUET EST PARTI.
-        
-        const now = new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
-        state.batch.forEach(v => {
-            state.sentHistory.push({
-                vin: v.vin,
-                type: v.type,
-                windowsCount: v.windows.length,
-                obs: v.obs,
-                sentTime: now
+        if (success) {
+            const now = new Date().toLocaleTimeString('fr-FR');
+            state.batch.forEach(v => state.sentHistory.push({ vin: v.vin, sentTime: now }));
+            
+            state.batch = [];
+            updateBatchUI();
+            updateHistoryUI();
+            
+            alert("✅ ENVOI RÉUSSI !\nLes données sont en route vers Google Sheets.");
+        } else {
+            // Si le Beacon échoue, on tente un dernier Fetch classique
+            await fetch(GOOGLE_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                body: JSON.stringify({ interventions: state.batch })
             });
-        });
-
-        state.batch = [];
-        updateBatchUI();
-        updateHistoryUI();
-        
-        alert("ENVOI EFFECTUÉ !\n(Vérifiez le Sheet sur votre PC)");
-
-    } catch (e) {
-        alert("Erreur mobile : " + e.message);
+            alert("✅ ENVOI EFFECTUÉ (via Fetch)");
+            state.batch = [];
+            updateBatchUI();
+        }
+    } catch(e) {
+        alert("⚠️ Problème de réseau. Vérifiez votre 4G/5G.");
     } finally {
         btn.disabled = false;
-        btn.innerHTML = originalText;
+        btn.innerHTML = "<span>Finaliser l'envoi</span>";
         if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 }

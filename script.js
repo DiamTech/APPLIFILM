@@ -17,6 +17,10 @@ let state = {
     vehiculeType: 'VOITURE'
 };
 
+// Mets tes vraies URLs ici
+const URL_VITRAGE = "https://script.google.com/macros/s/AKfycbxNU3VrpgcdShsFfG_ETvgpis7x1nJCIQChoUTideIU4pxS1NZgr46hj8xEQiZEdq8y/exec";
+const URL_PRET = "https://script.google.com/macros/s/ID_DE_TON_DEUXIEME_SHEET/exec";
+
 let scanner, canvas, ctx, drawing = false;
 
 // --- INITIALISATION AU CHARGEMENT ---
@@ -216,48 +220,6 @@ function renderActiveLoans() {
 // ==========================================
 // --- FONCTIONS STANDARDS (VITRAGE & AUTRES) ---
 // ==========================================
-
-async function finalize() {
-    if(!state.batch.length) return alert("Le lot est vide ! Ajoutez d'abord un véhicule.");
-    
-    const btn = document.getElementById('btn-final');
-    btn.disabled = true;
-    const originalContent = btn.innerHTML;
-    btn.innerHTML = "<span>ENVOI EN COURS...</span>";
-
-    try {
-        await fetch(GOOGLE_URL, {
-            method: 'POST', 
-            mode: 'no-cors', 
-            cache: 'no-cache',
-            body: JSON.stringify({ interventions: state.batch })
-        });
-        
-        // Mise à jour Historique
-        const now = new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
-        state.batch.forEach(v => { 
-            state.dailyHistory.push({ ...v, sentTime: now });
-            state.sentHistory.push({ vin: v.vin, sentTime: now });
-        });
-
-        state.batch = [];
-        updateBatchUI(); 
-        
-        if (document.getElementById('view-history') && !document.getElementById('view-history').classList.contains('hidden')) {
-            renderDailyHistory();
-        }
-
-        alert("✅ TERMINÉ ! Données envoyées et archivées.");
-
-    } catch(e) {
-        console.error(e);
-        alert("❌ Erreur réseau. Vérifiez votre connexion.");
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalContent;
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-    }
-}
 
 function addToBatch() {
     const vinInput = document.getElementById('vin-input');
@@ -566,31 +528,76 @@ function updateHistoryUI() {
 }
 
 async function finalize() {
+    // 1. Vérification si le lot n'est pas vide
     if(!state.batch.length) return alert("Le lot est vide !");
+    
     const btn = document.getElementById('btn-final');
     btn.disabled = true;
     const originalContent = btn.innerHTML;
     btn.innerHTML = "<span>ENVOI EN COURS...</span>";
     
-    const URL_VITRAGE = "https://script.google.com/macros/s/AKfycbx127X1JbcpO4hwYuNzKC9tmBsB51Fi4XnOn4ve65YBnvWsVuq9If5cwJBv0tQ5Rm6t/exec";
-    const URL_PRET = "https://script.google.com/macros/s/AKfycbwAjjdHbduPM6WnauvTVMHhuYgIkd7aoKk38_nGCb_CNKUuUCECTiHpHlt2-dkjWQ_0HA/exec";
-
     try {
-        await fetch(GOOGLE_URL, {
-            method: 'POST', mode: 'no-cors', cache: 'no-cache',
+        // On utilise l'URL spécifique au Sheet VITRAGE
+        await fetch(URL_VITRAGE, {
+            method: 'POST', 
+            mode: 'no-cors', 
+            cache: 'no-cache',
             body: JSON.stringify({ interventions: state.batch })
         });
+
+        // 2. Mise à jour de l'historique local après succès
         const now = new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
-        state.batch.forEach(v => { state.sentHistory.push({ vin: v.vin, sentTime: now }); });
+        state.batch.forEach(v => { 
+            state.sentHistory.push({ vin: v.vin, sentTime: now }); 
+        });
+
+        // 3. Vidage du lot et mise à jour de l'interface
         state.batch = [];
-        updateBatchUI(); updateHistoryUI();
-        alert("TERMINÉ ! Données transmises.");
+        updateBatchUI(); 
+        updateHistoryUI();
+        
+        alert("✅ TERMINÉ ! Données Vitrage transmises.");
+        
     } catch(e) {
-        alert("Erreur de connexion.");
+        console.error(e);
+        alert("❌ Erreur de connexion lors de l'envoi Vitrage.");
     } finally {
+        // 4. Remise en état du bouton
         btn.disabled = false;
         btn.innerHTML = originalContent;
         if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+}
+
+async function finalizePret() {
+    const btn = document.getElementById('btn-final-pret'); // Assure-toi d'avoir cet ID sur ton bouton Prêt
+    if (!state.pret.permis_recto) return alert("Photo du permis manquante !");
+
+    btn.disabled = true;
+    btn.innerText = "ENVOI EN COURS...";
+
+    const payload = {
+        type: "PRET",
+        client: document.getElementById('client-name')?.value || "Inconnu",
+        immat: document.getElementById('pret-immat')?.value || "N/C",
+        permis_recto: state.pret.permis_recto,
+        permis_verso: state.pret.permis_verso,
+        date: new Date().toLocaleString('fr-FR')
+    };
+
+    try {
+        await fetch(URL_PRET, {
+            method: 'POST',
+            mode: 'no-cors',
+            body: JSON.stringify(payload)
+        });
+        alert("✅ Prêt enregistré !");
+        // Reset du formulaire ici si besoin
+    } catch(e) {
+        alert("Erreur d'envoi Prêt");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "VALIDER LE PRÊT";
     }
 }
 

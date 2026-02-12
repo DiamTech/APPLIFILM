@@ -23,6 +23,10 @@ function saveState() {
     localStorage.setItem('scannerState', JSON.stringify(state));
 }
 
+function startScan() {
+    showModal("Caméra", "La fonction scan nécessite une licence ou une bibliothèque spécifique. En attendant, saisissez le VIN manuellement.", "info");
+}
+
 // --- 3. GESTION DES MODALES (FENÊTRES CUSTOM) ---
 function showModal(title, text, type = 'info') {
     const modal = document.getElementById('custom-modal');
@@ -166,7 +170,16 @@ function initSignaturePad() {
 }
 
 function openSignature() {
-    document.getElementById('signature-overlay').style.display = 'flex';
+    const overlay = document.getElementById('signature-overlay');
+    overlay.style.display = 'flex';
+    
+    // Indispensable : Redonner la bonne taille au canvas quand il devient visible
+    const canvas = document.getElementById('signature-pad');
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+    
+    // Relancer l'initialisation pour s'assurer que le pinceau suit le doigt
+    initSignaturePad(); 
 }
 
 function clearSignature() {

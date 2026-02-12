@@ -305,6 +305,35 @@
                 </div>
             </section>
 
+           <div class="bg-white dark:bg-slate-900 rounded-3xl p-4 shadow-sm border border-slate-100 dark:border-slate-800">
+    <h3 class="text-xs font-black uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
+        <i data-lucide="shield-alert" class="w-4 h-4"></i> État de la carrosserie
+    </h3>
+
+    <div class="relative w-full aspect-[1/2] max-w-[280px] mx-auto bg-slate-50 dark:bg-slate-950 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800" 
+         id="damage-container" onclick="addDamage(event)">
+        
+        <svg viewBox="0 0 100 200" class="w-full h-full p-4 pointer-events-none">
+            <path d="M30,20 Q50,15 70,20 L75,50 L75,150 Q75,185 70,190 L30,190 Q25,185 25,150 L25,50 Z" fill="none" stroke="currentColor" stroke-width="1.5" class="text-slate-300 dark:text-slate-700"/>
+            <rect x="28" y="55" width="44" height="35" rx="5" fill="none" stroke="currentColor" stroke-width="1" class="text-slate-200 dark:text-slate-800"/> <rect x="28" y="110" width="44" height="30" rx="2" fill="none" stroke="currentColor" stroke-width="1" class="text-slate-200 dark:text-slate-800"/> </svg>
+
+        <div id="crosses-overlay" class="absolute inset-0 pointer-events-none"></div>
+    </div>
+
+    <p class="text-[10px] text-center text-slate-400 mt-2 font-bold italic">Cliquez sur le véhicule pour marquer un impact (X)</p>
+
+    <textarea id="pret-degats-obs" placeholder="Précisez les dégâts ici (ex: rayure porte AVG, impact pare-brise...)" 
+              class="w-full mt-4 bg-slate-50 dark:bg-slate-950 border-none rounded-2xl py-4 px-5 text-sm font-medium h-24 focus:ring-2 focus:ring-indigo-500 transition-all"></textarea>
+
+    <button type="button" id="btn-lock-inspection" onclick="validateInspection()" 
+            class="w-full mt-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border-2 border-slate-200 dark:border-slate-700 active:scale-95 transition-all">
+        Confirmer l'inspection
+    </button>
+</div>
+
+<div id="signature-section" class="opacity-30 pointer-events-none transition-all duration-500">
+    </div>
+
             <div class="space-y-4 pt-2">
                 <button type="button" onclick="openSignature()" class="w-full bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-300 py-4 rounded-2xl font-black text-xs uppercase tracking-widest border-2 border-dashed border-indigo-200 dark:border-indigo-800">
                     <i data-lucide="pen-tool" class="inline w-4 h-4 mr-2"></i> Faire signer le client

@@ -354,8 +354,14 @@ function initSignature() {
 }
 
 function openSignature() { 
+    // SÉCURITÉ : On bloque si l'inspection carrosserie n'est pas confirmée
+    if (!state.pret || !state.pret.inspectionValidated) {
+        return alert("⚠️ Bloqué : Vous devez d'abord cliquer sur 'Confirmer l'état' de la carrosserie !");
+    }
+
     const modal = document.getElementById('modal-sig');
     if (modal) modal.classList.remove('hidden'); 
+    
     setTimeout(() => {
         const rect = canvas.getBoundingClientRect();
         canvas.width = rect.width;
@@ -372,9 +378,20 @@ function closeSignature() {
 }
 
 function saveSignature() { 
+    // 1. Sauvegarde dans le state
     state.signature = canvas.toDataURL('image/png'); 
-    document.getElementById('btn-sig-open').classList.add('hidden'); 
-    document.getElementById('sig-status').classList.remove('hidden'); 
+    
+    // 2. Retour visuel sur le bouton (on change le texte et la couleur)
+    const sigBtn = document.querySelector('#signature-section button');
+    const sigStatus = document.getElementById('pret-sig-ok');
+
+    if (sigBtn) {
+        sigBtn.innerHTML = '<span>✅ SIGNATURE ENREGISTRÉE</span>';
+        sigBtn.className = "w-full bg-green-500 text-white py-4 rounded-2xl font-black text-xs uppercase flex items-center justify-center gap-2 shadow-lg shadow-green-200";
+    }
+
+    if (sigStatus) sigStatus.classList.remove('hidden'); 
+    
     closeSignature(); 
 }
 

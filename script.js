@@ -588,9 +588,10 @@ async function finalize() {
 async function finalizePret() {
     const btn = document.getElementById('btn-final-pret');
     
-    // 1. RÉCUPÉRATION DES DONNÉES
+    // 1. RÉCUPÉRATION DES DONNÉES DE BASE
     const selectVehicule = document.getElementById('pret-vehicule-select');
     const plaqueAuto = selectVehicule ? selectVehicule.value : "";
+    const kmSaisi = parseInt(document.getElementById('pret-km-depart')?.value) || 0;
 
     const inputs = {
         nom: document.getElementById('pret-nom')?.value.trim(),
@@ -600,20 +601,21 @@ async function finalizePret() {
         permis_lieu: document.getElementById('pret-permis-lieu')?.value.trim()
     };
 
-    // 2. VÉRIFICATION DES CHAMPS OBLIGATOIRES (Le "Sauf si")
+    // 2. VÉRIFICATIONS DE SÉCURITÉ
     if (!plaqueAuto || plaqueAuto === "N/C") return alert("⚠️ Veuillez choisir un véhicule !");
-    if (!inputs.nom) return alert("⚠️ Le nom du client est obligatoire !");
-    if (!inputs.dob) return alert("⚠️ La date de naissance est obligatoire !");
-    if (!inputs.lieu_naiss) return alert("⚠️ Le lieu de naissance est obligatoire !");
-    if (!inputs.permis_num) return alert("⚠️ Le numéro de permis est obligatoire !");
-    if (!inputs.permis_lieu) return alert("⚠️ Le lieu de délivrance du permis est obligatoire !");
-    
-    // VÉRIFICATION DES DOCUMENTS (Photos & Signature)
-    if (!state.pret.permis_recto) return alert("⚠️ La photo du permis (Recto) est obligatoire !");
+    if (!kmSaisi || kmSaisi <= 0) return alert("⚠️ Veuillez saisir le kilométrage !");
     if (!state.signature) return alert("⚠️ La signature du client est obligatoire !");
-    if (!state.pret.inspectionValidated) return alert("⚠️ Vous devez valider l'inspection (bouton Confirmer) avant d'envoyer !");
+    if (!state.pret.inspectionValidated) return alert("⚠️ Vous devez valider l'inspection (bouton Confirmer) !");
 
-    // 3. LOGIQUE POUR LES DÉGÂTS (Facultatif)
+    // Sécurité supplémentaire : si c'est un DÉPART, on exige les infos client
+    if (state.pretMode === "DEPART") {
+        if (!inputs.nom || !inputs.dob || !inputs.permis_num) {
+            return alert("⚠️ Infos client incomplètes pour un départ !");
+        }
+        if (!state.pret.permis_recto) return alert("⚠️ Photo du permis obligatoire au départ !");
+    }
+
+    // 3. LOGIQUE POUR LES DÉGÂTS ET CALCUL KM
     let texteSaisi = document.getElementById('pret-degats-obs')?.value.trim() || "";
     const nbCroix = state.pret.damages ? state.pret.damages.length : 0;
     
@@ -624,33 +626,33 @@ async function finalizePret() {
             : "Aucun dégât signalé (Véhicule intact)";
     }
 
+    // --- CALCUL DES KM SI C'EST UN RETOUR ---
+    let kmInfoMessage = "";
+    if (state.pretMode === "RETOUR" && state.pret.km_depart_initial) {
+        const diff = kmSaisi - state.pret.km_depart_initial;
+        degatsFinalText += ` | KM départ: ${state.pret.km_depart_initial} | Parcouru: ${diff}km`;
+        kmInfoMessage = `\nDistance parcourue : ${diff} km`;
+    }
+
     // 4. PRÉPARATION DU PAQUET (PAYLOAD)
-        const payload = {
-        // --- L'AIGUILLAGE ---
+    const payload = {
         type: "PRET",
-        status: state.pretMode, // Enverra "DEPART" ou "RETOUR" (défini par tes boutons du haut)
-        
-        // --- LES INFOS VÉHICULE ---
+        status: state.pretMode, // DEPART ou RETOUR
         immat: plaqueAuto,
-        km: document.getElementById('pret-km-depart')?.value || "0", // On récupère les KM
-        
-        // --- LE CLIENT ---
+        km: kmSaisi,
         nom: inputs.nom,
         dob: inputs.dob,
         lieu_naiss: inputs.lieu_naiss,
         permis_num: inputs.permis_num,
         permis_lieu: inputs.permis_lieu,
-        
-        // --- L'ÉTAT DES LIEUX ---
         degats_details: degatsFinalText,
         degats_coords: JSON.stringify(state.pret.damages || []), 
-        
-        // --- LES DOCUMENTS ---
-        permis_recto: state.pret.permis_recto,
-        permis_verso: state.pret.permis_verso || "Non fournie",
+        permis_recto: state.pret.permis_recto || "N/A",
+        permis_verso: state.pret.permis_verso || "N/A",
         signature: state.signature,
         date: new Date().toLocaleString('fr-FR')
     };
+
     // 5. ENVOI AU SHEET
     btn.disabled = true;
     const originalText = btn.innerText;
@@ -663,14 +665,15 @@ async function finalizePret() {
             body: JSON.stringify(payload)
         });
 
-        alert("✅ DOSSIER COMPLET ! Le prêt pour " + plaqueAuto + " a été enregistré.");
+        alert(`✅ ${state.pretMode} ENREGISTRÉ !${kmInfoMessage}`);
         
         // 6. RÉINITIALISATION COMPLÈTE
-        resetPretForm(); // On appelle une petite fonction de nettoyage
+        resetPretForm(); 
         switchView('vitrage');
 
     } catch(e) {
-        alert("❌ Erreur réseau. Vérifiez votre connexion.");
+        console.error(e);
+        alert("❌ Erreur lors de l'envoi.");
     } finally {
         btn.disabled = false;
         btn.innerText = originalText;
@@ -942,25 +945,87 @@ async function fetchActiveLoans() {
     }
 }
 
+function resetPretForm() {
+    // 1. Remise à zéro du State
+    state.signature = null;
+    state.pret = {
+        damages: [],
+        inspectionValidated: false,
+        km_depart_initial: null,
+        permis_recto: null,
+        permis_verso: null
+    };
+
+    // 2. Vidage des champs texte et inputs
+    const fields = ["pret-nom", "pret-dob", "pret-lieu-naiss", "pret-permis-num", "pret-permis-lieu", "pret-degats-obs", "pret-km-depart"];
+    fields.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = "";
+    });
+
+    // 3. Reset du menu déroulant véhicule
+    const select = document.getElementById('pret-vehicule-select');
+    if (select) select.value = "";
+
+    // 4. Reset visuel (Croix, Signature, Photos)
+    document.getElementById('crosses-overlay').innerHTML = "";
+    
+    const sigBtn = document.querySelector('#signature-section button');
+    if (sigBtn) {
+        sigBtn.innerHTML = "Faire signer le client";
+        sigBtn.className = "w-full bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-300 py-4 rounded-2xl font-black text-xs uppercase border-2 border-dashed border-indigo-200";
+    }
+    
+    const sigStatus = document.getElementById('pret-sig-ok');
+    if (sigStatus) sigStatus.classList.add('hidden');
+
+    // Verrouiller à nouveau la zone de signature
+    const sigSection = document.getElementById('signature-section');
+    if (sigSection) sigSection.classList.add('opacity-30', 'pointer-events-none');
+
+    // Reset bouton inspection
+    const lockBtn = document.getElementById('btn-lock-inspection');
+    if (lockBtn) {
+        lockBtn.innerHTML = "Confirmer l'état";
+        lockBtn.className = "w-full mt-2 py-3 bg-slate-100 dark:bg-slate-900 text-[10px] font-black uppercase rounded-xl text-slate-500";
+    }
+
+    // Reset des previews photos
+    if (document.getElementById('preview-recto')) document.getElementById('preview-recto').innerHTML = '<i data-lucide="camera" class="w-5 h-5 text-slate-400"></i><span class="text-[8px] mt-1 text-slate-400 font-bold uppercase">Recto</span>';
+    if (document.getElementById('preview-verso')) document.getElementById('preview-verso').innerHTML = '<i data-lucide="camera" class="w-5 h-5 text-slate-400"></i><span class="text-[8px] mt-1 text-slate-400 font-bold uppercase">Verso</span>';
+
+    // Relancer Lucide pour les icônes
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
 function selectLoanForReturn(immat) {
-    // 1. On trouve les infos du prêt dans notre liste locale
+    // 1. On trouve les infos du prêt dans notre liste locale (state.activeLoans)
     const loan = state.activeLoans.find(l => l.immat === immat);
     if (!loan) return;
 
-    // 2. On remplit les champs automatiquement pour gagner du temps
+    // 2. On remplit les champs automatiquement
     document.getElementById('pret-vehicule-select').value = loan.immat;
     document.getElementById('pret-nom').value = loan.nom;
     
-    // 3. On stocke le KM de départ pour le calcul plus tard
-    state.startKM = parseInt(loan.km);
+    // 3. SYNCHRONISATION : On stocke le KM de départ dans la bonne variable
+    state.pret.km_depart_initial = parseInt(loan.km);
     
-    // 4. ON RÉCUPÈRE LES ANCIENNES CROIX
-    // On les affiche par exemple en gris pour les différencier des nouvelles
-    state.pret.damages = JSON.parse(loan.degats_coords || "[]");
-    renderDamages(true); // Une version de ta fonction qui dessine en gris
+    // 4. RÉCUPÉRATION DES DÉGÂTS DU DÉPART
+    try {
+        state.pret.damages = JSON.parse(loan.degats_coords || "[]");
+        renderDamages(); // On dessine les croix existantes
+    } catch(e) {
+        state.pret.damages = [];
+    }
     
-    // 5. On prévient l'utilisateur
-    alert("Prêt chargé ! KM au départ : " + loan.km + ". Marquez les NOUVEAUX dégâts si nécessaire.");
+    // On met à jour l'UI pour montrer que c'est chargé
+    const kmInput = document.getElementById('pret-km-depart');
+    if(kmInput) {
+        kmInput.placeholder = "Départ : " + loan.km + " km";
+        kmInput.value = ""; // On laisse vide pour saisir le nouveau KM
+    }
+    
+    alert("✅ Véhicule " + immat + " sélectionné.\nKM au départ : " + loan.km);
 }
 
 setTimeout(() => setVehicle('VOITURE'), 200);

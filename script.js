@@ -30,33 +30,31 @@ window.addEventListener('load', () => {
 
 // --- NAVIGATION ENTRE LES PAGES ---
 function switchView(view) {
-    // 1. On essaie de fermer le menu (si la fonction existe)
+    console.log("Bouton cliqué, vue demandée :", view);
+    
+    // 1. Fermer le menu
     if (typeof toggleMenu === 'function') toggleMenu(false);
 
-    // 2. On récupère les vues avec les BONS ID du HTML
-    const vVitrage = document.getElementById('view-intervention'); 
-    const vPret = document.getElementById('view-pret');
-    const vHistory = document.getElementById('view-history');
+    // 2. Récupérer les zones par leurs IDs exacts de ton HTML
+    const vVitrage = document.getElementById('view-vitrage'); // Ligne 154 de ton HTML
+    const vPret = document.getElementById('view-pret');       // Ligne 174 de ton HTML
+    const vHistory = document.getElementById('view-history'); // Si tu l'as ajouté
 
-    // 3. On cache tout par sécurité
+    // 3. On cache tout par défaut
     if(vVitrage) vVitrage.classList.add('hidden');
     if(vPret) vPret.classList.add('hidden');
     if(vHistory) vHistory.classList.add('hidden');
 
-    // 4. On affiche la vue demandée
+    // 4. On affiche la zone demandée
     if (view === 'pret') {
         if(vPret) vPret.classList.remove('hidden');
-    } 
-    else if (view === 'history') {
+    } else if (view === 'history') {
         if(vHistory) vHistory.classList.remove('hidden');
-        if(typeof updateHistoryUI === 'function') updateHistoryUI();
-    }
-    else {
-        // Par défaut (ou 'intervention'), on affiche le vitrage
+    } else {
+        // Par défaut, on affiche le vitrage
         if(vVitrage) vVitrage.classList.remove('hidden');
     }
 }
-
 // ==========================================
 // --- MODULE PRÊT DE VÉHICULE ---
 // ==========================================

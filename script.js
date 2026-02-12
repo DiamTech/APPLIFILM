@@ -570,8 +570,12 @@ async function finalize() {
 }
 
 async function finalizePret() {
-    const btn = document.getElementById('btn-final-pret'); // Assure-toi d'avoir cet ID sur ton bouton Prêt
-    if (!state.pret.permis_recto) return alert("Photo du permis manquante !");
+    const btn = document.getElementById('btn-final-pret');
+    
+    // Vérification de sécurité
+    if (!state.pret || !state.pret.permis_recto) {
+        return alert("⚠️ Photo du permis manquante !");
+    }
 
     btn.disabled = true;
     btn.innerText = "ENVOI EN COURS...";
@@ -586,18 +590,24 @@ async function finalizePret() {
     };
 
     try {
+        // C'EST CETTE LIGNE QUI FAIT L'AIGUILLAGE :
         await fetch(URL_PRET, {
             method: 'POST',
             mode: 'no-cors',
             body: JSON.stringify(payload)
         });
-        alert("✅ Prêt enregistré !");
-        // Reset du formulaire ici si besoin
+        
+        alert("✅ Prêt enregistré dans le bon Sheet !");
+        
+        // On peut vider les photos après succès
+        state.pret = { permis_recto: null, permis_verso: null };
+        switchView('vitrage'); // Retour à l'accueil
+        
     } catch(e) {
         alert("Erreur d'envoi Prêt");
     } finally {
         btn.disabled = false;
-        btn.innerText = "VALIDER LE PRÊT";
+        btn.innerText = "Valider le départ";
     }
 }
 

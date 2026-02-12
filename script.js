@@ -215,3 +215,36 @@ function toggleDarkMode() {
     if(icon) icon.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
     lucide.createIcons();
 }
+
+// --- GESTION DU MENU ---
+function toggleMenu(open) {
+    const menu = document.getElementById('side-menu');
+    const overlay = document.getElementById('menu-overlay');
+    const panel = document.getElementById('menu-panel');
+    
+    if (open) {
+        menu.classList.remove('invisible');
+        setTimeout(() => {
+            overlay.classList.replace('opacity-0', 'opacity-100');
+            panel.classList.replace('translate-x-full', 'translate-x-0');
+        }, 10);
+    } else {
+        overlay.classList.replace('opacity-100', 'opacity-0');
+        panel.classList.replace('translate-x-0', 'translate-x-full');
+        setTimeout(() => menu.classList.add('invisible'), 300);
+    }
+}
+
+// --- CHANGEMENT DE VUE ---
+function switchView(view) {
+    toggleMenu(false); // Ferme le menu
+    
+    // Pour l'instant on prépare juste la logique
+    if (view === 'pret') {
+        alert("Interface 'Prêt de véhicule' en cours de préparation...");
+    } else {
+        alert("Retour à l'interface Vitrages");
+    }
+    
+    // On mettra ici le code pour cacher/afficher les sections HTML
+}

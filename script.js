@@ -4,7 +4,8 @@ let state = {
     photos: [], 
     batch: [], 
     signature: null,
-    sentHistory: [] 
+    sentHistory: [],
+    dailyHistory: [] 
 };
 
 let scanner;
@@ -277,7 +278,6 @@ function updateHistoryUI() {
 }
 
 async function finalize() {
-    // Comme on ne peut ajouter au lot QUE si c'est signé, vérifier si le lot est vide suffit
     if(!state.batch.length) return alert("Le lot est vide ! Ajoutez d'abord un véhicule.");
     
     const btn = document.getElementById('btn-final');
@@ -285,18 +285,27 @@ async function finalize() {
     const originalContent = btn.innerHTML;
     btn.innerHTML = "<span>ENVOI EN COURS...</span>";
     
-    const GOOGLE_URL = 'https://script.google.com/macros/s/AKfycbxLVos-LwU_iV4h8skP7IHemI9yCjnGBC8LInFc7VXH93QxIOGOBDLAcDTyTA1klU_d/exec';
+    const GOOGLE_URL = 'https://script.google.com/macros/s/AKfycbxNU3VrpgcdShsFfG_ETvgpis7x1nJCIQChoUTideIU4pxS1NZgr46hj8xEQiZEdq8y/exec';
 
     try {
         await fetch(GOOGLE_URL, {
             method: 'POST', mode: 'no-cors', cache: 'no-cache',
             body: JSON.stringify({ interventions: state.batch })
         });
+        
+        // --- MISE A JOUR DE L'HISTORIQUE DETAILLÉ ---
         const now = new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
-        state.batch.forEach(v => { state.sentHistory.push({ vin: v.vin, sentTime: now }); });
+        
+        state.batch.forEach(v => { 
+            // On ajoute TOUT l'objet véhicule dans l'historique + l'heure
+            state.dailyHistory.push({ ...v, sentTime: now });
+        });
+
         state.batch = [];
-        updateBatchUI(); updateHistoryUI();
+        updateBatchUI(); 
+        
         alert("TERMINÉ ! Lot envoyé.");
+
     } catch(e) {
         alert("Erreur réseau.");
     } finally {
@@ -339,9 +348,67 @@ function toggleMenu(open) {
 
 function switchView(view) {
     toggleMenu(false);
-    if (view === 'pret') alert("Interface 'Prêt de véhicule' en préparation...");
-    else alert("Retour à l'interface Vitrages");
+    
+    const divIntervention = document.getElementById('view-intervention');
+    const divHistory = document.getElementById('view-history');
+
+    if (view === 'history') {
+        divIntervention.classList.add('hidden');
+        divHistory.classList.remove('hidden');
+        renderDailyHistory(); // On génère la liste
+    } else if (view === 'vitrage') {
+        divIntervention.classList.remove('hidden');
+        divHistory.classList.add('hidden');
+    } else if (view === 'pret') {
+        alert("Interface 'Prêt de véhicule' en préparation...");
+    }
 }
+
+function renderDailyHistory() {
+    const container = document.getElementById('daily-history-list');
+    if (!container) return;
+
+    if (state.dailyHistory.length === 0) {
+        container.innerHTML = '<div class="text-center py-10 text-slate-400 text-sm">Aucun envoi aujourd\'hui</div>';
+        return;
+    }
+
+    container.innerHTML = state.dailyHistory.map(item => `
+        <div class="bg-white dark:bg-slate-800 p-5 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700">
+            <div class="flex justify-between items-start mb-3">
+                <div>
+                    <div class="text-xs font-black text-indigo-500 uppercase tracking-widest mb-1">${item.type}</div>
+                    <div class="text-lg font-bold text-slate-800 dark:text-white">${item.vin}</div>
+                </div>
+                <div class="text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded-lg">
+                    ${item.sentTime}
+                </div>
+            </div>
+            
+            <div class="space-y-2">
+                <div class="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-2xl text-xs text-slate-600 dark:text-slate-300">
+                    <strong class="block text-[9px] uppercase text-slate-400 mb-1">Vitres</strong>
+                    ${item.windows.join(', ')}
+                </div>
+                ${item.obs ? `
+                <div class="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-2xl text-xs text-slate-600 dark:text-slate-300">
+                    <strong class="block text-[9px] uppercase text-slate-400 mb-1">Observations</strong>
+                    ${item.obs}
+                </div>` : ''}
+            </div>
+            
+            <div class="flex items-center gap-2 mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
+                <div class="flex -space-x-2">
+                    ${item.photos.map(() => `<div class="w-6 h-6 rounded-full bg-slate-200 border-2 border-white dark:border-slate-800"></div>`).join('')}
+                </div>
+                <div class="text-[10px] font-bold text-slate-400">
+                    ${item.photos.length} Photo(s) • Signature OK
+                </div>
+            </div>
+        </div>
+    `).reverse().join('');
+}
+
 
 // --- CONFIGURATION IDENTIQUE POUR TOUS LES VEHICULES (RESTÉE INCHANGÉE) ---
 const COMMON_VITRES = [

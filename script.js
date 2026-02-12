@@ -278,6 +278,7 @@ function updateHistoryUI() {
 }
 
 async function finalize() {
+    // 1. Vérifie s'il y a quelque chose à envoyer
     if(!state.batch.length) return alert("Le lot est vide ! Ajoutez d'abord un véhicule.");
     
     const btn = document.getElementById('btn-final');
@@ -285,29 +286,48 @@ async function finalize() {
     const originalContent = btn.innerHTML;
     btn.innerHTML = "<span>ENVOI EN COURS...</span>";
     
+    // Ton URL (Assure-toi que c'est bien la dernière version déployée)
     const GOOGLE_URL = 'https://script.google.com/macros/s/AKfycbx127X1JbcpO4hwYuNzKC9tmBsB51Fi4XnOn4ve65YBnvWsVuq9If5cwJBv0tQ5Rm6t/exec';
 
     try {
+        // 2. Envoi vers Google
         await fetch(GOOGLE_URL, {
-            method: 'POST', mode: 'no-cors', cache: 'no-cache',
+            method: 'POST', 
+            mode: 'no-cors', 
+            cache: 'no-cache',
             body: JSON.stringify({ interventions: state.batch })
         });
         
-        // --- MISE A JOUR DE L'HISTORIQUE DETAILLÉ ---
+        // 3. MISE À JOUR DE L'HISTORIQUE (C'est ici que ça manquait)
         const now = new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
         
+        // On copie chaque véhicule du lot vers l'historique détaillé
         state.batch.forEach(v => { 
-            // On ajoute TOUT l'objet véhicule dans l'historique + l'heure
-            state.dailyHistory.push({ ...v, sentTime: now });
+            state.dailyHistory.push({ 
+                ...v, // On garde toutes les infos (vitres, photos, obs...)
+                sentTime: now 
+            });
+            
+            // On garde aussi la compatibilité avec l'ancien petit historique (optionnel)
+            state.sentHistory.push({ vin: v.vin, sentTime: now });
         });
 
+        // 4. On vide le lot seulement APRÈS avoir copié
         state.batch = [];
+        
+        // 5. Mise à jour visuelle
         updateBatchUI(); 
         
-        alert("TERMINÉ ! Lot envoyé.");
+        // Si l'utilisateur est déjà sur la page historique, on rafraichit la liste
+        if (document.getElementById('view-history') && !document.getElementById('view-history').classList.contains('hidden')) {
+            renderDailyHistory();
+        }
+
+        alert("✅ TERMINÉ ! Données envoyées et archivées.");
 
     } catch(e) {
-        alert("Erreur réseau.");
+        console.error(e);
+        alert("❌ Erreur réseau. Vérifiez votre connexion.");
     } finally {
         btn.disabled = false;
         btn.innerHTML = originalContent;

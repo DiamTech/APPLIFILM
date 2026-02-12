@@ -1062,22 +1062,32 @@ function selectLoanForReturn(immat) {
     const zone = document.getElementById(id);
     if (!zone) return;
 
-    if (url && url.startsWith('http')) {
-        // On force le lien en mode "Thumbnail" si jamais le lien direct échoue
-        let finalUrl = url;
-        if (url.includes('drive.google.com') || url.includes('googleusercontent.com')) {
-            // On extrait l'ID (suite de chiffres et lettres de ~33 caractères)
-            const idMatch = url.match(/[-\w]{25,}/);
-            if (idMatch) finalUrl = `https://drive.google.com/thumbnail?id=${idMatch[0]}&sz=w1000`;
-        }
+    if (url && url.length > 10) {
+        let fileId = "";
+        try {
+            if (url.includes('id=')) fileId = url.split('id=')[1].split('&')[0];
+            else if (url.includes('/d/')) fileId = url.split('/d/')[1].split('/')[0];
+            else fileId = url.match(/[-\w]{25,}/);
+        } catch(e) {}
+
+        const finalUrl = fileId ? `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000` : url;
 
         zone.innerHTML = `
             <img src="${finalUrl}" 
                  referrerpolicy="no-referrer" 
-                 class="w-full h-full object-cover rounded-xl border-2 border-indigo-500 shadow-lg">
+                 onclick="openFullscreen('${finalUrl}')" 
+                 class="w-full h-full object-cover rounded-xl border-2 border-indigo-500 shadow-lg cursor-zoom-in">
+            <div class="absolute bottom-1 right-1 bg-black/50 rounded-full p-1">
+                <i data-lucide="maximize" class="w-2 h-2 text-white"></i>
+            </div>
         `;
-        zone.style.pointerEvents = "none"; // Bloque l'upload
+        
+        // --- CHANGEMENT ICI ---
+        zone.style.pointerEvents = "auto"; // On autorise le clic pour la loupe
         zone.style.border = "none";
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    } else {
+        zone.innerHTML = `<div class="text-[10px] text-slate-500 font-bold italic">AUCUN DOCUMENT</div>`;
     }
 };
     
@@ -1214,6 +1224,15 @@ function resetDamages() {
     }
     
     renderDamages();
+}
+
+function openFullscreen(url) {
+    const overlay = document.getElementById('fullscreen-overlay');
+    const img = document.getElementById('fullscreen-img');
+    if (overlay && img) {
+        img.src = url;
+        overlay.classList.remove('hidden');
+    }
 }
 
 setTimeout(() => setVehicle('VOITURE'), 200);

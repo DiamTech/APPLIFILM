@@ -21,7 +21,7 @@ let state = {
 
 // Mets tes vraies URLs ici
 const URL_VITRAGE = "https://script.google.com/macros/s/AKfycbyl-hYWhxxK8-1jLGxHC_QNFgrVFZtbUv69Ozr2hMAdqWz2iQvP5oG92Div0LbG-L5x/exec";
-const URL_PRET = "https://script.google.com/macros/s/AKfycbyNXYVLrZ6QlstE_UVhe-g2igbbXNGKiJxbgjvKcrcUiy_CqU7bIfpMfqYfemM24tnHNQ/exec";
+const URL_PRET = "https://script.google.com/macros/s/AKfycbzq54rMzq9J27FbQtOaxf1p3igk8iYiASjnBhaIiEGBv_s2y79YrZbodgjST83IFI57Vw/exec";
 
 let scanner, canvas, ctx, drawing = false;
 
@@ -931,41 +931,43 @@ async function fetchActiveLoans() {
         }
 
         container.innerHTML = loans.map(loan => {
-            // --- FORMATAGE DE LA DATE (Pour éviter le format 2026-02-12T...) ---
-            const dateObj = new Date(loan.date);
-            const datePretty = dateObj.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+    // 1. Formatage propre de la date
+    const dateObj = new Date(loan.date);
+    const datePretty = dateObj.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
 
-            // --- VÉRIFICATION DU KM ---
-            // On vérifie 'km' ou 'km_depart' selon ce que ton Apps Script envoie
-            const mileage = loan.km || loan.km_depart || "0";
+    // 2. Sécurisation du KM (pour éviter le "undefined")
+    const mileage = loan.km || "0";
 
-            return `
-                <button type="button" onclick="selectLoanForReturn('${loan.immat}')" 
-                    class="w-full bg-white dark:bg-slate-900 p-5 rounded-[2rem] border border-slate-100 dark:border-slate-800 text-left flex flex-col gap-3 active:scale-[0.98] transition-all shadow-sm mb-2">
-                    
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <span class="text-[9px] font-black text-indigo-400 uppercase tracking-widest block mb-1">Véhicule</span>
-                            <div class="font-black text-slate-800 dark:text-white text-base leading-none">${loan.immat}</div>
-                        </div>
-                        <div class="text-[10px] font-bold text-slate-400 bg-slate-50 dark:bg-slate-950 px-3 py-1 rounded-full">
-                            ${datePretty}
-                        </div>
+    return `
+        <button type="button" onclick="selectLoanForReturn('${loan.immat}')" 
+            class="w-full bg-white dark:bg-slate-900 p-5 rounded-[2rem] border border-slate-100 dark:border-slate-800 text-left flex flex-col gap-3 active:scale-[0.98] transition-all shadow-sm mb-2">
+            
+            <div class="flex justify-between items-start">
+                <div>
+                    <span class="text-[9px] font-black text-indigo-400 uppercase tracking-widest block mb-1">Modèle</span>
+                    <div class="font-black text-slate-800 dark:text-white text-base leading-none">
+                        ${loan.modele || "Véhicule"} 
                     </div>
+                    <div class="text-[10px] text-slate-400 font-bold mt-1">${loan.immat}</div>
+                </div>
+                <div class="text-[10px] font-bold text-slate-400 bg-slate-50 dark:bg-slate-950 px-3 py-1 rounded-full">
+                    ${datePretty}
+                </div>
+            </div>
 
-                    <div class="flex justify-between items-end">
-                        <div class="max-w-[60%]">
-                            <span class="text-[9px] font-bold text-slate-300 uppercase block mb-1">Client</span>
-                            <div class="text-xs font-bold text-slate-600 dark:text-slate-300 truncate">${loan.nom}</div>
-                        </div>
-                        <div class="text-right">
-                            <span class="text-[9px] font-bold text-slate-300 uppercase block mb-1">Compteur</span>
-                            <div class="text-sm font-black text-indigo-600">${mileage} <span class="text-[10px]">KM</span></div>
-                        </div>
-                    </div>
-                </button>
-            `;
-        }).join('');
+            <div class="flex justify-between items-end mt-2">
+                <div class="max-w-[60%]">
+                    <span class="text-[9px] font-bold text-slate-300 uppercase block mb-1">Client</span>
+                    <div class="text-xs font-bold text-slate-600 dark:text-slate-300 truncate">${loan.nom}</div>
+                </div>
+                <div class="text-right">
+                    <span class="text-[9px] font-bold text-slate-300 uppercase block mb-1">Compteur</span>
+                    <div class="text-sm font-black text-indigo-600">${mileage} <span class="text-[10px]">KM</span></div>
+                </div>
+            </div>
+        </button>
+    `;
+}).join('');
     } catch (e) {
         console.error(e);
         container.innerHTML = '<div class="text-[10px] font-bold text-center py-4 text-red-400 uppercase">⚠️ Erreur de connexion</div>';

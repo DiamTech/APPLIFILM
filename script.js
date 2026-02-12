@@ -21,42 +21,52 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function toggleHistory() {
-    const container = document.getElementById('history-container');
-    const chevron = document.getElementById('history-chevron');
-    const isHidden = container.classList.contains('hidden');
-    
-    if (isHidden) {
-        container.classList.remove('hidden');
-        chevron.style.transform = "rotate(180deg)";
-        renderHistory();
+    const sidebar = document.getElementById('history-sidebar');
+    const overlay = document.getElementById('history-overlay');
+    const isOpened = !sidebar.classList.contains('translate-x-full');
+
+    if (isOpened) {
+        // Fermer
+        sidebar.classList.add('translate-x-full');
+        overlay.classList.add('hidden');
     } else {
-        container.classList.add('hidden');
-        chevron.style.transform = "rotate(0deg)";
+        // Ouvrir
+        renderHistory(); // On rafraîchit la liste
+        sidebar.classList.remove('translate-x-full');
+        overlay.classList.remove('hidden');
     }
 }
 
+// Modifie renderHistory pour mettre à jour le petit point rouge dans le header
 function renderHistory() {
     const container = document.getElementById('history-container');
+    const dot = document.getElementById('hist-dot');
     container.innerHTML = "";
 
     if (history.length === 0) {
-        container.innerHTML = `<p class="text-center text-slate-400 text-xs py-4 italic">Aucun envoi archivé</p>`;
+        container.innerHTML = `<div class="flex flex-col items-center justify-center h-40 text-slate-400 italic text-xs">Aucun envoi archivé</div>`;
+        dot.classList.add('hidden');
         return;
     }
 
+    dot.classList.remove('hidden');
+
     history.forEach((v) => {
         const div = document.createElement('div');
-        div.className = "bg-slate-100/50 border border-slate-200 rounded-xl p-3 opacity-70 scale-95";
+        div.className = "bg-white border border-slate-200 rounded-xl p-3 shadow-sm";
         div.innerHTML = `
-            <div class="flex justify-between items-center mb-1">
-                <span class="font-mono text-[11px] font-bold text-slate-600">${v.vin}</span>
-                <span class="text-[9px] text-slate-400">${v.timestamp}</span>
+            <div class="flex justify-between items-start mb-1">
+                <span class="font-mono text-[11px] font-bold text-indigo-600">${v.vin}</span>
+                <span class="text-[9px] text-slate-400">${v.timestamp.split(' ')[0]}</span>
             </div>
-            <div class="text-[9px] text-slate-500 truncate">
-                ${v.type} • ${v.windows.join(', ')}
+            <div class="text-[10px] text-slate-600 font-semibold mb-1 italic">Note : ${v.obs}</div>
+            <div class="flex flex-wrap gap-1">
+                <span class="text-[8px] bg-slate-100 px-1.5 py-0.5 rounded uppercase font-bold text-slate-500">${v.type}</span>
+                ${v.windows.slice(0, 3).map(w => `<span class="text-[8px] bg-indigo-50 text-indigo-500 px-1.5 py-0.5 rounded">${w}</span>`).join('')}
+                ${v.windows.length > 3 ? `<span class="text-[8px] text-slate-300">...</span>` : ''}
             </div>
         `;
-        container.prepend(div); // Les plus récents en haut
+        container.appendChild(div); // Plus récent en haut déjà géré par l'ordre du tableau
     });
     if (window.lucide) lucide.createIcons();
 }

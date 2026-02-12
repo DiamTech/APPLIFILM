@@ -3,221 +3,130 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Scanner Applifilm Pro</title>
-    
+    <title>Applifilm Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
-
-    <script>
-        // Configuration de Tailwind pour le mode sombre manuel
-        tailwind.config = {
-            darkMode: 'class'
-        }
-    </script>
-
     <style>
-        /* Effet de background dynamique */
-        body {
-            background-color: #f8fafc;
-            background-image: radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.05) 0px, transparent 50%);
-            background-attachment: fixed;
-            transition: background-color 0.3s ease;
-        }
-
-        /* Mode Sombre : Fond Noir Pur */
-        .dark body {
-            background-color: #000000 !important;
-            background-image: none !important;
-        }
-
-        /* Style des vitres */
-        .window-btn { transition: all 0.2s; border: 2px solid #e2e8f0; cursor: pointer; }
-        .window-btn.selected { 
-            background-color: #4f46e5 !important; 
-            color: white !important; 
-            border-color: #4338ca !important; 
-            transform: scale(0.95);
-            box-shadow: 0 0 15px rgba(79, 70, 229, 0.3);
-        }
-
-        .dark .window-btn { background-color: #111; border-color: #333; color: #666; }
-
-        #signature-pad { touch-action: none; cursor: crosshair; }
-        .animate-in { animation: fadeIn 0.3s ease-out; }
+        .window-btn.selected { background-color: #4f46e5 !important; color: white !important; transform: scale(0.95); border-color: #4338ca; }
+        .animate-in { animation: fadeIn 0.4s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .splash-fade { opacity: 0; pointer-events: none; transition: all 0.7s ease; }
     </style>
 </head>
-<div id="splash-screen" class="fixed inset-0 bg-white z-[9999] flex items-center justify-center transition-opacity duration-700">
-    <div class="text-center">
-        <img src="https://www.applifilm.fr/wp-content/uploads/2020/07/applifilm.png" 
-             alt="Applifilm" class="h-16 w-auto object-contain mb-6 animate-pulse">
-        
-        <div class="flex justify-center gap-2">
-            <div class="w-2 h-2 bg-indigo-600 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-            <div class="w-2 h-2 bg-indigo-600 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-            <div class="w-2 h-2 bg-indigo-600 rounded-full animate-bounce"></div>
-        </div>
-    </div>
-</div>
+<body class="bg-slate-50 font-sans pb-32">
 
-<header class="bg-white/80 backdrop-blur-md border-b border-slate-200 p-4 sticky top-0 z-[100]">
-    <div class="flex items-center justify-between max-w-lg mx-auto">
-        <img src="https://www.applifilm.fr/wp-content/uploads/2020/07/applifilm.png" alt="Logo" class="h-8 w-auto">
-        <div id="batch-counter" class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-xs font-bold">0 lot</div>
-    </div>
-</header>
-
-    <div id="history-sidebar" class="fixed inset-y-0 right-0 w-80 bg-white dark:bg-slate-900 shadow-2xl z-[400] transform translate-x-full transition-transform duration-300 ease-in-out border-l border-slate-200 dark:border-slate-800">
-        <div class="flex flex-col h-full">
-            <div class="p-4 border-b dark:border-slate-800 flex justify-between items-center">
-                <h2 class="font-bold dark:text-white text-sm uppercase">Archives</h2>
-                <button onclick="toggleHistory()" class="text-slate-400"><i data-lucide="x"></i></button>
-            </div>
-            <div id="history-container" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
-            <div class="p-4 border-t dark:border-slate-800">
-                <button onclick="clearHistory()" class="w-full py-3 text-[10px] font-bold text-red-500 bg-red-50 dark:bg-red-900/20 rounded-xl uppercase">Vider</button>
+    <div id="splash-screen" class="fixed inset-0 bg-white z-[9999] flex items-center justify-center transition-opacity duration-700">
+        <div class="text-center">
+            <img src="https://www.applifilm.fr/wp-content/uploads/2020/07/applifilm.png" class="h-16 w-auto mb-6 animate-pulse">
+            <div class="flex justify-center gap-2">
+                <div class="w-2 h-2 bg-indigo-600 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                <div class="w-2 h-2 bg-indigo-600 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                <div class="w-2 h-2 bg-indigo-600 rounded-full animate-bounce"></div>
             </div>
         </div>
     </div>
-    <div id="history-overlay" onclick="toggleHistory()" class="fixed inset-0 bg-black/50 z-[350] hidden backdrop-blur-sm"></div>
 
-    <main class="max-w-md mx-auto p-4 space-y-6">
-        <section class="bg-white dark:bg-slate-800 p-4 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm">
-    <label class="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1 tracking-widest">Identification</label>
-    <div class="relative flex items-center">
-        <input type="text" id="vin-input" 
-               placeholder="Scanner ou saisir le VIN..." 
-               class="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-2xl py-4 pl-5 pr-14 text-sm font-mono tracking-wider focus:ring-2 focus:ring-indigo-500 dark:text-white transition-all">
-        
-        <button onclick="startScanner()" class="absolute right-2 bg-indigo-600 text-white p-3 rounded-xl shadow-lg active:scale-90 transition-transform">
-    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
-</button>
-    </div>
-</section>
+    <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 p-4 sticky top-0 z-[100]">
+        <div class="flex items-center justify-between max-w-lg mx-auto">
+            <img src="https://www.applifilm.fr/wp-content/uploads/2020/07/applifilm.png" alt="Logo" class="h-8 w-auto">
+            <div id="batch-counter" class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-xs font-bold">0 lot</div>
+        </div>
+    </header>
 
-        <section class="bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden transition-colors">
-    <label class="block text-[10px] font-black text-slate-400 uppercase mb-6 text-center tracking-[0.2em]">Plan d'intervention</label>
-    
-    <div class="relative mx-auto" style="width: 280px; height: 580px;">
-        <svg viewBox="0 0 200 480" class="absolute inset-0 w-full h-full fill-none stroke-slate-300 dark:stroke-slate-600 transition-colors" stroke-width="1.5">
-            <path d="M50 20 C50 10, 150 10, 150 20 L165 90 L165 420 C165 440, 35 440, 35 420 L35 90 Z" />
-            <path d="M55 35 C55 25, 145 25, 145 35 L155 80 L45 80 Z" />
-            <rect x="65" y="125" width="70" height="40" rx="5" />
-            <rect x="65" y="280" width="70" height="40" rx="5" />
-        </svg>
+    <main class="max-w-lg mx-auto p-4 space-y-6">
 
-        <button onclick="toggleWindow('PARE-BRISE')" id="win-PARE-BRISE" class="window-btn absolute top-[20px] left-1/2 w-40 h-14 rounded-2xl text-[10px] font-bold bg-white shadow-md -ml-20">PARE-BRISE</button>
-        <button onclick="toggleWindow('TOIT-AV')" id="win-TOIT-AV" class="window-btn absolute top-[125px] left-1/2 w-20 h-10 rounded-xl text-[8px] font-bold bg-white shadow-sm -ml-10">TOIT-AV</button>
-        <button onclick="toggleWindow('TOIT-AR')" id="win-TOIT-AR" class="window-btn absolute top-[280px] left-1/2 w-20 h-10 rounded-xl text-[8px] font-bold bg-white shadow-sm -ml-10">TOIT-AR</button>
-
-        <div class="absolute bottom-[20px] left-1/2 -ml-32 w-64 space-y-2">
-            <div class="flex gap-2">
-                <button onclick="toggleWindow('LUN.AR G')" id="win-LUN.AR G" class="window-btn flex-1 h-14 rounded-2xl text-[9px] font-bold bg-white shadow-md">LUN.AR G</button>
-                <button onclick="toggleWindow('LUN.AR D')" id="win-LUN.AR D" class="window-btn flex-1 h-14 rounded-2xl text-[9px] font-bold bg-white shadow-md">LUN.AR D</button>
+        <section class="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm">
+            <label class="block text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">Identification</label>
+            <div id="reader" class="hidden rounded-2xl overflow-hidden border-2 border-indigo-600 mb-4 bg-black"></div>
+            <div class="relative flex items-center">
+                <input type="text" id="vin-input" placeholder="Scanner ou saisir le VIN..." class="w-full bg-slate-50 border-none rounded-2xl py-4 pl-5 pr-14 text-sm font-mono tracking-wider focus:ring-2 focus:ring-indigo-500">
+                <button onclick="startScanner()" class="absolute right-2 bg-indigo-600 text-white p-3 rounded-xl shadow-lg active:scale-90 transition-transform">
+                    <i data-lucide="camera"></i>
+                </button>
             </div>
-            <button onclick="toggleWindow('COFFRE')" id="win-COFFRE" class="window-btn w-full h-12 rounded-2xl text-[10px] font-black bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 shadow-inner uppercase tracking-widest border-dashed">
-                <i data-lucide="archive" class="inline w-3 h-3 mr-1"></i> Coffre
+        </section>
+
+        <section class="bg-white p-4 rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+            <label class="block text-[10px] font-black text-slate-400 uppercase mb-6 text-center tracking-[0.2em]">Plan d'intervention</label>
+            <div class="relative mx-auto" style="width: 280px; height: 580px;">
+                <svg viewBox="0 0 200 480" class="absolute inset-0 w-full h-full fill-none stroke-slate-300" stroke-width="1.5">
+                    <path d="M50 20 C50 10, 150 10, 150 20 L165 90 L165 420 C165 440, 35 440, 35 420 L35 90 Z" />
+                    <path d="M55 35 C55 25, 145 25, 145 35 L155 80 L45 80 Z" />
+                </svg>
+
+                <button onclick="toggleWindow('PARE-BRISE')" id="win-PARE-BRISE" class="window-btn absolute top-[20px] left-1/2 w-40 h-14 rounded-2xl text-[10px] font-bold bg-white shadow-md -ml-20 border">PARE-BRISE</button>
+                <button onclick="toggleWindow('TOIT-AV')" id="win-TOIT-AV" class="window-btn absolute top-[125px] left-1/2 w-20 h-10 rounded-xl text-[8px] font-bold bg-white shadow-sm -ml-10 border">TOIT-AV</button>
+                <button onclick="toggleWindow('TOIT-AR')" id="win-TOIT-AR" class="window-btn absolute top-[280px] left-1/2 w-20 h-10 rounded-xl text-[8px] font-bold bg-white shadow-sm -ml-10 border">TOIT-AR</button>
+
+                <div class="absolute bottom-[20px] left-1/2 -ml-32 w-64 space-y-2">
+                    <div class="flex gap-2">
+                        <button onclick="toggleWindow('LUN.AR G')" id="win-LUN.AR G" class="window-btn flex-1 h-14 rounded-2xl text-[9px] font-bold bg-white shadow-md border">LUN.AR G</button>
+                        <button onclick="toggleWindow('LUN.AR D')" id="win-LUN.AR D" class="window-btn flex-1 h-14 rounded-2xl text-[9px] font-bold bg-white shadow-md border">LUN.AR D</button>
+                    </div>
+                    <button onclick="toggleWindow('COFFRE')" id="win-COFFRE" class="window-btn w-full h-12 rounded-2xl text-[10px] font-black bg-slate-50 text-slate-500 shadow-inner uppercase border border-dashed">COFFRE</button>
+                </div>
+
+                <div class="absolute left-[-20px] top-[90px] bottom-[140px] flex flex-col w-24">
+                    <button onclick="toggleWindow('AV-G')" id="win-AV-G" class="window-btn w-16 h-16 rounded-2xl text-[9px] bg-white font-bold shadow-sm mb-auto border">AV-G</button>
+                    <div class="flex flex-col">
+                        <button onclick="toggleWindow('CUST-G')" id="win-CUST-G" class="window-btn w-16 h-12 rounded-t-2xl text-[8px] bg-white font-bold border border-b-0">CUST-G</button>
+                        <button onclick="toggleWindow('AR-G')" id="win-AR-G" class="window-btn w-16 h-20 rounded-b-2xl text-[9px] bg-white font-bold shadow-sm border">AR-G</button>
+                    </div>
+                </div>
+
+                <div class="absolute right-[-20px] top-[90px] bottom-[140px] flex flex-col items-end w-24">
+                    <button onclick="toggleWindow('AV-D')" id="win-AV-D" class="window-btn w-16 h-16 rounded-2xl text-[9px] bg-white font-bold shadow-sm mb-auto border">AV-D</button>
+                    <div class="flex flex-col items-end">
+                        <button onclick="toggleWindow('CUST-D')" id="win-CUST-D" class="window-btn w-16 h-12 rounded-t-2xl text-[8px] bg-white font-bold border border-b-0">CUST-D</button>
+                        <button onclick="toggleWindow('AR-D')" id="win-AR-D" class="window-btn w-16 h-20 rounded-b-2xl text-[9px] bg-white font-bold shadow-sm border">AR-D</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="space-y-4">
+            <div class="grid grid-cols-3 gap-2">
+                <label class="flex flex-col items-center p-3 border-2 rounded-2xl bg-white cursor-pointer active:scale-95 transition-all">
+                    <input type="radio" name="type_inter" value="POSE" checked class="accent-indigo-600">
+                    <span class="text-[10px] font-bold mt-1 uppercase">POSE</span>
+                </label>
+                <label class="flex flex-col items-center p-3 border-2 rounded-2xl bg-white cursor-pointer active:scale-95 transition-all">
+                    <input type="radio" name="type_inter" value="SAV" class="accent-indigo-600">
+                    <span class="text-[10px] font-bold mt-1 uppercase">SAV</span>
+                </label>
+                <label class="flex flex-col items-center p-3 border-2 rounded-2xl bg-white cursor-pointer active:scale-95 transition-all">
+                    <input type="radio" name="type_inter" value="GARANTIE" class="accent-indigo-600">
+                    <span class="text-[10px] font-bold mt-1 uppercase">GARANTIE</span>
+                </label>
+            </div>
+            <textarea id="observation-input" rows="2" placeholder="Observations éventuelles..." class="w-full p-4 rounded-2xl border-none bg-white shadow-sm text-sm focus:ring-2 focus:ring-indigo-500"></textarea>
+        </section>
+
+        <section class="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm">
+            <label class="block text-[10px] font-black text-slate-400 uppercase mb-3 tracking-widest">Photos d'intervention</label>
+            <div class="grid grid-cols-4 gap-2" id="photo-preview-container">
+                <label class="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-50 transition-all">
+                    <i data-lucide="camera" class="w-6 h-6 text-slate-300"></i>
+                    <input type="file" accept="image/*" capture="environment" class="hidden" multiple onchange="handlePhotos(this)">
+                </label>
+            </div>
+        </section>
+
+        <div class="space-y-3">
+            <button onclick="addToBatch()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold shadow-lg active:scale-95 transition-all">
+                Ajouter au lot
+            </button>
+            <button id="btn-finaliser" onclick="finalize()" class="w-full bg-indigo-600 text-white py-5 rounded-2xl font-black text-lg shadow-xl shadow-indigo-200 active:scale-95 transition-all">
+                Finaliser l'envoi
             </button>
         </div>
 
-        <div class="absolute left-[-25px] top-[90px] bottom-[140px] flex flex-col w-24">
-            <button onclick="toggleWindow('AV-G')" id="win-AV-G" class="window-btn w-16 h-16 rounded-2xl text-[9px] bg-white font-bold shadow-sm mb-auto">AV-G</button>
-            
-            <div class="flex flex-col gap-1">
-                <button onclick="toggleWindow('CUST-G')" id="win-CUST-G" class="window-btn w-16 h-14 rounded-t-2xl text-[8px] bg-white font-bold border-b-0">CUST-G</button>
-                <button onclick="toggleWindow('AR-G')" id="win-AR-G" class="window-btn w-16 h-20 rounded-b-2xl text-[9px] bg-white font-bold shadow-sm">AR-G</button>
-            </div>
-        </div>
+        <div id="batch-list" class="space-y-3 pt-6 border-t border-slate-200"></div>
 
-        <div class="absolute right-[-25px] top-[90px] bottom-[140px] flex flex-col items-end w-24">
-            <button onclick="toggleWindow('AV-D')" id="win-AV-D" class="window-btn w-16 h-16 rounded-2xl text-[9px] bg-white font-bold shadow-sm mb-auto">AV-D</button>
-            
-            <div class="flex flex-col gap-1 items-end">
-                <button onclick="toggleWindow('CUST-D')" id="win-CUST-D" class="window-btn w-16 h-14 rounded-t-2xl text-[8px] bg-white font-bold border-b-0">CUST-D</button>
-                <button onclick="toggleWindow('AR-D')" id="win-AR-D" class="window-btn w-16 h-20 rounded-b-2xl text-[9px] bg-white font-bold shadow-sm">AR-D</button>
-            </div>
-        </div>
-    </div>
-</section>
-
-        <div class="grid grid-cols-3 gap-2">
-    <label class="flex flex-col items-center p-3 border-2 rounded-2xl bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 cursor-pointer active:scale-95 transition-all">
-        <input type="radio" name="type_inter" value="POSE" checked class="accent-indigo-600">
-        <span class="text-[10px] font-bold uppercase mt-1 dark:text-white">POSE</span>
-    </label>
-    <label class="flex flex-col items-center p-3 border-2 rounded-2xl bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 cursor-pointer active:scale-95 transition-all">
-        <input type="radio" name="type_inter" value="SAV" class="accent-indigo-600">
-        <span class="text-[10px] font-bold uppercase mt-1 dark:text-white">SAV</span>
-    </label>
-    <label class="flex flex-col items-center p-3 border-2 rounded-2xl bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 cursor-pointer active:scale-95 transition-all">
-        <input type="radio" name="type_inter" value="GARANTIE" class="accent-indigo-600">
-        <span class="text-[10px] font-bold uppercase mt-1 dark:text-white">GARANTIE</span>
-    </label>
-</div>
-
-        <div class="bg-white dark:bg-slate-800 p-4 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm">
-            <textarea id="observation-input" rows="2" placeholder="Observations / Défauts..." 
-                class="w-full bg-transparent border-none p-0 text-sm dark:text-white outline-none resize-none"></textarea>
-        </div>
-
-        <section class="bg-white dark:bg-slate-800 p-4 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm">
-    <label class="block text-[10px] font-black text-slate-400 uppercase mb-3 ml-1 tracking-widest">Photos du véhicule</label>
-    
-    <div class="grid grid-cols-4 gap-2" id="photo-preview-container">
-        <label class="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900 transition-all">
-            <i data-lucide="camera" class="w-6 h-6 text-slate-300"></i>
-            <span class="text-[8px] font-bold text-slate-400 mt-1">AJOUTER</span>
-            <input type="file" id="photo-input" accept="image/*" capture="environment" class="hidden" multiple onchange="handlePhotos(this)">
-        </label>
-        </div>
-</section>
-
-        <button onclick="addToBatch()" class="w-full bg-slate-900 dark:bg-indigo-600 text-white p-5 rounded-3xl font-bold flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg">
-            <i data-lucide="plus-circle"></i> AJOUTER AU LOT
-        </button>
-
-        <div id="batch-container" class="space-y-3 mt-4"></div>
-
-        <div class="flex gap-2 pb-20">
-            <button id="btn-open-sign" onclick="openSignature()" class="flex-1 bg-amber-500 text-white p-5 rounded-3xl font-bold flex items-center justify-center gap-2">
-                <i data-lucide="pen-tool"></i> SIGNER LE BON
-            </button>
-            <button id="btn-clear-sign" onclick="resetSignature()" class="hidden bg-red-100 text-red-600 px-6 rounded-3xl font-bold flex items-center justify-center active:scale-90 transition-all">
-                <i data-lucide="trash-2"></i>
-            </button>
-        </div>
     </main>
 
-    <div class="fixed bottom-0 inset-x-0 p-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 z-[300]">
-        <button onclick="finalize()" class="w-full bg-green-600 text-white p-5 rounded-3xl font-black shadow-xl flex items-center justify-center gap-2 active:scale-95 transition-all uppercase tracking-widest text-sm">
-            <i data-lucide="send"></i> FINALISER & ENVOYER
-        </button>
-    </div>
-
-    <div id="custom-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[600] hidden flex items-center justify-center p-4">
-        <div class="bg-white dark:bg-slate-800 w-full max-w-xs rounded-[2rem] p-8 shadow-2xl animate-in text-center">
-            <div id="modal-icon" class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"></div>
-            <h3 id="modal-title" class="font-bold text-slate-800 dark:text-white text-lg">Message</h3>
-            <p id="modal-text" class="text-slate-500 dark:text-slate-400 text-xs mt-2 mb-8"></p>
-            <button onclick="closeModal()" class="w-full bg-slate-900 dark:bg-white dark:text-slate-900 text-white p-4 rounded-2xl font-bold">D'ACCORD</button>
-        </div>
-    </div>
-
-    <div id="signature-overlay" class="fixed inset-0 bg-black/90 z-[500] hidden flex-col items-center justify-center p-4">
-        <div class="bg-white dark:bg-slate-800 w-full max-w-sm rounded-[2rem] overflow-hidden">
-            <div class="p-4 border-b dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
-                <span class="text-xs font-bold uppercase dark:text-white">Signature Client</span>
-                <button onclick="clearSignature()" class="text-red-500 text-[10px] font-black uppercase">Effacer</button>
-            </div>
-            <canvas id="signature-pad" class="w-full h-80 bg-white dark:bg-slate-50"></canvas>
-            <div class="p-6 flex gap-2">
-                <button onclick="closeSignature()" class="flex-1 bg-indigo-600 text-white p-4 rounded-2xl font-bold uppercase text-xs tracking-widest">Valider</button>
-                <button onclick="document.getElementById('signature-overlay').style.display='none'" class="bg-slate-100 dark:bg-slate-700 text-slate-400 px-6 rounded-2xl"><i data-lucide="x"></i></button>
-            </div>
-        </div>
-    </div>
-
     <script src="script.js"></script>
+    <script>lucide.createIcons();</script>
 </body>
 </html>

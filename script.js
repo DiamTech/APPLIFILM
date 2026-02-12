@@ -1057,47 +1057,29 @@ function selectLoanForReturn(immat) {
         kmInput.placeholder = "Départ : " + loan.km + " km";
         kmInput.value = ""; 
     }
-
-    // D. TRANSFORMATION DES ZONES D'UPLOAD EN GALERIE
-    // À mettre à l'intérieur de selectLoanForReturn
-// D. TRANSFORMATION DES ZONES D'UPLOAD EN GALERIE
+    
     const renderPhoto = (id, url) => {
-        const zone = document.getElementById(id);
-        if (!zone) return;
+    const zone = document.getElementById(id);
+    if (!zone) return;
 
-        if (url && url.length > 10) {
-            // --- EXTRACTEUR D'ID UNIVERSEL ---
-            let fileId = "";
-            try {
-                if (url.includes('id=')) {
-                    fileId = url.split('id=')[1].split('&')[0];
-                } else if (url.includes('/d/')) {
-                    fileId = url.split('/d/')[1].split('/')[0];
-                } else {
-                    // Si c'est le lien "googleusercontent", l'ID est à la fin
-                    fileId = url.match(/[-\w]{25,}/); 
-                }
-            } catch(e) { console.error("Erreur ID", e); }
-
-            // On utilise le lien Thumbnail qui est le plus fiable du monde
-            const finalUrl = fileId 
-                ? `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000` 
-                : url;
-
-            console.log("Tentative d'affichage photo ID:", fileId); // Pour debug
-
-            zone.innerHTML = `
-                <img src="${finalUrl}" 
-                     referrerpolicy="no-referrer" 
-                     class="w-full h-full object-cover rounded-xl border-2 border-indigo-500 shadow-lg"
-                     style="display: block !important;">
-            `;
-            zone.style.pointerEvents = "none";
-            zone.style.border = "none";
-        } else {
-            zone.innerHTML = `<div class="text-[10px] text-slate-400 italic font-bold">AUCUN DOCUMENT</div>`;
+    if (url && url.startsWith('http')) {
+        // On force le lien en mode "Thumbnail" si jamais le lien direct échoue
+        let finalUrl = url;
+        if (url.includes('drive.google.com') || url.includes('googleusercontent.com')) {
+            // On extrait l'ID (suite de chiffres et lettres de ~33 caractères)
+            const idMatch = url.match(/[-\w]{25,}/);
+            if (idMatch) finalUrl = `https://drive.google.com/thumbnail?id=${idMatch[0]}&sz=w1000`;
         }
-    };
+
+        zone.innerHTML = `
+            <img src="${finalUrl}" 
+                 referrerpolicy="no-referrer" 
+                 class="w-full h-full object-cover rounded-xl border-2 border-indigo-500 shadow-lg">
+        `;
+        zone.style.pointerEvents = "none"; // Bloque l'upload
+        zone.style.border = "none";
+    }
+};
     
     renderPhoto('preview-recto', loan.recto);
     renderPhoto('preview-verso', loan.verso);

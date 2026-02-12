@@ -87,24 +87,34 @@
             <textarea id="obs" placeholder="Observations éventuelles..." class="w-full p-4 rounded-2xl border-none bg-white dark:bg-slate-800 shadow-sm text-sm dark:text-white min-h-[80px] focus:ring-2 focus:ring-indigo-500"></textarea>
         </section>
 
-        <section class="grid grid-cols-2 gap-3">
-            <button onclick="document.getElementById('file-in').click()" class="bg-white dark:bg-slate-800 p-5 rounded-3xl border border-dashed border-slate-300 flex flex-col items-center justify-center gap-2 active:bg-slate-50 transition-colors">
-                <i data-lucide="plus" class="text-slate-400"></i>
-                <span class="text-[10px] font-black">PHOTOS (<span id="photo-count">0</span>)</span>
-                <input type="file" id="file-in" accept="image/*" capture="environment" class="hidden" multiple onchange="handlePhotos(this)">
-            </button>
-            <div id="sig-area">
-                <button id="btn-sig-open" onclick="openSignature()" class="w-full h-full bg-white dark:bg-slate-800 p-5 rounded-3xl border-2 border-indigo-100 flex flex-col items-center justify-center gap-2 active:bg-indigo-50 transition-colors">
-                    <i data-lucide="pen-tool" class="text-indigo-500"></i>
-                    <span class="text-[10px] font-black text-indigo-600 uppercase">Signer</span>
-                </button>
-                <div id="sig-status" class="hidden w-full h-full bg-green-50 dark:bg-green-900/20 p-5 rounded-3xl border-2 border-green-200 flex flex-col items-center justify-center gap-1 relative animate-in">
-                    <i data-lucide="check-circle" class="text-green-500"></i>
-                    <span class="text-[8px] font-black text-green-600 uppercase">Signé OK</span>
-                    <button onclick="resetSignature()" class="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-full shadow-lg"><i data-lucide="x" class="w-3 h-3"></i></button>
-                </div>
-            </div>
-        </section>
+        <section class="bg-white dark:bg-slate-800 p-4 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm">
+    <label class="block text-[10px] font-black text-slate-400 uppercase mb-3 ml-1 tracking-widest">Photos d'intervention</label>
+    
+    <div class="grid grid-cols-4 gap-2" id="photo-preview-container">
+        <label class="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl cursor-pointer active:scale-95 transition-all bg-slate-50 dark:bg-slate-900/50">
+            <i data-lucide="camera" class="w-5 h-5 text-slate-400"></i>
+            <span class="text-[8px] font-bold text-slate-400 mt-1 uppercase">Ajouter</span>
+            <input type="file" id="file-in" accept="image/*" capture="environment" class="hidden" multiple onchange="handlePhotos(this)">
+        </label>
+        </div>
+</section>
+
+<section id="sig-area" class="mt-4">
+    <button id="btn-sig-open" onclick="openSignature()" class="w-full bg-white dark:bg-slate-800 p-5 rounded-3xl border-2 border-indigo-100 dark:border-indigo-900/30 flex items-center justify-center gap-3 active:scale-95 transition-all">
+        <i data-lucide="pen-tool" class="text-indigo-500"></i>
+        <span class="text-xs font-black text-indigo-600 uppercase tracking-widest">Signer l'intervention</span>
+    </button>
+    
+    <div id="sig-status" class="hidden w-full bg-green-50 dark:bg-green-900/20 p-5 rounded-3xl border-2 border-green-200 flex items-center justify-between animate-in">
+        <div class="flex items-center gap-3">
+            <i data-lucide="check-circle" class="text-green-500"></i>
+            <span class="text-xs font-black text-green-600 uppercase">Signature enregistrée</span>
+        </div>
+        <button onclick="resetSignature()" class="bg-red-100 text-red-600 p-2 rounded-xl active:scale-90">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+        </button>
+    </div>
+</section>
 
         <button onclick="addToBatch()" class="w-full bg-slate-900 dark:bg-white dark:text-slate-900 py-5 rounded-3xl font-black text-xs uppercase tracking-widest shadow-lg active:scale-95 transition-all">Ajouter au lot</button>
     </main>

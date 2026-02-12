@@ -1285,12 +1285,12 @@ async function saveReturn() {
     }
 }
 
-// On surveille le changement de véhicule
+// On écoute le changement de sélection du véhicule
 document.getElementById('pret-vehicule-select').addEventListener('change', async function(e) {
     const immat = e.target.value;
     
-    // On ne récupère l'historique QUE si on est en mode DEPART
-    if (!immat || state.pretMode === 'RETOUR') return;
+    // On ne récupère l'historique QUE si on est en mode DEPART (pas en retour)
+    if (!immat || state.pretMode !== 'DEPART') return;
 
     try {
         const response = await fetch(SCRIPT_URL, {
@@ -1304,25 +1304,35 @@ document.getElementById('pret-vehicule-select').addEventListener('change', async
         const res = await response.json();
 
         if (res.status === "success") {
-            // 1. On charge les anciennes croix (on les force en type 'old' pour qu'elles soient grises)
+            // 1. On parse les coordonnées récupérées
             const lastCoords = JSON.parse(res.coords || "[]");
-            state.pret.damages = lastCoords.map(c => ({ ...c, type: 'old' }));
             
-            // 2. On pré-remplit les observations et le KM
-            document.getElementById('pret-km-depart').value = res.km || "";
-            document.getElementById('pret-degats-obs').value = "DÉGÂTS PRÉCÉDENTS : " + (res.details || "RAS") + "\n";
+            // 2. On les injecte en tant que "new" pour qu'elles soient ROUGES 
+            // et éffaçables comme des nouveaux points
+            state.pret.damages = lastCoords.map(c => ({
+                x: c.x,
+                y: c.y,
+                type: 'new' // 'new' les rend rouges et interactives
+            }));
             
-            // 3. On rafraîchit le dessin de la voiture
+            // 3. On remplit le kilométrage et les observations
+            const kmInput = document.getElementById('pret-km-depart');
+            if (kmInput) kmInput.value = res.km || "";
+            
+            const obsInput = document.getElementById('pret-degats-obs');
+            if (obsInput) obsInput.value = res.details || "";
+            
+            // 4. On rafraîchit le dessin de la voiture
             renderDamages();
             
-            console.log("✅ Historique récupéré pour " + immat);
+            alert("✅ État du véhicule " + immat + " chargé (Dégâts en rouge).");
         } else {
-            // Si c'est un nouveau véhicule jamais enregistré
+            // Si c'est un nouveau véhicule ou sans historique, on vide tout
             state.pret.damages = [];
             renderDamages();
         }
     } catch (err) {
-        console.error("Erreur récup historique:", err);
+        console.error("Erreur lors de la récupération :", err);
     }
 });
 

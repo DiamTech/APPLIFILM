@@ -1,45 +1,32 @@
-let state = { vin: "", selectedWindows: [], photos: [], batch: [], signature: null };
+let state = { 
+    vin: "", 
+    selectedWindows: [], 
+    photos: [], 
+    batch: [], 
+    signature: null,
+    sentHistory: [] 
+};
+
 let scanner;
 let canvas, ctx, drawing = false;
 
-// --- INITIALISATION ---
-// --- INITIALISATION SÉCURISÉE ---
+// --- INITIALISATION & SECURITE LOGO ---
 window.addEventListener('load', () => {
-    console.log("DOM chargé, initialisation...");
+    // Initialisation Signature
+    initSignature();
+    
+    // Initialisation Icônes
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 
-    // 1. Initialiser les icônes
-    if (typeof lucide !== 'undefined') {
-        lucide.createIcons();
+    // FORCE LE RETRAIT DU LOGO (Splash Screen)
+    const splash = document.getElementById('splash-screen');
+    if (splash) {
+        splash.style.opacity = '0';
+        setTimeout(() => splash.remove(), 600);
     }
-
-    // 2. Initialiser la signature (si la fonction existe)
-    try {
-        if (typeof initSignature === 'function') {
-            initSignature();
-        }
-    } catch (e) {
-        console.error("Erreur initSignature:", e);
-    }
-
-    // 3. FORCE LE RETRAIT DU LOGO (Splash Screen)
-    const hideSplash = () => {
-        const splash = document.getElementById('splash-screen');
-        if (splash) {
-            splash.style.opacity = '0';
-            splash.style.transition = 'opacity 0.5s ease';
-            setTimeout(() => {
-                splash.remove();
-                console.log("Splash-screen retiré avec succès");
-            }, 500);
-        }
-    };
-
-    // On le retire immédiatement ET on met une sécurité à 2 secondes au cas où
-    hideSplash();
-    setTimeout(hideSplash, 2000); 
 });
 
-// --- SCANNER VIN (Correction) ---
+// --- SCANNER VIN ---
 async function startScanner() {
     const readerDiv = document.getElementById('reader');
     readerDiv.classList.toggle('hidden');
@@ -50,10 +37,10 @@ async function startScanner() {
     }
 
     scanner = new Html5Qrcode("reader");
-    const config = { fps: 10, qrbox: { width: 250, height: 150 } };
-
     try {
-        await scanner.start({ facingMode: "environment" }, config, (text) => {
+        await scanner.start({ facingMode: "environment" }, 
+        { fps: 10, qrbox: { width: 250, height: 150 } }, 
+        (text) => {
             document.getElementById('vin-input').value = text;
             stopScanner();
         });
@@ -70,135 +57,23 @@ async function stopScanner() {
     }
 }
 
-// On ajoute sentHistory dans ton objet state
-let state = { 
-    vin: "", 
-    selectedWindows: [], 
-    photos: [], 
-    batch: [], 
-    signature: null,
-    sentHistory: [] // Pour stocker ce qui est déjà parti
-};
-
-// Fonction pour mettre à jour l'affichage du menu déroulant
-function updateHistoryUI() {
-    const counter = document.getElementById('sent-counter');
-    const list = document.getElementById('sent-list');
-    
-    counter.innerText = `${state.sentHistory.length} ENVOYÉS`;
-    
-    if (state.sentHistory.length === 0) {
-        list.innerHTML = '<p class="text-center py-6 text-slate-400 text-[10px]">Aucun envoi effectué</p>';
-        return;
-    }
-
-    list.innerHTML = state.sentHistory.map((item, i) => `
-        <div class="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-700">
-            <div class="flex justify-between items-start mb-1">
-                <span class="font-black text-[11px] text-indigo-600 dark:text-indigo-400">${item.vin}</span>
-                <span class="text-[8px] font-bold opacity-50">${item.sentTime}</span>
-            </div>
-            <div class="flex flex-wrap gap-1 mb-1">
-                <span class="px-1.5 py-0.5 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 rounded text-[8px] font-bold uppercase">${item.type}</span>
-                <span class="text-[9px] text-slate-500">${item.windowsCount} vitres</span>
-            </div>
-            ${item.obs ? `<p class="text-[9px] italic text-slate-400 truncate">"${item.obs}"</p>` : ''}
-        </div>
-    `).reverse().join(''); // .reverse() pour avoir le plus récent en haut
-}
-
-// MODIFICATION DE LA FONCTION FINALIZE
-async function finalize() {
-    if(!state.batch.length) return alert("Le lot est vide !");
-    
-    const btn = document.getElementById('btn-final');
-    btn.disabled = true;
-    btn.innerHTML = `<span>ENVOI...</span>`;
-    
-    try {
-        // Envoi réel vers Google
-        await fetch('https://script.google.com/macros/s/AKfycby8fC4tLtri-KHVwjciLmw0D0QT1jAlUxZiT5Z2OtA1JylZuDXKu5Ta16FZ0S6VGHka/exec', {
-            method: 'POST',
-            mode: 'no-cors',
-            body: JSON.stringify({ interventions: state.batch })
-        });
-
-        // Succès : On prépare les infos pour l'historique visuel
-        const now = new Date().toLocaleTimeString('fr-FR', {hour: '2min', minute: '2min'});
-        
-        state.batch.forEach(vehicule => {
-            state.sentHistory.push({
-                vin: vehicule.vin,
-                type: vehicule.type,
-                windowsCount: vehicule.windows.length,
-                obs: vehicule.obs,
-                sentTime: now
-            });
-        });
-
-        // On vide le lot actuel et on met à jour l'historique
-        state.batch = [];
-        updateBatchUI(); // Vide la liste d'attente
-        updateHistoryUI(); // Remplit le menu déroulant
-        
-        alert("TERMINÉ ! Les données sont enregistrées.");
-    } catch(e) {
-        alert("Erreur réseau");
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = `<span>FINALISER L'ENVOI</span><i data-lucide="send" class="w-5 h-5"></i>`;
-        lucide.createIcons();
-    }
-}
-
-function renderPhotos() {
-    const container = document.getElementById('photo-preview-container');
-    // On garde uniquement le premier élément (le bouton "Ajouter")
-    const addButton = container.querySelector('label');
-    container.innerHTML = '';
-    container.appendChild(addButton);
-
-    // On boucle sur les photos stockées dans state.photos
-    state.photos.forEach((photoData, index) => {
-        const div = document.createElement('div');
-        div.className = "relative aspect-square rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-sm animate-in";
-        div.innerHTML = `
-            <img src="${photoData}" class="w-full h-full object-cover">
-            <button onclick="removePhoto(${index})" class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] shadow-lg border border-white">
-                <i data-lucide="x" class="w-3 h-3"></i>
-            </button>
-        `;
-        container.appendChild(div);
-    });
-    // On demande à Lucide de générer les icônes "x" ajoutées dynamiquement
-    lucide.createIcons();
-}
-
-function removePhoto(index) {
-    state.photos.splice(index, 1);
-    renderPhotos();
-}
-
+// --- SIGNATURE (Modale & Tracé) ---
 function initSignature() {
     canvas = document.getElementById('canvas');
     if (!canvas) return;
     ctx = canvas.getContext('2d');
     
-    // Force la taille du dessin à correspondre à l'affichage écran
     const fixSize = () => {
         const rect = canvas.getBoundingClientRect();
         canvas.width = rect.width;
         canvas.height = rect.height;
-        // On doit redéfinir les styles après un changement de taille
         ctx.strokeStyle = "#4f46e5"; 
         ctx.lineWidth = 3;
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
     };
 
-    // On attend un peu que la modale soit affichée pour calculer la taille
     window.addEventListener('resize', fixSize);
-    setTimeout(fixSize, 100);
 
     const getPos = (e) => {
         const rect = canvas.getBoundingClientRect();
@@ -210,7 +85,6 @@ function initSignature() {
     };
 
     const start = (e) => {
-        // Empêche la page de bouger pendant qu'on signe
         if (e.target === canvas) e.preventDefault();
         drawing = true;
         const p = getPos(e);
@@ -226,16 +100,11 @@ function initSignature() {
         ctx.stroke();
     };
 
-    const stop = () => {
-        drawing = false;
-    };
+    const stop = () => { drawing = false; };
 
-    // Événements Souris
     canvas.addEventListener('mousedown', start);
     canvas.addEventListener('mousemove', move);
     window.addEventListener('mouseup', stop);
-    
-    // Événements Tactiles (Mobile)
     canvas.addEventListener('touchstart', start, { passive: false });
     canvas.addEventListener('touchmove', move, { passive: false });
     canvas.addEventListener('touchend', stop);
@@ -243,7 +112,6 @@ function initSignature() {
 
 function openSignature() {
     document.getElementById('modal-sig').classList.remove('hidden');
-    // On laisse 50ms à la modale pour apparaître puis on ajuste le canvas
     setTimeout(() => {
         const rect = canvas.getBoundingClientRect();
         canvas.width = rect.width;
@@ -251,13 +119,13 @@ function openSignature() {
         ctx.strokeStyle = "#4f46e5";
         ctx.lineWidth = 3;
         ctx.lineCap = "round";
-    }, 50);
+    }, 100);
 }
+
 function closeSignature() { document.getElementById('modal-sig').classList.add('hidden'); }
 function clearCanvas() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
 
 function saveSignature() {
-    // Vérifier si le canvas est vide (optionnel)
     state.signature = canvas.toDataURL();
     document.getElementById('btn-sig-open').classList.add('hidden');
     document.getElementById('sig-status').classList.remove('hidden');
@@ -271,7 +139,47 @@ function resetSignature() {
     document.getElementById('sig-status').classList.add('hidden');
 }
 
-// --- LOGIQUE MÉTIER ---
+// --- GESTION DES PHOTOS & MINIATURES ---
+function handlePhotos(input) {
+    const files = Array.from(input.files);
+    let processed = 0;
+    files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            state.photos.push(e.target.result);
+            processed++;
+            if (processed === files.length) renderPhotos();
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function renderPhotos() {
+    const container = document.getElementById('photo-preview-container');
+    const addButton = container.querySelector('label');
+    container.innerHTML = '';
+    container.appendChild(addButton);
+
+    state.photos.forEach((photo, index) => {
+        const div = document.createElement('div');
+        div.className = "relative aspect-square rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-sm";
+        div.innerHTML = `
+            <img src="${photo}" class="w-full h-full object-cover">
+            <button onclick="removePhoto(${index})" class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center shadow-lg">
+                <i data-lucide="x" class="w-3 h-3"></i>
+            </button>`;
+        container.appendChild(div);
+    });
+    lucide.createIcons();
+    document.getElementById('photo-count').innerText = state.photos.length;
+}
+
+function removePhoto(index) {
+    state.photos.splice(index, 1);
+    renderPhotos();
+}
+
+// --- LOGIQUE METIER ---
 function toggleWindow(id) {
     const btn = document.getElementById('win-' + id);
     if(state.selectedWindows.includes(id)) {
@@ -283,23 +191,6 @@ function toggleWindow(id) {
     }
 }
 
-function handlePhotos(input) {
-    const files = Array.from(input.files);
-    let processed = 0;
-
-    files.forEach(file => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            state.photos.push(e.target.result);
-            processed++;
-            if (processed === files.length) {
-                renderPhotos(); // Mise à jour visuelle une fois tout lu
-            }
-        };
-        reader.readAsDataURL(file);
-    });
-}
-
 function addToBatch() {
     const vin = document.getElementById('vin-input').value;
     if(!vin && state.selectedWindows.length === 0) return alert("Remplissez le VIN ou cochez une vitre.");
@@ -309,32 +200,49 @@ function addToBatch() {
         type: document.querySelector('input[name="type"]:checked').value,
         obs: document.getElementById('obs').value,
         windows: [...state.selectedWindows],
-        photos: [...state.photos], // Tableau de photos
-        signature: state.signature, // La signature seule (Base64)
+        photos: [...state.photos],
+        signature: state.signature,
         date: new Date().toLocaleString('fr-FR')
     });
 
-    // Reset de l'interface après ajout
-    resetUI(); 
+    // Reset UI
+    document.getElementById('vin-input').value = "";
+    document.getElementById('obs').value = "";
+    document.querySelectorAll('.window-btn').forEach(b => b.classList.remove('selected'));
+    state.selectedWindows = []; state.photos = []; resetSignature();
+    renderPhotos();
     updateBatchUI();
+    alert("Véhicule ajouté au lot !");
 }
 
 function updateBatchUI() {
     document.getElementById('batch-counter').innerText = `${state.batch.length} lot(s)`;
-    const list = document.getElementById('batch-list');
-    list.innerHTML = state.batch.map((item, i) => `
-        <div class="flex justify-between items-center p-3 mb-2 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-700">
-            <div class="flex flex-col">
-                <span class="font-black text-indigo-600 text-[10px]">${item.vin}</span>
-                <span class="text-[8px] text-slate-400 uppercase">${item.type} • ${item.windows.length} vitres</span>
-            </div>
-            <button onclick="state.batch.splice(${i},1); updateBatchUI()" class="text-red-400 p-2">✕</button>
-        </div>
-    `).join('') || '<p class="text-center text-slate-400 py-4">Aucun lot en attente</p>';
+    // (Optionnel : Liste des lots en attente si besoin)
 }
 
 function toggleHistoryMenu() { 
     document.getElementById('history-menu').classList.toggle('hidden'); 
+}
+
+function updateHistoryUI() {
+    const counter = document.getElementById('sent-counter');
+    const list = document.getElementById('sent-list');
+    counter.innerText = `${state.sentHistory.length} ENVOYÉS`;
+    
+    if (state.sentHistory.length === 0) {
+        list.innerHTML = '<p class="text-center py-6 text-slate-400 text-[10px]">Aucun envoi effectué</p>';
+        return;
+    }
+
+    list.innerHTML = state.sentHistory.map((item) => `
+        <div class="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-700 mb-2">
+            <div class="flex justify-between items-start">
+                <span class="font-black text-[11px] text-indigo-600 dark:text-indigo-400">${item.vin}</span>
+                <span class="text-[8px] font-bold opacity-50">${item.sentTime}</span>
+            </div>
+            <div class="text-[9px] text-slate-500 uppercase font-bold">${item.type} • ${item.windowsCount} vitres</div>
+        </div>
+    `).reverse().join('');
 }
 
 async function finalize() {
@@ -344,17 +252,29 @@ async function finalize() {
     btn.innerHTML = `<span>ENVOI EN COURS...</span>`;
     
     try {
-        // Remplace par ton URL Google Script /exec
-        await fetch('https://script.google.com/macros/s/AKfycby8fC4tLtri-KHVwjciLmw0D0QT1jAlUxZiT5Z2OtA1JylZuDXKu5Ta16FZ0S6VGHka/exec', {
+        await fetch('TA_URL_GOOGLE_SCRIPT', {
             method: 'POST',
             mode: 'no-cors',
             body: JSON.stringify({ interventions: state.batch })
         });
-        alert("TERMINÉ ! Toutes les données sont sur Google Drive.");
+
+        const now = new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
+        state.batch.forEach(v => {
+            state.sentHistory.push({
+                vin: v.vin,
+                type: v.type,
+                windowsCount: v.windows.length,
+                obs: v.obs,
+                sentTime: now
+            });
+        });
+
         state.batch = [];
         updateBatchUI();
+        updateHistoryUI();
+        alert("TERMINÉ ! Toutes les données sont sur Google Drive.");
     } catch(e) {
-        alert("Erreur de connexion. Vérifiez votre 4G/5G.");
+        alert("Erreur de connexion.");
     } finally {
         btn.disabled = false;
         btn.innerHTML = `<span>FINALISER L'ENVOI</span><i data-lucide="send" class="w-5 h-5"></i>`;

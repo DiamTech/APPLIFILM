@@ -89,7 +89,6 @@ function initSignature() {
     const getPos = (e) => {
         const rect = canvas.getBoundingClientRect();
         const ev = e.touches ? e.touches[0] : e;
-        // Calcul précis pour éviter le décalage sous le doigt
         return { 
             x: ev.clientX - rect.left, 
             y: ev.clientY - rect.top 
@@ -114,12 +113,10 @@ function initSignature() {
 
     const stop = () => { drawing = false; };
 
-    // Souris
     canvas.addEventListener('mousedown', start);
     canvas.addEventListener('mousemove', move);
     window.addEventListener('mouseup', stop);
 
-    // Tactile (Correction spécifique mobile)
     canvas.addEventListener('touchstart', start, { passive: false });
     canvas.addEventListener('touchmove', move, { passive: false });
     canvas.addEventListener('touchend', stop);
@@ -127,9 +124,8 @@ function initSignature() {
 
 function openSignature() { 
     const modal = document.getElementById('modal-sig');
-    modal.classList.remove('hidden'); 
+    if (modal) modal.classList.remove('hidden'); 
     
-    // On recalcule la taille après l'ouverture pour que le dessin soit fluide
     setTimeout(() => {
         const rect = canvas.getBoundingClientRect();
         canvas.width = rect.width;
@@ -140,19 +136,42 @@ function openSignature() {
     }, 250);
 }
 
+// CETTE FONCTION MANQUAIT :
+function closeSignature() { 
+    const modal = document.getElementById('modal-sig');
+    if (modal) modal.classList.add('hidden'); 
+}
+
 function saveSignature() { 
     state.signature = canvas.toDataURL('image/png'); 
-    document.getElementById('btn-sig-open').classList.add('hidden'); 
-    document.getElementById('sig-status').classList.remove('hidden'); 
-    closeSignature(); 
+    const btnOpen = document.getElementById('btn-sig-open');
+    const statusDiv = document.getElementById('sig-status');
+    
+    if (btnOpen) btnOpen.classList.add('hidden'); 
+    if (statusDiv) statusDiv.classList.remove('hidden'); 
+    
+    closeSignature(); // Maintenant elle fonctionne !
+}
+
+// CETTE FONCTION MANQUAIT AUSSI :
+function clearCanvas() { 
+    if (ctx && canvas) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height); 
+    }
 }
 
 function resetSignature() { 
     state.signature = null; 
     clearCanvas(); 
-    document.getElementById('btn-sig-open').classList.remove('hidden'); 
-    document.getElementById('sig-status').classList.add('hidden'); 
+    const btnOpen = document.getElementById('btn-sig-open');
+    const statusDiv = document.getElementById('sig-status');
+    
+    if (btnOpen) btnOpen.classList.remove('hidden'); 
+    if (statusDiv) statusDiv.classList.add('hidden'); 
 }
+
+
+
 // --- PHOTOS AVEC COMPRESSION (Vital pour éviter les erreurs de connexion) ---
 function handlePhotos(input) {
     const files = Array.from(input.files);

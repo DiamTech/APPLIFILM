@@ -632,7 +632,7 @@ async function finalizePret() {
         
         // --- LES INFOS VÉHICULE ---
         immat: plaqueAuto,
-        km: document.getElementById('pret-km')?.value || "0", // On récupère les KM
+        km: document.getElementById('pret-km-depart')?.value || "0", // On récupère les KM
         
         // --- LE CLIENT ---
         nom: inputs.nom,

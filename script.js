@@ -12,6 +12,8 @@ let state = {
     pret: { 
         permis_recto: null, 
         permis_verso: null,
+        damages: [], // <--- INDISPENSABLE pour stocker les croix
+        inspectionValidated: false,
         photos_depart: [] // Même si tu n'as pas de bouton, laisse-le pour éviter l'erreur
     },
     vehiculeType: 'VOITURE'
@@ -19,7 +21,7 @@ let state = {
 
 // Mets tes vraies URLs ici
 const URL_VITRAGE = "https://script.google.com/macros/s/AKfycbyl-hYWhxxK8-1jLGxHC_QNFgrVFZtbUv69Ozr2hMAdqWz2iQvP5oG92Div0LbG-L5x/exec";
-const URL_PRET = "https://script.google.com/macros/s/AKfycbxu8BWG3Y7E6L1xXfqlevefJbPrjeQwaI0mopRQNaHpbqcoiWLPWXJcjbfY1fVlkvF9EA/exec";
+const URL_PRET = "https://script.google.com/macros/s/AKfycby5YDDnuggo_cA5zAGk71DPuwzwy-yp4MA6z_EbPzKGL64T4qeftDzDEX2tOf8EGyalGQ/exec";
 
 let scanner, canvas, ctx, drawing = false;
 
@@ -573,6 +575,14 @@ async function finalizePret() {
     const selectVehicule = document.getElementById('pret-vehicule-select');
     const plaqueAuto = selectVehicule ? selectVehicule.value : "N/C";
 
+    if (!state.pret.inspectionValidated) {
+        return alert("⚠️ Vous devez d'abord valider l'inspection de la carrosserie !");
+    }
+
+    if (!state.signature) {
+        return alert("⚠️ Signature client obligatoire !");
+    }
+
     // 2. ON RÉCUPÈRE LES AUTRES INFOS
     const payload = {
         type: "PRET",
@@ -582,6 +592,8 @@ async function finalizePret() {
         lieu_naiss: document.getElementById('pret-lieu-naiss')?.value || "N/C",
         permis_num: document.getElementById('pret-permis-num')?.value || "N/C",
         permis_lieu: document.getElementById('pret-permis-lieu')?.value || "N/C",
+        degats_details: document.getElementById('pret-degats-obs')?.value || "Aucun dégât signalé",
+        degats_coords: JSON.stringify(state.pret.damages), // Transforme la liste de croix en texte
         permis_recto: state.pret.permis_recto,
         permis_verso: state.pret.permis_verso,
         signature: state.signature,

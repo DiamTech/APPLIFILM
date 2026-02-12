@@ -1,120 +1,80 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Applifilm - Intervention</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
-    <style>
+   <style>
     /* 1. BASE & THEME */
     body { 
         font-family: 'Segoe UI', system-ui, sans-serif; 
-        background: #f4f7f6; 
-        margin: 0; 
-        padding: 20px; 
-        transition: background 0.3s, color 0.3s; 
-    }
-    
-    :root { 
-        --win-bg: rgba(255, 255, 255, 0.9); 
-        --win-border: #cbd5e1; 
-        --win-text: #1e293b; 
-    }
-
-    .dark { 
-        --win-bg: #1e293b; 
-        --win-border: #475569; 
-        --win-text: #f1f5f9; 
+@@ -30,8 +30,8 @@
         background: #0f172a; 
     }
 
-    /* 2. BOUTONS GENERAUX */
-    button:not(.window-btn):not(.btn-icon):not(.tab-btn):not(.close-btn):not(.btn-primary):not(.fuel-btn) { 
+    /* 2. BOUTONS GENERAUX (HORS VITRES ET SIGNATURE) */
+    button:not(.window-btn):not(.btn-icon):not(.tab-btn):not(.close-btn):not(.btn-primary) { 
         width: 100%; 
         padding: 15px; 
         background: #4f46e5; 
-        color: white; 
-        border: none; 
-        border-radius: 12px; 
-        font-weight: bold; 
-        cursor: pointer;
-    }
-
-    /* 3. LE BOUTON SIGNER (CORRIGÉ) */
-    .btn-primary {
+@@ -47,7 +47,7 @@
         width: 100% !important;
         padding: 16px !important;
         background: #4f46e5 !important; 
-        color: #ffffff !important;
+        color: #ffffff !important; /* Force le texte en blanc */
         border: none !important;
         border-radius: 12px !important;
         font-weight: 700 !important;
-        font-size: 16px !important;
-        cursor: pointer;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        gap: 10px !important;
+@@ -60,7 +60,6 @@
         box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.4);
     }
 
+    /* Force l'icône à être blanche */
     .btn-primary svg, .btn-primary [data-lucide] {
         color: #ffffff !important;
         stroke: #ffffff !important;
-        width: 20px !important;
-        height: 20px !important;
-    }
-
-    /* 4. CONFIGURATION DES VITRES */
-    .window-btn {
-        width: 85px !important; 
-        height: 45px !important;
-        position: absolute;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        justify-content: center !important;
-        background-color: var(--win-bg) !important;
-        border: 1px solid var(--win-border) !important;
-        color: var(--win-text) !important;
-        font-size: 10px !important;
-        border-radius: 12px !important;
-        z-index: 10;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+@@ -87,35 +86,23 @@
         transition: all 0.2s ease;
     }
 
+    .window-btn div {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        width: 100%;
+        text-align: center;
+    }
+
+    /* ÉTAT SÉLECTIONNÉ (VIOLET) */
     .window-btn.selected {
         background-color: #4f46e5 !important;
         border-color: #818cf8 !important;
         color: white !important; 
     }
 
+    .window-btn.selected div {
+        color: white !important;
+    }
+
     /* 5. AUTRES CLASSES */
     .btn-icon { width: auto !important; height: auto !important; display: inline-flex !important; align-items: center; justify-content: center; padding: 12px !important; }
     .tab-btn { width: auto !important; flex: 1; padding: 8px 0 !important; background: transparent !important; color: inherit !important; border: none !important; }
     .close-btn { width: auto !important; background: transparent !important; color: #94a3b8 !important; padding: 8px !important; }
-    .fuel-btn { transition: all 0.2s; }
+
 </style>
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen pb-32">
 
     <button type="button" onclick="toggleMenu(true)" class="btn-icon fixed top-4 right-4 z-[150] bg-indigo-600 text-white rounded-2xl shadow-xl active:scale-95 transition-all">
-        <i data-lucide="menu"></i>
+        <i data-lucide="menu" id="menu-icon"></i>
     </button>
 
     <div id="side-menu" class="fixed inset-0 z-[200] invisible">
-        <div onclick="toggleMenu(false)" class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm opacity-0 transition-opacity duration-300" id="menu-overlay"></div>
-        <div class="absolute top-0 right-0 h-full w-72 bg-white dark:bg-slate-900 shadow-2xl translate-x-full transition-transform duration-300 ease-out p-6" id="menu-panel">
-            <div class="flex justify-between items-center mb-10">
-                <img src="https://www.applifilm.fr/wp-content/uploads/2020/07/applifilm.png" class="h-6">
-                <button onclick="toggleMenu(false)" class="close-btn"><i data-lucide="x"></i></button>
+@@ -127,36 +114,34 @@
             </div>
             <nav class="space-y-4">
                 <button onclick="switchView('vitrage')" class="w-full flex items-center gap-4 p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 font-black text-xs uppercase tracking-widest">
-                    <i data-lucide="layers"></i> Vitrages
+                    <i data-lucide="layers" class="w-5 h-5"></i> Vitrages
+                </button>
+                <button onclick="switchView('pret')" class="w-full flex items-center gap-4 p-4 rounded-2xl text-slate-400 font-black text-xs uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                    <i data-lucide="car" class="w-5 h-5"></i> Prêt de véhicule
                 </button>
             </nav>
         </div>
@@ -122,81 +82,84 @@
 
     <header class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 p-4 sticky top-0 z-[100]">
         <div class="flex items-center justify-between max-w-lg mx-auto">
-            <img src="https://www.applifilm.fr/wp-content/uploads/2020/07/applifilm.png" class="h-7">
+            <img src="https://www.applifilm.fr/wp-content/uploads/2020/07/applifilm.png" class="h-7" alt="Logo">
             <div class="flex items-center gap-2">
-                <button type="button" onclick="toggleHistoryMenu()" class="btn-icon bg-slate-100 dark:bg-slate-800 text-slate-600 rounded-xl">
+                <button type="button" onclick="toggleHistoryMenu()" class="btn-icon bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-[10px] font-black border border-slate-200 dark:border-slate-700">
                     <i data-lucide="history" class="w-4 h-4 text-indigo-500"></i>
                 </button>
                 <button type="button" onclick="toggleDarkMode()" class="btn-icon rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600">
-                    <i data-lucide="moon" id="dark-icon"></i>
+                    <i data-lucide="moon" id="dark-icon" class="w-5 h-5"></i>
                 </button>
             </div>
         </div>
     </header>
 
     <main class="max-w-lg mx-auto p-4 space-y-6">
-        
+
         <section class="bg-white dark:bg-slate-800 p-6 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-700">
             <label class="block text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest ml-1">VIN du véhicule</label>
             <div class="flex gap-3">
                 <input type="text" id="vin-input" placeholder="Scanner ou saisir" class="flex-1 bg-slate-50 dark:bg-slate-950 border-none rounded-2xl py-4 px-5 text-sm font-bold focus:ring-2 focus:ring-indigo-500">
-                <button type="button" onclick="startScanner()" class="btn-icon bg-indigo-600 text-white rounded-2xl shadow-lg">
-                    <i data-lucide="scan-line"></i>
+                <button type="button" onclick="startScanner()" class="btn-icon bg-indigo-600 text-white rounded-2xl shadow-lg active:scale-95 transition-all">
+                    <i data-lucide="scan-line" class="w-6 h-6"></i>
                 </button>
             </div>
             <div id="reader" class="hidden mt-4 rounded-2xl overflow-hidden border-2 border-indigo-100"></div>
-        </section>
-
-        <section class="bg-white dark:bg-slate-800 p-4 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-700">
+@@ -166,52 +151,64 @@
             <div class="flex gap-2 p-1 bg-slate-100 dark:bg-slate-900 rounded-2xl mb-6">
                 <button type="button" onclick="setVehicle('VOITURE')" id="tab-VOITURE" class="tab-btn py-2 rounded-xl text-[9px] font-black uppercase transition-all">Voiture</button>
                 <button type="button" onclick="setVehicle('FOURGON')" id="tab-FOURGON" class="tab-btn py-2 rounded-xl text-[9px] font-black uppercase transition-all opacity-50">Fourgon</button>
+                <button type="button" onclick="setVehicle('VDL')" id="tab-VDL" class="tab-btn py-2 rounded-xl text-[9px] font-black uppercase transition-all opacity-50">VDL</button>
             </div>
 
-            <div class="relative mx-auto border border-slate-100 dark:border-slate-700 rounded-3xl overflow-hidden bg-slate-50/50 dark:bg-slate-900/50 shadow-inner" style="width: 95%; height: 650px;">
-                <div id="vehicle-svg-container" class="absolute inset-0 flex items-center justify-center p-2"></div>
-                <div id="vitres-container" class="absolute inset-0"></div>
-            </div>
-        </section>
+            <div class="relative mx-auto border border-slate-100 dark:border-slate-700 rounded-3xl overflow-hidden bg-slate-50/50 dark:bg-slate-900/50 shadow-inner" 
+     style="width: 95%; max-width: 400px; height: 650px;">
+    <div id="vehicle-svg-container" class="absolute inset-0 flex items-center justify-center p-2">
+        </div>
+    <div id="vitres-container" class="absolute inset-0">
+        </div>
+</div>
 
-        <section class="bg-white dark:bg-slate-800 p-6 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-700 space-y-6">
-            <div class="flex items-center gap-2">
-                <i data-lucide="clipboard-check" class="text-indigo-500 w-5 h-5"></i>
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fiche de Prêt / Retour</label>
-            </div>
-            <div class="space-y-2">
-                <label class="text-[10px] font-bold text-slate-500 ml-1 uppercase">Kilométrage</label>
-                <input type="number" id="km-input" placeholder="Ex: 124500" class="w-full bg-slate-50 dark:bg-slate-950 border-none rounded-2xl py-4 px-5 text-xl font-bold text-indigo-600 focus:ring-2 focus:ring-indigo-500">
-            </div>
-            <div class="space-y-2">
-                <label class="text-[10px] font-bold text-slate-500 ml-1 uppercase">Carburant</label>
-                <div class="grid grid-cols-4 gap-2">
-                    <button type="button" onclick="setFuel(25, this)" class="fuel-btn py-3 rounded-xl border border-slate-200 dark:border-slate-700 text-[10px] font-black">1/4</button>
-                    <button type="button" onclick="setFuel(50, this)" class="fuel-btn py-3 rounded-xl border border-slate-200 dark:border-slate-700 text-[10px] font-black">1/2</button>
-                    <button type="button" onclick="setFuel(75, this)" class="fuel-btn py-3 rounded-xl border border-slate-200 dark:border-slate-700 text-[10px] font-black">3/4</button>
-                    <button type="button" onclick="setFuel(100, this)" class="fuel-btn py-3 rounded-xl border border-slate-200 dark:border-slate-700 text-[10px] font-black">PLEIN</button>
-                </div>
-            </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         </section>
 
         <section class="bg-white dark:bg-slate-800 p-6 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
             <div class="flex gap-2 p-1 bg-slate-100 dark:bg-slate-950 rounded-2xl">
                 <label class="flex-1 cursor-pointer">
                     <input type="radio" name="type" value="POSE" checked class="hidden peer">
-                    <div class="text-center py-3 rounded-xl text-[10px] font-black peer-checked:bg-white dark:peer-checked:bg-slate-800 opacity-40 peer-checked:opacity-100 transition-all uppercase">Pose</div>
+                    <div class="text-center py-3 rounded-xl text-[10px] font-black peer-checked:bg-white dark:peer-checked:bg-slate-800 peer-checked:shadow-sm opacity-40 peer-checked:opacity-100 transition-all uppercase">Pose</div>
                 </label>
                 <label class="flex-1 cursor-pointer">
                     <input type="radio" name="type" value="SAV" class="hidden peer">
-                    <div class="text-center py-3 rounded-xl text-[10px] font-black peer-checked:bg-white dark:peer-checked:bg-slate-800 opacity-40 peer-checked:opacity-100 transition-all uppercase">SAV</div>
+                    <div class="text-center py-3 rounded-xl text-[10px] font-black peer-checked:bg-white dark:peer-checked:bg-slate-800 peer-checked:shadow-sm opacity-40 peer-checked:opacity-100 transition-all uppercase">SAV</div>
+                </label>
+                <label class="flex-1 cursor-pointer">
+                    <input type="radio" name="type" value="GARANTIE" class="hidden peer">
+                    <div class="text-center py-3 rounded-xl text-[10px] font-black peer-checked:bg-white dark:peer-checked:bg-slate-800 peer-checked:shadow-sm opacity-40 peer-checked:opacity-100 transition-all uppercase">Garantie</div>
                 </label>
             </div>
-            <textarea id="obs" placeholder="Observations carrosserie / propreté..." class="w-full bg-slate-50 dark:bg-slate-950 border-none rounded-2xl py-4 px-5 text-sm h-24 resize-none focus:ring-2 focus:ring-indigo-500"></textarea>
+            <textarea id="obs" placeholder="Observations..." class="w-full bg-slate-50 dark:bg-slate-950 border-none rounded-2xl py-4 px-5 text-sm h-24 resize-none focus:ring-2 focus:ring-indigo-500"></textarea>
         </section>
 
         <section class="bg-white dark:bg-slate-800 p-6 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-700">
             <label class="block text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest ml-1">Photos</label>
             <div class="grid grid-cols-4 gap-3" id="photo-preview-container">
-                <label class="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl cursor-pointer bg-slate-50 dark:bg-slate-950">
+                <label class="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl cursor-pointer active:scale-95 bg-slate-50 dark:bg-slate-950">
                     <i data-lucide="camera" class="w-5 h-5 text-slate-400"></i>
                     <input type="file" accept="image/*" capture="environment" class="hidden" multiple onchange="handlePhotos(this)">
                 </label>
@@ -204,54 +167,45 @@
         </section>
 
         <section>
-            <button type="button" id="btn-signer-principal" class="btn-primary" onclick="openSignature()">
+            <button type="button" class="btn-primary" onclick="generatePDF()">
                 <i data-lucide="pen-tool"></i>
                 <span>Signer et Terminer</span>
             </button>
-            <div id="sig-status" class="hidden w-full bg-green-50 dark:bg-green-900/20 p-6 rounded-[2.5rem] border-2 border-green-200 dark:border-green-900 flex items-center justify-between">
+            <div id="sig-status" class="hidden w-full bg-green-50 dark:bg-green-900/20 p-6 rounded-[2.5rem] border-2 border-green-200 dark:border-green-900 flex items-center justify-between animate-in">
                 <div class="flex items-center gap-3 text-green-600 font-black text-xs uppercase"><i data-lucide="check-circle"></i> Signature ok</div>
                 <button type="button" onclick="resetSignature()" class="btn-icon bg-red-100 text-red-600 p-2 rounded-xl"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
             </div>
-        </section>
-
-        <div class="space-y-4 pt-4">
-            <button type="button" onclick="addToBatch()" class="w-full bg-indigo-600 text-white py-6 rounded-[2.5rem] font-black text-xs uppercase tracking-widest shadow-xl active:scale-95 transition-all">
-                Ajouter au lot
+@@ -223,7 +220,7 @@
             </button>
             <div class="text-center">
                 <div id="batch-counter" class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">0 EN ATTENTE</div>
-                <button type="button" id="btn-final" onclick="finalize()" class="w-full bg-slate-900 dark:bg-indigo-500 text-white py-6 rounded-[2.5rem] font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 shadow-2xl">
+                <button type="button" id="btn-final" onclick="finalize()" class="w-full bg-slate-900 dark:bg-indigo-500 text-white py-6 rounded-[2.5rem] font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 shadow-2xl active:scale-95 disabled:opacity-50 transition-all">
                     <span>Finaliser l'envoi</span>
                     <i data-lucide="send" class="w-5 h-5"></i>
                 </button>
-            </div>
-        </div>
-    </main>
-
-    <div id="modal-sig" class="hidden fixed inset-0 z-[200] bg-slate-950/90 backdrop-blur-sm p-4 flex items-center justify-center">
-        <div class="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[3rem] overflow-hidden shadow-2xl">
-            <div class="p-6 border-b dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-950">
+@@ -237,7 +234,7 @@
                 <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Signature</span>
                 <button type="button" onclick="clearCanvas()" class="text-xs font-bold text-indigo-500">Effacer</button>
             </div>
-            <canvas id="canvas" class="w-full h-64 bg-white touch-none"></canvas>
+            <canvas id="canvas" class="w-full h-64"></canvas>
             <div class="p-4 grid grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-950">
                 <button type="button" onclick="closeSignature()" class="py-4 rounded-2xl font-bold text-xs text-slate-500 uppercase">Fermer</button>
                 <button type="button" onclick="saveSignature()" class="py-4 rounded-2xl font-bold text-xs bg-indigo-600 text-white uppercase">Valider</button>
-            </div>
-        </div>
-    </div>
+@@ -247,23 +244,20 @@
 
     <div id="modal-tint" class="hidden fixed inset-0 z-[300] flex items-end sm:items-center justify-center p-4">
         <div onclick="closeTintModal()" class="absolute inset-0 bg-slate-950/40 backdrop-blur-sm"></div>
-        <div class="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[2.5rem] shadow-2xl relative overflow-hidden">
+        <div class="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[2.5rem] shadow-2xl relative animate-in overflow-hidden">
             <div class="p-6 text-center border-b dark:border-slate-800">
                 <h3 id="tint-title" class="text-[10px] font-black uppercase tracking-widest text-slate-400">Choisir la teinte</h3>
             </div>
             <div class="p-4 grid grid-cols-2 gap-2">
                 <button onclick="selectTint('ART85')" class="py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 font-bold text-xs hover:bg-indigo-500 hover:text-white transition-colors">ART85</button>
                 <button onclick="selectTint('70')" class="py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 font-bold text-xs hover:bg-indigo-500 hover:text-white transition-colors">70</button>
+                <button onclick="selectTint('50')" class="py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 font-bold text-xs hover:bg-indigo-500 hover:text-white transition-colors">50</button>
+                <button onclick="selectTint('35')" class="py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 font-bold text-xs hover:bg-indigo-500 hover:text-white transition-colors">35</button>
                 <button onclick="selectTint('20')" class="py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 font-bold text-xs hover:bg-indigo-500 hover:text-white transition-colors">20</button>
+                <button onclick="selectTint('15')" class="py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 font-bold text-xs hover:bg-indigo-500 hover:text-white transition-colors">15</button>
                 <button onclick="selectTint('5')" class="py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 font-bold text-xs hover:bg-indigo-500 hover:text-white transition-colors">5</button>
                 <button onclick="deselectWindow()" class="py-4 rounded-2xl bg-red-50 text-red-500 font-bold text-xs uppercase">Supprimer</button>
             </div>

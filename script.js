@@ -3,16 +3,40 @@ let scanner;
 let canvas, ctx, drawing = false;
 
 // --- INITIALISATION ---
-window.addEventListener('DOMContentLoaded', () => {
-    initSignature();
-    lucide.createIcons();
-    setTimeout(() => {
-        const splash = document.getElementById('splash-screen');
-        if(splash) {
-            splash.style.opacity = '0';
-            setTimeout(() => splash.remove(), 500);
+// --- INITIALISATION SÉCURISÉE ---
+window.addEventListener('load', () => {
+    console.log("DOM chargé, initialisation...");
+
+    // 1. Initialiser les icônes
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+
+    // 2. Initialiser la signature (si la fonction existe)
+    try {
+        if (typeof initSignature === 'function') {
+            initSignature();
         }
-    }, 1200);
+    } catch (e) {
+        console.error("Erreur initSignature:", e);
+    }
+
+    // 3. FORCE LE RETRAIT DU LOGO (Splash Screen)
+    const hideSplash = () => {
+        const splash = document.getElementById('splash-screen');
+        if (splash) {
+            splash.style.opacity = '0';
+            splash.style.transition = 'opacity 0.5s ease';
+            setTimeout(() => {
+                splash.remove();
+                console.log("Splash-screen retiré avec succès");
+            }, 500);
+        }
+    };
+
+    // On le retire immédiatement ET on met une sécurité à 2 secondes au cas où
+    hideSplash();
+    setTimeout(hideSplash, 2000); 
 });
 
 // --- SCANNER VIN (Correction) ---

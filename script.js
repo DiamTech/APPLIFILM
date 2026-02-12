@@ -389,16 +389,17 @@ function renderVitraux() {
         const selection = state.selectedWindows.find(sw => sw.id === v.id);
         const isSelected = selection ? 'selected' : '';
         
-        // On affine les tailles : 9px pour le nom, 10px pour la teinte (au lieu de 11)
+        // On fixe les tailles pour éviter le saut de police
+        // text-[9px] pour tout le monde, seule la graisse change
         const label = selection 
-            ? `<span class="text-[8px] uppercase opacity-70 leading-tight">${v.id}</span>
-               <span class="text-[10px] font-black leading-none text-indigo-600 dark:text-indigo-400">${selection.tint}</span>` 
-            : `<span class="text-[9px] font-bold leading-tight px-1">${v.id}</span>`;
+            ? `<span class="text-[8px] uppercase opacity-60 leading-none mb-0.5">${v.id}</span>
+               <span class="text-[9px] font-black leading-none text-indigo-600 dark:text-indigo-400">${selection.tint}</span>` 
+            : `<span class="text-[9px] font-bold leading-tight">${v.id}</span>`;
         
         return `
             <button type="button" onclick="toggleWindow('${v.id}')" id="win-${v.id}" 
-                style="position: absolute; ${v.pos}"
-                class="window-btn rounded-xl border border-slate-300 dark:border-slate-600 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm shadow-sm transition-all flex flex-col items-center justify-center overflow-hidden text-center p-0.5 ${isSelected}">
+                style="position: absolute; ${v.pos} display: flex; flex-direction: column; align-items: center; justify-center: center;"
+                class="window-btn rounded-xl border border-slate-300 dark:border-slate-600 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm shadow-sm transition-all overflow-hidden p-0 ${isSelected}">
                 ${label}
             </button>
         `;

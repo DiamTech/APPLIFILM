@@ -90,9 +90,14 @@
 
         <div id="batch-container" class="space-y-2 mt-4"></div>
 
-        <button onclick="openSignature()" class="w-full bg-amber-500 text-white p-4 rounded-2xl font-bold shadow-md flex items-center justify-center gap-2 mt-6">
-            <i data-lucide="pen-tool"></i> SIGNER LE BON
-        </button>
+        <div class="flex gap-2 mt-6">
+    <button id="btn-open-sign" onclick="openSignature()" class="flex-1 bg-amber-500 text-white p-4 rounded-2xl font-bold shadow-md flex items-center justify-center gap-2">
+        <i data-lucide="pen-tool"></i> SIGNER LE BON
+    </button>
+    <button id="btn-clear-sign" onclick="resetSignature()" class="hidden bg-red-100 text-red-600 p-4 rounded-2xl font-bold flex items-center justify-center shadow-sm">
+        <i data-lucide="trash-2"></i>
+    </button>
+</div>
 
     </main>
 

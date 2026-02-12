@@ -34,23 +34,26 @@ window.addEventListener('load', () => {
 function switchView(view) {
     toggleMenu(false); // On ferme le menu latéral
 
-    const viewVitrage = document.getElementById('view-vitrage');
-    const viewPret = document.getElementById('view-pret');
+    // 1. On récupère les 3 vues (Vitrage, Prêt, Historique)
+    const vVitrage = document.getElementById('view-vitrage');
+    const vPret = document.getElementById('view-pret');
+    const vHistory = document.getElementById('view-history');
 
-    // Sécurité si les ID n'existent pas encore dans le HTML
-    if (!viewVitrage || !viewPret) {
-        console.error("Erreur : Les ID 'view-vitrage' ou 'view-pret' manquent dans le HTML.");
-        return;
-    }
+    // 2. On cache tout par sécurité
+    if(vVitrage) vVitrage.classList.add('hidden');
+    if(vPret) vPret.classList.add('hidden');
+    if(vHistory) vHistory.classList.add('hidden');
 
-    if (view === 'pret') {
-        // On masque le vitrage, on affiche le prêt
-        viewVitrage.classList.add('hidden');
-        viewPret.classList.remove('hidden');
-    } else {
-        // On affiche le vitrage, on masque le prêt
-        viewVitrage.classList.remove('hidden');
-        viewPret.classList.add('hidden');
+    // 3. On affiche la vue demandée
+    if (view === 'vitrage') {
+        if(vVitrage) vVitrage.classList.remove('hidden');
+    } 
+    else if (view === 'pret') {
+        if(vPret) vPret.classList.remove('hidden');
+    } 
+    else if (view === 'history') {
+        if(vHistory) vHistory.classList.remove('hidden');
+        updateHistoryUI(); // Met à jour la liste si on va sur l'historique
     }
 }
 

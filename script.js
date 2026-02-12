@@ -6,6 +6,7 @@ let state = JSON.parse(localStorage.getItem('scannerState')) || {
 
 let selectedWindows = [];
 let signaturePad = null;
+let history = JSON.parse(localStorage.getItem('scannerHistory')) || [];
 
 // --- 2. INITIALISATION ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -18,6 +19,47 @@ document.addEventListener('DOMContentLoaded', () => {
         updateSignatureUI(true);
     }
 });
+
+function toggleHistory() {
+    const container = document.getElementById('history-container');
+    const chevron = document.getElementById('history-chevron');
+    const isHidden = container.classList.contains('hidden');
+    
+    if (isHidden) {
+        container.classList.remove('hidden');
+        chevron.style.transform = "rotate(180deg)";
+        renderHistory();
+    } else {
+        container.classList.add('hidden');
+        chevron.style.transform = "rotate(0deg)";
+    }
+}
+
+function renderHistory() {
+    const container = document.getElementById('history-container');
+    container.innerHTML = "";
+
+    if (history.length === 0) {
+        container.innerHTML = `<p class="text-center text-slate-400 text-xs py-4 italic">Aucun envoi archivé</p>`;
+        return;
+    }
+
+    history.forEach((v) => {
+        const div = document.createElement('div');
+        div.className = "bg-slate-100/50 border border-slate-200 rounded-xl p-3 opacity-70 scale-95";
+        div.innerHTML = `
+            <div class="flex justify-between items-center mb-1">
+                <span class="font-mono text-[11px] font-bold text-slate-600">${v.vin}</span>
+                <span class="text-[9px] text-slate-400">${v.timestamp}</span>
+            </div>
+            <div class="text-[9px] text-slate-500 truncate">
+                ${v.type} • ${v.windows.join(', ')}
+            </div>
+        `;
+        container.prepend(div); // Les plus récents en haut
+    });
+    if (window.lucide) lucide.createIcons();
+}
 
 function saveState() {
     localStorage.setItem('scannerState', JSON.stringify(state));
@@ -277,6 +319,10 @@ async function finalize() {
         });
 
         if (response.ok) {
+            history = [...state.batch, ...history].slice(0, 50); // On garde les 50 derniers
+    localStorage.setItem('scannerHistory', JSON.stringify(history));
+    
+    showModal("Succès", "Données envoyées et archivées !", "success");
             showModal("Succès", "Toutes les données ont été envoyées !", "success");
             setTimeout(() => {
                 localStorage.clear();

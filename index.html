@@ -87,6 +87,16 @@
 
         <div id="batch-container" class="space-y-3 mt-6"></div>
 
+        <section class="mt-10 border-t border-slate-200 pt-6">
+    <button onclick="toggleHistory()" class="flex items-center justify-between w-full text-slate-400 hover:text-indigo-600 transition-colors">
+        <span class="text-xs font-bold uppercase tracking-widest">Historique (50 derniers)</span>
+        <i data-lucide="chevron-down" id="history-chevron"></i>
+    </button>
+    
+    <div id="history-container" class="hidden space-y-2 mt-4">
+        </div>
+</section>
+
         <div class="flex gap-2 mt-8">
             <button id="btn-open-sign" onclick="openSignature()" class="flex-1 bg-amber-500 text-white p-4 rounded-2xl font-bold shadow-md flex items-center justify-center gap-2 transition-all">
                 <i data-lucide="pen-tool"></i> SIGNER LE BON

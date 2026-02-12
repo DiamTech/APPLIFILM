@@ -21,7 +21,7 @@ let state = {
 
 // Mets tes vraies URLs ici
 const URL_VITRAGE = "https://script.google.com/macros/s/AKfycbyl-hYWhxxK8-1jLGxHC_QNFgrVFZtbUv69Ozr2hMAdqWz2iQvP5oG92Div0LbG-L5x/exec";
-const URL_PRET = "https://script.google.com/macros/s/AKfycbyUHmpREU7w5uUJHe0JvpmgOpzGj1IW30c0HvUDp3pUxaVVmw_bF97L-WqR-EZkrDvWPw/exec";
+const URL_PRET = "https://script.google.com/macros/s/AKfycbxh3j0nkQxdO0oTQ5bORE25XwcjlZpUQ_5Fgd0a_utXPuFrkxE0VVp0j2VSmMOAxgXH6w/exec";
 
 let scanner, canvas, ctx, drawing = false;
 
@@ -1284,5 +1284,46 @@ async function saveReturn() {
         showLoading(false);
     }
 }
+
+// On surveille le changement de véhicule
+document.getElementById('pret-vehicule-select').addEventListener('change', async function(e) {
+    const immat = e.target.value;
+    
+    // On ne récupère l'historique QUE si on est en mode DEPART
+    if (!immat || state.pretMode === 'RETOUR') return;
+
+    try {
+        const response = await fetch(SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({ 
+                action: 'GET_LAST_STATE', 
+                immat: immat 
+            })
+        });
+        
+        const res = await response.json();
+
+        if (res.status === "success") {
+            // 1. On charge les anciennes croix (on les force en type 'old' pour qu'elles soient grises)
+            const lastCoords = JSON.parse(res.coords || "[]");
+            state.pret.damages = lastCoords.map(c => ({ ...c, type: 'old' }));
+            
+            // 2. On pré-remplit les observations et le KM
+            document.getElementById('pret-km-depart').value = res.km || "";
+            document.getElementById('pret-degats-obs').value = "DÉGÂTS PRÉCÉDENTS : " + (res.details || "RAS") + "\n";
+            
+            // 3. On rafraîchit le dessin de la voiture
+            renderDamages();
+            
+            console.log("✅ Historique récupéré pour " + immat);
+        } else {
+            // Si c'est un nouveau véhicule jamais enregistré
+            state.pret.damages = [];
+            renderDamages();
+        }
+    } catch (err) {
+        console.error("Erreur récup historique:", err);
+    }
+});
 
 setTimeout(() => setVehicle('VOITURE'), 200);

@@ -251,13 +251,20 @@ async function finalize() {
     btn.disabled = true;
     btn.innerHTML = `<span>ENVOI EN COURS...</span>`;
     
+    // Remplace bien cette URL par la tienne !
+    const url = 'TON_URL_ICI'; 
+
     try {
-        await fetch('https://script.google.com/macros/s/AKfycby8fC4tLtri-KHVwjciLmw0D0QT1jAlUxZiT5Z2OtA1JylZuDXKu5Ta16FZ0S6VGHka/exec', {
+        const response = await fetch(url, {
             method: 'POST',
-            mode: 'no-cors',
+            mode: 'no-cors', // Indispensable pour Google Script
+            cache: 'no-cache',
             body: JSON.stringify({ interventions: state.batch })
         });
 
+        // Avec no-cors, on considère que si on arrive ici sans erreur "catch", c'est envoyé
+        console.log("Tentative d'envoi terminée");
+        
         const now = new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
         state.batch.forEach(v => {
             state.sentHistory.push({
@@ -272,9 +279,11 @@ async function finalize() {
         state.batch = [];
         updateBatchUI();
         updateHistoryUI();
-        alert("TERMINÉ ! Toutes les données sont sur Google Drive.");
+        alert("ENVOI EFFECTUÉ ! (Vérifie ton Google Sheet)");
+
     } catch(e) {
-        alert("Erreur de connexion.");
+        console.error("Erreur détaillée:", e);
+        alert("Erreur de connexion : " + e.message);
     } finally {
         btn.disabled = false;
         btn.innerHTML = `<span>FINALISER L'ENVOI</span><i data-lucide="send" class="w-5 h-5"></i>`;

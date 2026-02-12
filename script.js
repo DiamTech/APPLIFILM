@@ -25,18 +25,44 @@ window.addEventListener('load', () => {
 async function startScanner() {
     const readerDiv = document.getElementById('reader');
     readerDiv.classList.toggle('hidden');
+    
     if (readerDiv.classList.contains('hidden')) {
         if(scanner) await scanner.stop();
         return;
     }
+
     scanner = new Html5Qrcode("reader");
+    
     try {
-        await scanner.start({ facingMode: "environment" }, 
-        { fps: 10, qrbox: { width: 250, height: 150 } }, 
-        (text) => {
-            document.getElementById('vin-input').value = text;
-            stopScanner();
-        });
+        await scanner.start(
+            { facingMode: "environment" }, 
+            { fps: 10, qrbox: { width: 250, height: 150 } }, 
+            async (text) => {
+                // 1. On remplit le champ VIN
+                document.getElementById('vin-input').value = text;
+
+                // 2. CAPTURE AUTOMATIQUE DE LA PHOTO
+                try {
+                    const video = document.querySelector('#reader video');
+                    const canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(video, 0, 0);
+                    
+                    // On compresse légèrement et on ajoute aux photos
+                    const photoVIN = canvas.toDataURL('image/jpeg', 0.7);
+                    state.photos.push(photoVIN);
+                    renderPhotos(); // Met à jour l'affichage des photos
+                } catch (e) {
+                    console.log("Erreur capture auto :", e);
+                }
+
+                // 3. On arrête le scanner
+                stopScanner();
+                alert("VIN détecté et photo de preuve enregistrée !");
+            }
+        );
     } catch (err) {
         alert("Caméra non accessible");
         readerDiv.classList.add('hidden');

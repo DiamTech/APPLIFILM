@@ -179,14 +179,20 @@ function toggleWindow(id) {
 }
 
 function handlePhotos(input) {
-    Array.from(input.files).forEach(f => {
-        const r = new FileReader();
-        r.onload = (e) => state.photos.push(e.target.result);
-        r.readAsDataURL(f);
+    const files = Array.from(input.files);
+    let processed = 0;
+
+    files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            state.photos.push(e.target.result);
+            processed++;
+            if (processed === files.length) {
+                renderPhotos(); // Mise à jour visuelle une fois tout lu
+            }
+        };
+        reader.readAsDataURL(file);
     });
-    setTimeout(() => {
-        document.getElementById('photo-count').innerText = state.photos.length;
-    }, 500);
 }
 
 function addToBatch() {

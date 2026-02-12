@@ -32,23 +32,25 @@ window.addEventListener('load', () => {
 
 // --- NAVIGATION ENTRE LES PAGES ---
 function switchView(view) {
-    toggleMenu(false); // Ferme le menu
-    
-    // 1. On cache toutes les vues
-    ['view-intervention', 'view-history', 'view-pret'].forEach(id => {
-        const el = document.getElementById(id);
-        if(el) el.classList.add('hidden');
-    });
+    toggleMenu(false); // On ferme le menu latéral
 
-    // 2. On affiche la vue demandée
-    if (view === 'history') {
-        document.getElementById('view-history').classList.remove('hidden');
-        renderDailyHistory();
-    } else if (view === 'pret') {
-        document.getElementById('view-pret').classList.remove('hidden');
-        renderActiveLoans();
+    const viewVitrage = document.getElementById('view-vitrage');
+    const viewPret = document.getElementById('view-pret');
+
+    // Sécurité si les ID n'existent pas encore dans le HTML
+    if (!viewVitrage || !viewPret) {
+        console.error("Erreur : Les ID 'view-vitrage' ou 'view-pret' manquent dans le HTML.");
+        return;
+    }
+
+    if (view === 'pret') {
+        // On masque le vitrage, on affiche le prêt
+        viewVitrage.classList.add('hidden');
+        viewPret.classList.remove('hidden');
     } else {
-        document.getElementById('view-intervention').classList.remove('hidden');
+        // On affiche le vitrage, on masque le prêt
+        viewVitrage.classList.remove('hidden');
+        viewPret.classList.add('hidden');
     }
 }
 

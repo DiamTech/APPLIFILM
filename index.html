@@ -178,6 +178,18 @@
                 class="w-full bg-transparent border-none p-0 text-sm dark:text-white outline-none resize-none"></textarea>
         </div>
 
+        <section class="bg-white dark:bg-slate-800 p-4 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm">
+    <label class="block text-[10px] font-black text-slate-400 uppercase mb-3 ml-1 tracking-widest">Photos du véhicule</label>
+    
+    <div class="grid grid-cols-4 gap-2" id="photo-preview-container">
+        <label class="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900 transition-all">
+            <i data-lucide="camera" class="w-6 h-6 text-slate-300"></i>
+            <span class="text-[8px] font-bold text-slate-400 mt-1">AJOUTER</span>
+            <input type="file" id="photo-input" accept="image/*" capture="environment" class="hidden" multiple onchange="handlePhotos(this)">
+        </label>
+        </div>
+</section>
+
         <button onclick="addToBatch()" class="w-full bg-slate-900 dark:bg-indigo-600 text-white p-5 rounded-3xl font-bold flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg">
             <i data-lucide="plus-circle"></i> AJOUTER AU LOT
         </button>

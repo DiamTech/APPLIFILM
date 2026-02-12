@@ -569,23 +569,27 @@ async function finalize() {
 async function finalizePret() {
     const btn = document.getElementById('btn-final-pret');
     
-    // On récupère les infos avec TES nouveaux IDs HTML
+    // 1. ON RÉCUPÈRE LA PLAQUE DEPUIS LE MENU DÉROULANT
+    const selectVehicule = document.getElementById('pret-vehicule-select');
+    const plaqueAuto = selectVehicule ? selectVehicule.value : "N/C";
+
+    // 2. ON RÉCUPÈRE LES AUTRES INFOS
     const payload = {
         type: "PRET",
+        immat: plaqueAuto, // Utilise la plaque du menu déroulant
         nom: document.getElementById('pret-nom')?.value || "Inconnu",
         dob: document.getElementById('pret-dob')?.value || "N/C",
         lieu_naiss: document.getElementById('pret-lieu-naiss')?.value || "N/C",
         permis_num: document.getElementById('pret-permis-num')?.value || "N/C",
         permis_lieu: document.getElementById('pret-permis-lieu')?.value || "N/C",
-        // On n'oublie pas l'immat si tu as un champ pour ça
-        immat: document.getElementById('pret-immat')?.value || "N/C", 
-        // Les images
         permis_recto: state.pret.permis_recto,
         permis_verso: state.pret.permis_verso,
-        signature: state.signature, // La signature est ici !
+        signature: state.signature,
         date: new Date().toLocaleString('fr-FR')
     };
 
+    // Sécurités
+    if (plaqueAuto === "") return alert("⚠️ Veuillez choisir un véhicule !");
     if (!payload.permis_recto) return alert("⚠️ Photo du permis manquante !");
     if (!payload.signature) return alert("⚠️ Signature client manquante !");
 
@@ -598,9 +602,11 @@ async function finalizePret() {
             mode: 'no-cors',
             body: JSON.stringify(payload)
         });
-        alert("✅ Dossier de prêt complet envoyé !");
-        // Reset après envoi
+        alert("✅ Prêt pour le véhicule " + plaqueAuto + " enregistré !");
+        
+        // On réinitialise tout
         state.signature = null;
+        if(selectVehicule) selectVehicule.value = ""; 
         switchView('vitrage');
     } catch(e) {
         alert("Erreur d'envoi");

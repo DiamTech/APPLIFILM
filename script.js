@@ -42,28 +42,25 @@ window.addEventListener('load', () => {
 
 // --- NAVIGATION ENTRE LES PAGES ---
 function switchView(view) {
-    console.log("Bouton cliqué, vue demandée :", view);
-    
-    // 1. Fermer le menu
+    // 1. On ferme le menu
     if (typeof toggleMenu === 'function') toggleMenu(false);
 
-    // 2. Récupérer les zones par leurs IDs exacts de ton HTML
-    const vVitrage = document.getElementById('view-vitrage'); // Ligne 154 de ton HTML
-    const vPret = document.getElementById('view-pret');       // Ligne 174 de ton HTML
-    const vHistory = document.getElementById('view-history'); // Si tu l'as ajouté
+    // 2. Les IDs exacts de ton HTML
+    const vVitrage = document.getElementById('view-vitrage'); 
+    const vPret = document.getElementById('view-pret');
+    const vHistory = document.getElementById('view-history');
 
-    // 3. On cache tout par défaut
+    // 3. On cache TOUT
     if(vVitrage) vVitrage.classList.add('hidden');
     if(vPret) vPret.classList.add('hidden');
     if(vHistory) vHistory.classList.add('hidden');
 
-    // 4. On affiche la zone demandée
+    // 4. On affiche la bonne page
     if (view === 'pret') {
         if(vPret) vPret.classList.remove('hidden');
     } else if (view === 'history') {
         if(vHistory) vHistory.classList.remove('hidden');
     } else {
-        // Par défaut, on affiche le vitrage
         if(vVitrage) vVitrage.classList.remove('hidden');
     }
 }
@@ -570,15 +567,16 @@ async function finalize() {
 }
 
 async function finalizePret() {
-    const btn = document.getElementById('btn-final-pret');
-    
-    // Vérification de sécurité
+    // Vérification de sécurité pour éviter le crash
     if (!state.pret || !state.pret.permis_recto) {
-        return alert("⚠️ Photo du permis manquante !");
+        return alert("⚠️ Photo du permis (Recto) obligatoire !");
     }
 
-    btn.disabled = true;
-    btn.innerText = "ENVOI EN COURS...";
+    const btn = document.getElementById('btn-final-pret');
+    if(btn) {
+        btn.disabled = true;
+        btn.innerText = "ENVOI EN COURS...";
+    }
 
     const payload = {
         type: "PRET",
@@ -590,24 +588,21 @@ async function finalizePret() {
     };
 
     try {
-        // C'EST CETTE LIGNE QUI FAIT L'AIGUILLAGE :
-        await fetch(URL_PRET, {
-            method: 'POST',
-            mode: 'no-cors',
-            body: JSON.stringify(payload)
+        await fetch(URL_PRET, { 
+            method: 'POST', 
+            mode: 'no-cors', 
+            body: JSON.stringify(payload) 
         });
-        
-        alert("✅ Prêt enregistré dans le bon Sheet !");
-        
-        // On peut vider les photos après succès
+        alert("✅ PRÊT ENREGISTRÉ DANS LE SHEET PRÊT !");
         state.pret = { permis_recto: null, permis_verso: null };
-        switchView('vitrage'); // Retour à l'accueil
-        
+        switchView('vitrage'); // Retour auto à l'accueil
     } catch(e) {
-        alert("Erreur d'envoi Prêt");
+        alert("Erreur de connexion : " + e.message);
     } finally {
-        btn.disabled = false;
-        btn.innerText = "Valider le départ";
+        if(btn) {
+            btn.disabled = false;
+            btn.innerText = "Valider le départ";
+        }
     }
 }
 

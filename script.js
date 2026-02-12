@@ -21,7 +21,7 @@ let state = {
 
 // Mets tes vraies URLs ici
 const URL_VITRAGE = "https://script.google.com/macros/s/AKfycbyl-hYWhxxK8-1jLGxHC_QNFgrVFZtbUv69Ozr2hMAdqWz2iQvP5oG92Div0LbG-L5x/exec";
-const URL_PRET = "https://script.google.com/macros/s/AKfycbzTjhaJrlV4iPLuGmcX5zFjqizv1GQdXXgzQzDX26e8I1Tb3w9yPtWBLpYjJiG0zVJTsQ/exec";
+const URL_PRET = "https://script.google.com/macros/s/AKfycbxvxvU8myQ2XlusTlGUBRMCLRQ5EBoDx59jNmBMWznp1oGB66bstAvuRyStxE5zbsEYDg/exec";
 
 let scanner, canvas, ctx, drawing = false;
 
@@ -597,23 +597,25 @@ async function finalizePret() {
         dob: document.getElementById('pret-dob')?.value,
         lieu_naiss: document.getElementById('pret-lieu-naiss')?.value.trim(),
         permis_num: document.getElementById('pret-permis-num')?.value.trim(),
-        permis_lieu: document.getElementById('pret-permis-lieu')?.value.trim()
+        permis_lieu: document.getElementById('pret-permis-lieu')?.value.trim(),
+        km_saisi: parseInt(document.getElementById('pret-km-depart')?.value) || 0
     };
 
-    // 2. VÉRIFICATION DES CHAMPS OBLIGATOIRES (Le "Sauf si")
+    // 2. VÉRIFICATIONS (Champs obligatoires)
     if (!plaqueAuto || plaqueAuto === "N/C") return alert("⚠️ Veuillez choisir un véhicule !");
     if (!inputs.nom) return alert("⚠️ Le nom du client est obligatoire !");
-    if (!inputs.dob) return alert("⚠️ La date de naissance est obligatoire !");
-    if (!inputs.lieu_naiss) return alert("⚠️ Le lieu de naissance est obligatoire !");
-    if (!inputs.permis_num) return alert("⚠️ Le numéro de permis est obligatoire !");
-    if (!inputs.permis_lieu) return alert("⚠️ Le lieu de délivrance du permis est obligatoire !");
+    if (!inputs.km_saisi || inputs.km_saisi <= 0) return alert("⚠️ Veuillez saisir le kilométrage actuel !");
     
-    // VÉRIFICATION DES DOCUMENTS (Photos & Signature)
-    if (!state.pret.permis_recto) return alert("⚠️ La photo du permis (Recto) est obligatoire !");
-    if (!state.signature) return alert("⚠️ La signature du client est obligatoire !");
-    if (!state.pret.inspectionValidated) return alert("⚠️ Vous devez valider l'inspection (bouton Confirmer) avant d'envoyer !");
+    // Si c'est un départ, on vérifie tout le dossier client
+    if (state.pretMode === 'DEPART') {
+        if (!inputs.dob || !inputs.lieu_naiss || !inputs.permis_num) return alert("⚠️ Infos client incomplètes !");
+        if (!state.pret.permis_recto) return alert("⚠️ Photo du permis obligatoire !");
+    }
 
-    // 3. LOGIQUE POUR LES DÉGÂTS (Facultatif)
+    if (!state.signature) return alert("⚠️ Signature client obligatoire !");
+    if (!state.pret.inspectionValidated) return alert("⚠️ Validez l'inspection (bouton Confirmer) !");
+
+    // 3. LOGIQUE POUR LES DÉGÂTS
     let texteSaisi = document.getElementById('pret-degats-obs')?.value.trim() || "";
     const nbCroix = state.pret.damages ? state.pret.damages.length : 0;
     
@@ -624,33 +626,67 @@ async function finalizePret() {
             : "Aucun dégât signalé (Véhicule intact)";
     }
 
+    // --- PARTIE 3 : CALCUL DES KM SI RETOUR ---
+    if (state.pretMode === "RETOUR" && state.pret.km_depart_initial) {
+        const totalParcouru = inputs.km_saisi - state.pret.km_depart_initial;
+        
+        // On ajoute l'info dans le texte des observations pour le Sheet
+        degatsFinalText += " | KM AU DÉPART : " + state.pret.km_depart_initial;
+        degatsFinalText += " | PARCOURU : " + totalParcouru + " km";
+        
+        if (totalParcouru < 0) alert("⚠️ Attention : Le KM retour est inférieur au KM départ !");
+    }
+
     // 4. PRÉPARATION DU PAQUET (PAYLOAD)
-        const payload = {
-        // --- L'AIGUILLAGE ---
+    const payload = {
         type: "PRET",
-        status: state.pretMode, // Enverra "DEPART" ou "RETOUR" (défini par tes boutons du haut)
-        
-        // --- LES INFOS VÉHICULE ---
+        status: state.pretMode, // "DEPART" ou "RETOUR"
         immat: plaqueAuto,
-        km: document.getElementById('pret-km-depart')?.value || "0", // On récupère les KM
+        km: inputs.km_saisi,
         
-        // --- LE CLIENT ---
         nom: inputs.nom,
         dob: inputs.dob,
         lieu_naiss: inputs.lieu_naiss,
         permis_num: inputs.permis_num,
         permis_lieu: inputs.permis_lieu,
         
-        // --- L'ÉTAT DES LIEUX ---
         degats_details: degatsFinalText,
         degats_coords: JSON.stringify(state.pret.damages || []), 
         
-        // --- LES DOCUMENTS ---
-        permis_recto: state.pret.permis_recto,
-        permis_verso: state.pret.permis_verso || "Non fournie",
+        permis_recto: state.pret.permis_recto || "N/A",
+        permis_verso: state.pret.permis_verso || "N/A",
         signature: state.signature,
         date: new Date().toLocaleString('fr-FR')
     };
+
+    // 5. ENVOI AU SHEET
+    btn.disabled = true;
+    const originalText = btn.innerText;
+    btn.innerText = "TRANSMISSION...";
+
+    try {
+        await fetch(URL_PRET, {
+            method: 'POST',
+            mode: 'no-cors',
+            body: JSON.stringify(payload)
+        });
+
+        const msg = state.pretMode === "DEPART" ? "Prêt enregistré !" : "Retour enregistré !";
+        alert("✅ " + msg);
+        
+        // 6. RÉINITIALISATION
+        resetPretForm(); 
+        switchView('vitrage');
+
+    } catch(e) {
+        alert("❌ Erreur réseau.");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = originalText;
+    }
+}
+
+    
     // 5. ENVOI AU SHEET
     btn.disabled = true;
     const originalText = btn.innerText;
@@ -943,24 +979,31 @@ async function fetchActiveLoans() {
 }
 
 function selectLoanForReturn(immat) {
-    // 1. On trouve les infos du prêt dans notre liste locale
+    // 1. On trouve les infos du véhicule dans la liste chargée
     const loan = state.activeLoans.find(l => l.immat === immat);
     if (!loan) return;
 
-    // 2. On remplit les champs automatiquement pour gagner du temps
+    // 2. On remplit automatiquement les champs
     document.getElementById('pret-vehicule-select').value = loan.immat;
     document.getElementById('pret-nom').value = loan.nom;
     
-    // 3. On stocke le KM de départ pour le calcul plus tard
-    state.startKM = parseInt(loan.km);
+    // 3. On affiche le KM de départ dans le placeholder pour info
+    const kmInput = document.getElementById('pret-km-depart');
+    kmInput.value = ""; // On laisse vide pour saisir le nouveau
+    kmInput.placeholder = "Départ était à : " + loan.km_depart;
     
-    // 4. ON RÉCUPÈRE LES ANCIENNES CROIX
-    // On les affiche par exemple en gris pour les différencier des nouvelles
-    state.pret.damages = JSON.parse(loan.degats_coords || "[]");
-    renderDamages(true); // Une version de ta fonction qui dessine en gris
-    
-    // 5. On prévient l'utilisateur
-    alert("Prêt chargé ! KM au départ : " + loan.km + ". Marquez les NOUVEAUX dégâts si nécessaire.");
+    // On stocke le KM de départ dans le state pour faire le calcul après
+    state.pret.km_depart_initial = parseInt(loan.km_depart);
+
+    // 4. ON CHARGE LES ANCIENNES CROIX (Dégâts du départ)
+    try {
+        state.pret.damages = JSON.parse(loan.degats_coords || "[]");
+        renderDamages(); // On redessine les croix sur le SVG
+    } catch(e) {
+        state.pret.damages = [];
+    }
+
+    alert("Véhicule " + immat + " sélectionné. KM au départ : " + loan.km_depart);
 }
 
 setTimeout(() => setVehicle('VOITURE'), 200);

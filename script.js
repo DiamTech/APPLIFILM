@@ -251,7 +251,7 @@ async function finalize() {
     btn.disabled = true;
     btn.innerHTML = "<span>ENVOI EN COURS...</span>";
     
-    const GOOGLE_URL = 'https://script.google.com/macros/s/AKfycby8fC4tLtri-KHVwjciLmw0D0QT1jAlUxZiT5Z2OtA1JylZuDXKu5Ta16FZ0S6VGHka/exec';
+    const GOOGLE_URL = 'https://script.google.com/macros/s/AKfycbxp0FVZ6za1mQ7FF6-Qm15_ZNuIm73GZla8tAvtOb9OAEeYCKyfHIsSLoGbwIQbtZAr/exec';
 
     // On prépare les données
     const payload = JSON.stringify({ interventions: state.batch });

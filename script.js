@@ -52,8 +52,8 @@ function addToBatch() {
     const obsInput = document.getElementById('observation-input'); // Assure-toi que cette ligne est là
     const vin = vinInput.value.trim();
 
-    if (!vin) return alert("⚠️ Scannez ou tapez un VIN.");
-    if (selectedWindows.length === 0) return alert("⚠️ Sélectionnez au moins une vitre.");
+    if (!vin) return showModal("Oups !", "Merci de scanner ou taper un VIN.", "info");
+    if (selectedWindows.length === 0) return showModal("Plan vide", "Tu dois sélectionner au moins une vitre.", "info");
 
     const typeInter = document.querySelector('input[name="type_inter"]:checked').value;
 
@@ -75,7 +75,7 @@ function addToBatch() {
     selectedWindows = [];
     document.querySelectorAll('.window-btn').forEach(btn => btn.classList.remove('selected'));
     
-    alert("✅ Véhicule ajouté au lot !");
+    showModal("Ajouté !", "Le véhicule a bien été ajouté au lot.", "success");
 }
 
 function renderBatch() {
@@ -285,9 +285,9 @@ function closeSignature() {
         // On rafraîchit l'icône Lucide
         if (typeof lucide !== 'undefined') lucide.createIcons();
         
-        alert("✅ Signature enregistrée !");
+        showModal("Parfait !", "La signature est enregistrée.", "success");
     } else {
-        alert("⚠️ Aucune signature détectée.");
+        showModal("Signature manquante", "Le cadre est vide. Le client doit signer.", "info");
     }
 }
 
@@ -295,7 +295,11 @@ function closeSignature() {
 // 6. ENVOI FINAL (SHEETDB)
 // ==========================================
 async function finalize() {
-    if (state.batch.length === 0) return alert("⚠️ Le lot est vide !");
+    if (state.batch.length === 0) return showModal("Lot vide", "Ajoute au moins un véhicule avant d'envoyer.", "info");
+
+    if (!state.signature || state.signature === "") {
+        return showModal("Signature manquante", "Le client doit signer le bon avant l'envoi final.", "info");
+    }
     
     const finalBtn = document.querySelector('button[onclick="finalize()"]');
     finalBtn.disabled = true;
@@ -322,7 +326,7 @@ async function finalize() {
 
         // On vérifie d'abord si la réponse réseau est OK
         if (response.ok) {
-            alert("✅ DONNÉES ENVOYÉES AVEC SUCCÈS !");
+            showModal("Terminé !", "Toutes les données sont dans le Google Sheets.", "success");
             localStorage.clear();
             location.reload();
         } else {

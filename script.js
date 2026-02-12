@@ -619,12 +619,6 @@ function toggleMenu(open) {
     }
 }
 
-function switchView(view) {
-    toggleMenu(false);
-    if (view === 'pret') alert("Interface 'Prêt de véhicule' en préparation...");
-    else alert("Retour à l'interface Vitrages");
-}
-
 const VEHICLES_CONFIG = {
     VOITURE: {
         shape: '<svg viewBox="0 0 200 550" class="w-full h-full stroke-slate-300 dark:stroke-slate-600 fill-none" stroke-width="2"><path d="M50 20 C50 10, 150 10, 150 20 L175 100 L175 480 C175 510, 25 510, 25 480 L25 100 Z"/><path d="M30 110 L170 110 M30 350 L170 350"/></svg>',

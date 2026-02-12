@@ -24,9 +24,10 @@
 
     /* VITRES : On utilise les variables pour que ça change en Dark Mode */
     .window-btn {
-    width: auto !important;
-    min-width: 45px !important; /* Plus large pour le confort */
-    min-height: 40px !important; /* Plus haut pour le doigt */
+    /* On double la largeur */
+    width: 85px !important; 
+    height: 45px !important;
+    
     padding: 2px !important;
     margin: 0 !important;
     display: flex !important;
@@ -36,8 +37,19 @@
     background-color: var(--win-bg) !important;
     border: 1px solid var(--win-border) !important;
     color: var(--win-text) !important;
-    font-size: 10px !important; /* Police un peu plus grande car on a de la place */
+    font-size: 10px !important;
+    border-radius: 12px !important;
     z-index: 10;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* On s'assure que si le texte est long, il ne casse pas tout */
+.window-btn div {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+    text-align: center;
 }
 
     .window-btn.selected {

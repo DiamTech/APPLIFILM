@@ -1029,65 +1029,106 @@ function resetPretForm() {
 }
 
 function selectLoanForReturn(immat) {
-    // 1. On trouve les infos du prêt dans notre liste locale (state.activeLoans)
+    // 1. Recherche du dossier
     const loan = state.activeLoans.find(l => l.immat === immat);
-    if (!loan) return;
+    if (!loan) return alert("❌ Dossier introuvable.");
 
-    // 2. Remplissage des champs d'identité et du permis
+    // [NOUVEAU] On bascule l'affichage sur le formulaire de prêt pour voir les infos
+    state.pretMode = 'RETOUR'; 
+    // Si tu as une fonction switchView, appelle-la ici : switchView('pret');
+
+    // 2. Remplissage Identité & Permis
     document.getElementById('pret-vehicule-select').value = loan.immat;
     document.getElementById('pret-nom').value = loan.nom || "";
     document.getElementById('pret-lieu-naiss').value = loan.lieu_naiss || "";
     document.getElementById('pret-permis-num').value = loan.permis_num || "";
     document.getElementById('pret-permis-lieu').value = loan.permis_lieu || "";
     
-    // Formatage de la date de naissance pour l'input HTML (YYYY-MM-DD)
+    // Date de naissance (Formatage sécurisé pour l'input date)
     if (loan.dob) {
-        try {
-            const d = new Date(loan.dob);
-            const formattedDate = d.toISOString().split('T')[0];
-            document.getElementById('pret-dob').value = formattedDate;
-        } catch(e) { console.error("Erreur formatage date naissance", e); }
+        const d = new Date(loan.dob);
+        if (!isNaN(d)) {
+            document.getElementById('pret-dob').value = d.toISOString().split('T')[0];
+        }
     }
 
-    // 3. Synchronisation du kilométrage
-    state.pret.km_depart_initial = parseInt(loan.km);
+    // 3. Kilométrage
+    state.pret.km_depart_initial = parseInt(loan.km) || 0;
     const kmInput = document.getElementById('pret-km-depart');
     if(kmInput) {
         kmInput.placeholder = "Départ : " + loan.km + " km";
-        kmInput.value = ""; // On laisse vide pour saisir le KM de retour
+        kmInput.value = ""; 
     }
 
-    // 4. Affichage des aperçus des photos du permis
+    // 4. Photos du permis (Previews)
     const previewRecto = document.getElementById('preview-recto');
     const previewVerso = document.getElementById('preview-verso');
     
-    if (loan.recto && loan.recto.startsWith('http')) {
-        previewRecto.innerHTML = `<img src="${loan.recto}" class="w-full h-full object-cover rounded-xl shadow-inner">`;
-        state.pret.permis_recto = loan.recto; // On stocke l'URL pour la renvoyer au retour
+    if (loan.recto && loan.recto.length > 10) {
+        previewRecto.innerHTML = `<img src="${loan.recto}" class="w-full h-full object-cover rounded-xl">`;
+        state.pret.permis_recto = loan.recto;
     }
-    if (loan.verso && loan.verso.startsWith('http')) {
-        previewVerso.innerHTML = `<img src="${loan.verso}" class="w-full h-full object-cover rounded-xl shadow-inner">`;
+    if (loan.verso && loan.verso.length > 10) {
+        previewVerso.innerHTML = `<img src="${loan.verso}" class="w-full h-full object-cover rounded-xl">`;
         state.pret.permis_verso = loan.verso;
     }
 
-    // 5. Récupération des dégâts du départ (Croix grises)
+    // 5. RÉCUPÉRATION DES DÉGÂTS (Le cœur du problème)
     try {
-        const oldCoords = JSON.parse(loan.degats_coords || "[]");
-        // On marque ces dégâts comme "old" pour que renderDamages() les dessine en gris
-        state.pret.damages = oldCoords.map(c => ({ ...c, type: 'old' }));
+        // On récupère la colonne L (degats_coords)
+        const savedCoords = loan.degats_coords || loan.coords; 
+        const oldCoords = JSON.parse(savedCoords || "[]");
+        
+        // On marque ces points comme 'old'
+        state.pret.damages = oldCoords.map(c => ({ 
+            x: c.x, 
+            y: c.y, 
+            type: 'old' 
+        }));
+        
         renderDamages(); 
     } catch(e) {
+        console.error("Erreur parsing dégâts:", e);
         state.pret.damages = [];
-        console.error("Erreur lors du chargement des coordonnées de dégâts", e);
     }
 
-    // 6. Rappel de l'état des observations au départ
+    // 6. Observations
     const obsField = document.getElementById('pret-degats-obs');
     if (obsField) {
-        obsField.value = "ÉTAT DÉPART : " + (loan.details || "RAS");
+        obsField.value = "PRÉCÉDEMMENT : " + (loan.details || "RAS");
     }
 
-    alert("✅ Dossier complet de " + loan.nom + " récupéré !\nKM au départ : " + loan.km);
+    alert("✅ Dossier " + immat + " chargé ! Les anciens dégâts sont en GRIS.");
+}
+
+function renderDamages() {
+    const overlay = document.getElementById('crosses-overlay');
+    if (!overlay) return;
+
+    overlay.innerHTML = state.pret.damages.map(d => {
+        // Si c'est 'old', on met en gris. Sinon (nouveau clic), en rouge.
+        const isOld = d.type === 'old';
+        const color = isOld ? '#94a3b8' : '#ef4444'; 
+        const size = isOld ? '16px' : '22px';
+
+        return `
+            <div style="position: absolute; left: ${d.x}%; top: ${d.y}%; 
+                transform: translate(-50%, -50%); color: ${color}; 
+                font-weight: 900; font-size: ${size}; pointer-events: none;">X</div>
+        `;
+    }).join('');
+}
+
+function addDamage(event) {
+    if (state.pret.inspectionValidated) return;
+    const container = document.getElementById('damage-container');
+    const rect = container.getBoundingClientRect();
+    const x = ((event.clientX - rect.left) / rect.width) * 100;
+    const y = ((event.clientY - rect.top) / rect.height) * 100;
+
+    // IMPORTANT : On marque les nouveaux clics comme 'new'
+    state.pret.damages.push({ x, y, type: 'new' });
+    renderDamages();
 }
 
 setTimeout(() => setVehicle('VOITURE'), 200);

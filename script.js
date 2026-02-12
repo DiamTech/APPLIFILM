@@ -312,58 +312,76 @@ function switchView(view) {
     // On mettra ici le code pour cacher/afficher les sections HTML
 }
 
-const VEHICLES_DATA = {
-    VOITURE: [
-        "PARE-BRISE", "LUNETTE AR", "VITRE AV-G", "VITRE AV-D", 
-        "VITRE AR-G", "VITRE AR-D", "CUSTODE AV-G", "CUSTODE AV-D",
-        "CUSTODE AR-G", "CUSTODE AR-D"
-    ],
-    FOURGON: [
-        "PARE-BRISE", "LUNETTE SIMPLE", "LUNETTE DOUBLE", 
-        "VITRE AV-G", "VITRE AV-D", "LATÉRALE G", "LATÉRALE D",
-        "TOIT OUVRANT 1", "TOIT OUVRANT 2"
-    ],
-    VDL: [
-        "PARE-BRISE", "LUNETTE AR", "BAIE LATÉRALE G", "BAIE LATÉRALE D",
-        "LANTERNEAU 1", "LANTERNEAU 2", "VITRE CABINE G", "VITRE CABINE D"
-    ]
+const VEHICLES_CONFIG = {
+    VOITURE: {
+        shape: '<svg viewBox="0 0 200 450" class="w-full h-full stroke-slate-300 dark:stroke-slate-600 fill-none" stroke-width="2"><path d="M50 20 C50 10, 150 10, 150 20 L170 100 L170 400 C170 430, 30 430, 30 400 L30 100 Z"/><path d="M40 110 L160 110 M40 280 L160 280"/></svg>',
+        vitres: [
+            { id: "PARE-BRISE", pos: "top: 40px; left: 50%; transform: translateX(-50%); width: 140px; height: 60px;" },
+            { id: "AV-G", pos: "top: 120px; left: 10px; width: 50px; height: 70px;" },
+            { id: "AV-D", pos: "top: 120px; right: 10px; width: 50px; height: 70px;" },
+            { id: "AR-G", pos: "top: 200px; left: 10px; width: 50px; height: 70px;" },
+            { id: "AR-D", pos: "top: 200px; right: 10px; width: 50px; height: 70px;" },
+            { id: "LUNETTE", pos: "bottom: 40px; left: 50%; transform: translateX(-50%); width: 120px; height: 50px;" }
+        ]
+    },
+    FOURGON: {
+        shape: '<svg viewBox="0 0 200 450" class="w-full h-full stroke-slate-300 dark:stroke-slate-600 fill-none" stroke-width="2"><rect x="30" y="20" width="140" height="400" rx="15"/><path d="M30 100 L170 100 M30 380 L170 380"/></svg>',
+        vitres: [
+            { id: "PARE-BRISE", pos: "top: 35px; left: 50%; transform: translateX(-50%); width: 150px; height: 60px;" },
+            { id: "LAT-G", pos: "top: 110px; left: 5px; width: 40px; height: 120px;" },
+            { id: "LAT-D", pos: "top: 110px; right: 5px; width: 40px; height: 120px;" },
+            { id: "LUN-G", pos: "bottom: 30px; left: 35px; width: 60px; height: 40px;" },
+            { id: "LUN-D", pos: "bottom: 30px; right: 35px; width: 60px; height: 40px;" },
+            { id: "TOIT", pos: "top: 250px; left: 50%; transform: translateX(-50%); width: 80px; height: 60px;" }
+        ]
+    },
+    VDL: {
+        shape: '<svg viewBox="0 0 200 450" class="w-full h-full stroke-slate-300 dark:stroke-slate-600 fill-none" stroke-width="2"><rect x="20" y="10" width="160" height="430" rx="5"/><path d="M20 90 L180 90"/></svg>',
+        vitres: [
+            { id: "PARE-BRISE", pos: "top: 25px; left: 50%; transform: translateX(-50%); width: 160px; height: 60px;" },
+            { id: "BAIE-G", pos: "top: 120px; left: 5px; width: 35px; height: 100px;" },
+            { id: "BAIE-D", pos: "top: 120px; right: 5px; width: 35px; height: 100px;" },
+            { id: "LANT-1", pos: "top: 150px; left: 50%; transform: translateX(-50%); width: 70px; height: 70px;" },
+            { id: "LANT-2", pos: "top: 300px; left: 50%; transform: translateX(-50%); width: 70px; height: 70px;" }
+        ]
+    }
 };
 
 function setVehicle(type) {
     state.vehiculeType = type;
     
-    // Mise à jour visuelle des onglets
+    // UI Onglets
     ['VOITURE', 'FOURGON', 'VDL'].forEach(t => {
         const btn = document.getElementById('tab-' + t);
-        if(btn) {
-            btn.classList.toggle('bg-white', t === type);
-            btn.classList.toggle('shadow-sm', t === type);
-            btn.classList.toggle('opacity-50', t !== type);
-        }
+        if(btn) btn.classList.toggle('opacity-50', t !== type);
+        if(btn) btn.classList.toggle('bg-white', t === type);
     });
 
+    // Injecter le contour SVG
+    document.getElementById('vehicle-svg-container').innerHTML = VEHICLES_CONFIG[type].shape;
+
+    // Dessiner les boutons
     renderVitraux();
 }
 
 function renderVitraux() {
     const container = document.getElementById('vitres-container');
-    if (!container) return;
+    const config = VEHICLES_CONFIG[state.vehiculeType];
     
-    const vitres = VEHICLES_DATA[state.vehiculeType] || VEHICLES_DATA.VOITURE;
-    
-    container.innerHTML = vitres.map(v => {
-        const selection = state.selectedWindows.find(sw => sw.id === v);
+    container.innerHTML = config.vitres.map(v => {
+        const selection = state.selectedWindows.find(sw => sw.id === v.id);
         const isSelected = selection ? 'selected' : '';
-        const label = selection ? `<span class="block text-[7px] opacity-70">${v}</span><span class="block text-[10px] font-black">${selection.tint}</span>` : v;
+        const label = selection ? `<span class="text-[7px] leading-none">${v.id}</span><br><b>${selection.tint}</b>` : v.id;
         
         return `
-            <button type="button" onclick="toggleWindow('${v}')" id="win-${v}" 
-                class="window-btn p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-[9px] font-bold uppercase transition-all ${isSelected}">
+            <button type="button" onclick="toggleWindow('${v.id}')" id="win-${v.id}" 
+                style="position: absolute; ${v.pos}"
+                class="window-btn rounded-xl border border-slate-300 dark:border-slate-600 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm text-[8px] font-bold uppercase transition-all flex flex-col items-center justify-center ${isSelected}">
                 ${label}
             </button>
         `;
     }).join('');
 }
 
-// Lancer l'affichage par défaut au démarrage
-setTimeout(() => setVehicle('VOITURE'), 100);
+// Initialisation au chargement
+setTimeout(() => setVehicle('VOITURE'), 200);

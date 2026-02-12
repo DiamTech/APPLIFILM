@@ -37,6 +37,32 @@ function toggleHistory() {
     }
 }
 
+function toggleDarkMode() {
+    const html = document.documentElement;
+    const icon = document.getElementById('dark-icon');
+    
+    if (html.classList.contains('dark')) {
+        html.classList.remove('dark');
+        icon.setAttribute('data-lucide', 'moon');
+        localStorage.setItem('theme', 'light');
+    } else {
+        html.classList.add('dark');
+        icon.setAttribute('data-lucide', 'sun');
+        localStorage.setItem('theme', 'dark');
+    }
+    // Met à jour l'icône Lucide
+    if (window.lucide) lucide.createIcons();
+}
+
+// Au chargement, vérifier la préférence sauvegardée
+document.addEventListener('DOMContentLoaded', () => {
+    if (localStorage.getItem('theme') === 'dark') {
+        document.documentElement.classList.add('dark');
+        document.getElementById('dark-icon').setAttribute('data-lucide', 'sun');
+        if (window.lucide) lucide.createIcons();
+    }
+});
+
 // Modifie renderHistory pour mettre à jour le petit point rouge dans le header
 function renderHistory() {
     const container = document.getElementById('history-container');

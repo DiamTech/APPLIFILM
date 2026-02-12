@@ -18,14 +18,44 @@
 </head>
 <body class="bg-slate-50 font-sans pb-40">
 
-    <header class="bg-indigo-600 text-white p-4 shadow-lg sticky top-0 z-50">
-        <div class="flex justify-between items-center max-w-md mx-auto">
-            <h1 class="font-bold text-lg flex items-center gap-2">
-                <i data-lucide="scan-line"></i> SCANNER V8
-            </h1>
-            <span id="batch-count" class="bg-white text-indigo-600 px-3 py-1 rounded-full text-xs font-bold">0</span>
+   <header class="bg-indigo-600 text-white p-4 shadow-lg sticky top-0 z-50">
+    <div class="flex justify-between items-center max-w-md mx-auto">
+        <h1 class="font-bold text-lg flex items-center gap-2">
+            <i data-lucide="scan-line"></i> SCANNER V8
+        </h1>
+        <div class="flex items-center gap-3">
+            <span id="batch-count" class="bg-indigo-500 text-white px-2 py-1 rounded-md text-[10px] font-black border border-indigo-400">0</span>
+            <button onclick="toggleHistory()" class="p-2 hover:bg-indigo-500 rounded-full transition-colors relative">
+                <i data-lucide="history"></i>
+                <div id="hist-dot" class="absolute top-1 right-1 w-2 h-2 bg-red-400 rounded-full hidden border-2 border-indigo-600"></div>
+            </button>
         </div>
-    </header>
+    </div>
+</header>
+    
+    <div id="history-sidebar" class="fixed inset-y-0 right-0 w-80 bg-slate-50 shadow-2xl z-[400] transform translate-x-full transition-transform duration-300 ease-in-out border-l border-slate-200">
+    <div class="flex flex-col h-full">
+        <div class="p-4 bg-white border-b flex justify-between items-center">
+            <h2 class="font-bold text-slate-800 flex items-center gap-2 text-sm uppercase tracking-wider">
+                <i data-lucide="archive" class="w-4 h-4"></i> Archives (50)
+            </h2>
+            <button onclick="toggleHistory()" class="p-2 text-slate-400 hover:text-slate-600">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+        
+        <div id="history-container" class="flex-1 overflow-y-auto p-4 space-y-3">
+            </div>
+
+        <div class="p-4 bg-white border-t">
+            <button onclick="clearHistory()" class="w-full py-3 text-xs font-bold text-red-500 bg-red-50 rounded-xl hover:bg-red-100 transition-colors uppercase tracking-widest">
+                Vider l'historique
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="history-overlay" onclick="toggleHistory()" class="fixed inset-0 bg-slate-900/40 z-[350] hidden backdrop-blur-sm"></div>
 
     <main class="max-w-md mx-auto p-4 space-y-6">
 

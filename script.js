@@ -5,7 +5,10 @@ let state = {
     batch: [], 
     signature: null,
     sentHistory: [],
-    dailyHistory: [] 
+    dailyHistory: [],
+    // NOUVEAUX CHAMPS POUR LE PRÊT :
+    pret: { permis_recto: null, permis_verso: null },
+    activeLoans: JSON.parse(localStorage.getItem('activeLoans')) || [] 
 };
 
 let scanner;
@@ -16,12 +19,12 @@ window.addEventListener('load', () => {
     setTimeout(() => {
         initSignature();
         if (typeof lucide !== 'undefined') lucide.createIcons();
-        
         const splash = document.getElementById('splash-screen');
         if (splash) {
             splash.style.opacity = '0';
             setTimeout(() => splash.remove(), 600);
         }
+        renderActiveLoans(); // <--- AJOUTE CETTE LIGNE
     }, 100);
 });
 
@@ -277,6 +280,151 @@ function updateHistoryUI() {
     state.sentHistory.map(item => `<div class="p-3 border-b border-slate-100 dark:border-slate-700"><div class="flex justify-between text-[10px] font-black"><span class="text-indigo-500">${item.vin}</span><span>${item.sentTime}</span></div></div>`).reverse().join('');
 }
 
+// --- LOGIQUE PRÊT DE VÉHICULE ---
+
+// 1. Gestion des photos Permis
+function handlePermis(input, face) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        // Sauvegarde dans le state
+        state.pret[face === 'recto' ? 'permis_recto' : 'permis_verso'] = e.target.result;
+        
+        // Changement visuel (Vert = OK)
+        const parent = input.parentElement;
+        parent.classList.remove('border-dashed', 'border-slate-200');
+        parent.classList.add('border-solid', 'border-green-500', 'bg-green-50');
+        parent.querySelector('span').innerText = face.toUpperCase() + " OK";
+        parent.querySelector('i').classList.replace('text-slate-400', 'text-green-500');
+    };
+    reader.readAsDataURL(file);
+}
+
+// 2. Valider le départ (Ajout au lot)
+function savePret() {
+    // Récupération des champs
+    const data = {
+        nom: document.getElementById('pret-nom').value,
+        dob: document.getElementById('pret-dob').value,
+        lieu: document.getElementById('pret-lieu-naiss').value,
+        permis: document.getElementById('pret-permis-num').value,
+        permis_lieu: document.getElementById('pret-permis-lieu').value,
+        vehicule: document.getElementById('pret-vehicule-select').value,
+        km: document.getElementById('pret-km-depart').value,
+        fuel: document.getElementById('pret-carburant').value,
+        date: new Date().toLocaleString('fr-FR')
+    };
+
+    // VÉRIFICATIONS OBLIGATOIRES
+    if(!state.pret.permis_recto || !state.pret.permis_verso) return alert("⚠️ Les photos du permis (Recto & Verso) sont OBLIGATOIRES !");
+    if(!data.nom) return alert("⚠️ Le nom du client est obligatoire.");
+    if(!data.vehicule) return alert("⚠️ Sélectionnez un véhicule.");
+    if(!data.km) return alert("⚠️ Le kilométrage de départ est obligatoire.");
+    if(!state.signature) return alert("⚠️ La signature du client est OBLIGATOIRE.");
+
+    // AJOUT AU LOT (Pour envoi Google Sheet)
+    state.batch.push({
+        vin: "PRET: " + data.vehicule.split(':')[1].trim(), // On garde juste la plaque pour le VIN
+        type: "PRÊT VÉHICULE",
+        // On compile toutes les infos dans la colonne Observations
+        obs: `CLIENT: ${data.nom} | NÉ LE: ${data.dob} à ${data.lieu} | PERMIS: ${data.permis} (${data.permis_lieu}) | DÉPART: ${data.km} KM | CARBURANT: ${data.fuel}`,
+        windows: [`Véhicule: ${data.vehicule.split(':')[0]}`], // Modèle dans la colonne vitres
+        photos: [state.pret.permis_recto, state.pret.permis_verso],
+        signature: state.signature,
+        date: data.date
+    });
+
+    // SAUVEGARDE EN MÉMOIRE (Pour le retour plus tard)
+    state.activeLoans.push(data);
+    localStorage.setItem('activeLoans', JSON.stringify(state.activeLoans));
+
+    // RESET DU FORMULAIRE
+    document.getElementById('pret-nom').value = "";
+    document.getElementById('pret-km-depart').value = "";
+    document.getElementById('pret-dob').value = "";
+    document.getElementById('pret-lieu-naiss').value = "";
+    document.getElementById('pret-permis-num').value = "";
+    document.getElementById('pret-permis-lieu').value = "";
+    
+    // Reset visuel photos
+    state.pret.permis_recto = null;
+    state.pret.permis_verso = null;
+    document.querySelectorAll('#permis-preview-container label').forEach(lbl => {
+        lbl.classList.add('border-dashed', 'border-slate-200');
+        lbl.classList.remove('border-solid', 'border-green-500', 'bg-green-50');
+        lbl.querySelector('span').innerText = lbl.querySelector('input').getAttribute('onchange').includes('recto') ? "Recto" : "Verso";
+        lbl.querySelector('i').classList.replace('text-green-500', 'text-slate-400');
+    });
+
+    resetSignature();
+    updateBatchUI();
+    
+    alert("✅ Départ validé et ajouté au lot !");
+    switchView('vitrage'); // Retour à l'accueil
+}
+
+// 3. Gestion du Retour Véhicule
+function returnVehicle(index) {
+    const loan = state.activeLoans[index];
+    const kmRetour = prompt(`RETOUR ${loan.vehicule}\nDépart: ${loan.km} km\n\nEntrez le kilométrage de retour :`);
+    
+    if(kmRetour) {
+        const kmIntRetour = parseInt(kmRetour);
+        const kmIntDepart = parseInt(loan.km);
+        
+        if (kmIntRetour < kmIntDepart) {
+            return alert("⚠️ Erreur : Le KM retour est inférieur au KM départ !");
+        }
+
+        const total = kmIntRetour - kmIntDepart;
+        const fuelRetour = prompt("Niveau Carburant retour ?", "Identique");
+        
+        // Ajout du RETOUR au lot
+        state.batch.push({
+            vin: "RETOUR: " + loan.vehicule.split(':')[1].trim(),
+            type: "RETOUR PRÊT",
+            obs: `CLIENT: ${loan.nom} | RETOUR: ${kmRetour} KM | TOTAL PARCOURU: ${total} KM | CARBURANT: ${fuelRetour}`,
+            windows: [`Total: ${total} km`],
+            photos: [], 
+            signature: null, // Pas de signature obligatoire au retour (sauf si tu veux)
+            date: new Date().toLocaleString('fr-FR')
+        });
+
+        // Supprimer de la liste des véhicules sortis
+        state.activeLoans.splice(index, 1);
+        localStorage.setItem('activeLoans', JSON.stringify(state.activeLoans));
+        
+        renderActiveLoans();
+        updateBatchUI();
+        alert(`✅ Retour enregistré (${total} km parcourus).`);
+    }
+}
+
+// 4. Afficher la liste des véhicules sortis
+function renderActiveLoans() {
+    const list = document.getElementById('active-loans-list');
+    if(!list) return;
+
+    if(state.activeLoans.length === 0) {
+        list.innerHTML = '<div class="text-center text-xs text-slate-300 italic py-4">Aucun véhicule sorti</div>';
+        return;
+    }
+
+    list.innerHTML = state.activeLoans.map((l, i) => `
+        <div onclick="returnVehicle(${i})" class="bg-indigo-50 dark:bg-slate-900 p-4 rounded-2xl border border-indigo-100 dark:border-slate-700 flex justify-between items-center cursor-pointer active:scale-95 transition-transform mb-2 shadow-sm">
+            <div>
+                <div class="font-black text-xs text-indigo-600">${l.vehicule}</div>
+                <div class="text-[10px] text-slate-500 font-bold uppercase mt-1">${l.nom}</div>
+            </div>
+            <div class="text-right">
+                <div class="text-xs font-bold text-slate-700 dark:text-slate-300">${l.km} km</div>
+                <div class="text-[9px] text-slate-400">Sorti le ${l.date.split(' ')[0]}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
 async function finalize() {
     // 1. Vérifie s'il y a quelque chose à envoyer
     if(!state.batch.length) return alert("Le lot est vide ! Ajoutez d'abord un véhicule.");
@@ -287,7 +435,7 @@ async function finalize() {
     btn.innerHTML = "<span>ENVOI EN COURS...</span>";
     
     // Ton URL (Assure-toi que c'est bien la dernière version déployée)
-    const GOOGLE_URL = 'https://script.google.com/macros/s/AKfycbx127X1JbcpO4hwYuNzKC9tmBsB51Fi4XnOn4ve65YBnvWsVuq9If5cwJBv0tQ5Rm6t/exec';
+    const GOOGLE_URL = 'https://script.google.com/macros/s/AKfycbwAjjdHbduPM6WnauvTVMHhuYgIkd7aoKk38_nGCb_CNKUuUCECTiHpHlt2-dkjWQ_0HA/exec';
 
     try {
         // 2. Envoi vers Google
@@ -369,18 +517,21 @@ function toggleMenu(open) {
 function switchView(view) {
     toggleMenu(false);
     
-    const divIntervention = document.getElementById('view-intervention');
-    const divHistory = document.getElementById('view-history');
+    // On cache toutes les vues
+    ['view-intervention', 'view-history', 'view-pret'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.classList.add('hidden');
+    });
 
+    // On affiche la bonne
     if (view === 'history') {
-        divIntervention.classList.add('hidden');
-        divHistory.classList.remove('hidden');
-        renderDailyHistory(); // On génère la liste
-    } else if (view === 'vitrage') {
-        divIntervention.classList.remove('hidden');
-        divHistory.classList.add('hidden');
+        document.getElementById('view-history').classList.remove('hidden');
+        renderDailyHistory();
     } else if (view === 'pret') {
-        alert("Interface 'Prêt de véhicule' en préparation...");
+        document.getElementById('view-pret').classList.remove('hidden');
+        renderActiveLoans(); // Affiche la liste des véhicules dehors
+    } else {
+        document.getElementById('view-intervention').classList.remove('hidden');
     }
 }
 

@@ -252,7 +252,7 @@ async function finalize() {
     btn.innerHTML = `<span>ENVOI EN COURS...</span>`;
     
     try {
-        await fetch('TA_URL_GOOGLE_SCRIPT', {
+        await fetch('https://script.google.com/macros/s/AKfycby8fC4tLtri-KHVwjciLmw0D0QT1jAlUxZiT5Z2OtA1JylZuDXKu5Ta16FZ0S6VGHka/exec', {
             method: 'POST',
             mode: 'no-cors',
             body: JSON.stringify({ interventions: state.batch })

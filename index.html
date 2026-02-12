@@ -93,17 +93,19 @@
             <div id="reader" class="hidden mt-4 rounded-2xl overflow-hidden border-2 border-indigo-100"></div>
         </section>
 
-        <section class="bg-white dark:bg-slate-800 p-6 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-700">
-    <p class="text-[10px] text-center text-slate-400 font-black uppercase mb-4 tracking-widest">Type de véhicule</p>
-    
+       <section class="bg-white dark:bg-slate-800 p-4 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-700">
     <div class="flex gap-2 p-1 bg-slate-100 dark:bg-slate-900 rounded-2xl mb-6">
-        <button type="button" onclick="setVehicle('VOITURE')" id="tab-VOITURE" class="flex-1 py-3 rounded-xl text-[9px] font-black uppercase transition-all bg-white shadow-sm dark:bg-slate-800 dark:text-white">Voiture</button>
-        <button type="button" onclick="setVehicle('FOURGON')" id="tab-FOURGON" class="flex-1 py-3 rounded-xl text-[9px] font-black uppercase transition-all opacity-50 dark:text-slate-400">Fourgon</button>
-        <button type="button" onclick="setVehicle('VDL')" id="tab-VDL" class="flex-1 py-3 rounded-xl text-[9px] font-black uppercase transition-all opacity-50 dark:text-slate-400">VDL</button>
+        <button type="button" onclick="setVehicle('VOITURE')" id="tab-VOITURE" class="flex-1 py-2 rounded-xl text-[9px] font-black uppercase transition-all">Voiture</button>
+        <button type="button" onclick="setVehicle('FOURGON')" id="tab-FOURGON" class="flex-1 py-2 rounded-xl text-[9px] font-black uppercase transition-all opacity-50">Fourgon</button>
+        <button type="button" onclick="setVehicle('VDL')" id="tab-VDL" class="flex-1 py-2 rounded-xl text-[9px] font-black uppercase transition-all opacity-50">VDL</button>
     </div>
 
-    <div id="vitres-container" class="grid grid-cols-2 gap-3 animate-in">
-        </div>
+    <div class="relative mx-auto border border-slate-100 dark:border-slate-700 rounded-3xl overflow-hidden bg-slate-50/50 dark:bg-slate-900/50" style="width: 280px; height: 520px;">
+        <div id="vehicle-svg-container" class="absolute inset-0 flex items-center justify-center p-4">
+            </div>
+        <div id="vitres-container" class="absolute inset-0">
+            </div>
+    </div>
 </section>
 
         <section class="bg-white dark:bg-slate-800 p-6 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">

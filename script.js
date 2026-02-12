@@ -20,6 +20,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+window.addEventListener('load', () => {
+    const splash = document.getElementById('splash-screen');
+    setTimeout(() => {
+        splash.style.opacity = '0';
+        setTimeout(() => {
+            splash.style.display = 'none';
+        }, 700); // Temps pour la transition de fondu
+    }, 1500); // Temps d'affichage du logo (1.5 seconde)
+});
+
 function toggleHistory() {
     const sidebar = document.getElementById('history-sidebar');
     const overlay = document.getElementById('history-overlay');

@@ -21,7 +21,7 @@ let state = {
 
 // Mets tes vraies URLs ici
 const URL_VITRAGE = "https://script.google.com/macros/s/AKfycbyl-hYWhxxK8-1jLGxHC_QNFgrVFZtbUv69Ozr2hMAdqWz2iQvP5oG92Div0LbG-L5x/exec";
-const URL_PRET = "https://script.google.com/macros/s/AKfycby5YDDnuggo_cA5zAGk71DPuwzwy-yp4MA6z_EbPzKGL64T4qeftDzDEX2tOf8EGyalGQ/exec";
+const URL_PRET = "https://script.google.com/macros/s/AKfycbzTjhaJrlV4iPLuGmcX5zFjqizv1GQdXXgzQzDX26e8I1Tb3w9yPtWBLpYjJiG0zVJTsQ/exec";
 
 let scanner, canvas, ctx, drawing = false;
 
@@ -625,22 +625,32 @@ async function finalizePret() {
     }
 
     // 4. PRÉPARATION DU PAQUET (PAYLOAD)
-    const payload = {
+        const payload = {
+        // --- L'AIGUILLAGE ---
         type: "PRET",
+        status: state.pretMode, // Enverra "DEPART" ou "RETOUR" (défini par tes boutons du haut)
+        
+        // --- LES INFOS VÉHICULE ---
         immat: plaqueAuto,
+        km: document.getElementById('pret-km')?.value || "0", // On récupère les KM
+        
+        // --- LE CLIENT ---
         nom: inputs.nom,
         dob: inputs.dob,
         lieu_naiss: inputs.lieu_naiss,
         permis_num: inputs.permis_num,
         permis_lieu: inputs.permis_lieu,
+        
+        // --- L'ÉTAT DES LIEUX ---
         degats_details: degatsFinalText,
         degats_coords: JSON.stringify(state.pret.damages || []), 
+        
+        // --- LES DOCUMENTS ---
         permis_recto: state.pret.permis_recto,
-        permis_verso: state.pret.permis_verso || "Non fournie", // Le verso est souvent optionnel
+        permis_verso: state.pret.permis_verso || "Non fournie",
         signature: state.signature,
         date: new Date().toLocaleString('fr-FR')
     };
-
     // 5. ENVOI AU SHEET
     btn.disabled = true;
     const originalText = btn.innerText;
@@ -930,6 +940,27 @@ async function fetchActiveLoans() {
     } catch (e) {
         container.innerHTML = '<div class="text-[10px] font-bold text-center py-4 text-red-400">ERREUR DE CHARGEMENT</div>';
     }
+}
+
+function selectLoanForReturn(immat) {
+    // 1. On trouve les infos du prêt dans notre liste locale
+    const loan = state.activeLoans.find(l => l.immat === immat);
+    if (!loan) return;
+
+    // 2. On remplit les champs automatiquement pour gagner du temps
+    document.getElementById('pret-vehicule-select').value = loan.immat;
+    document.getElementById('pret-nom').value = loan.nom;
+    
+    // 3. On stocke le KM de départ pour le calcul plus tard
+    state.startKM = parseInt(loan.km);
+    
+    // 4. ON RÉCUPÈRE LES ANCIENNES CROIX
+    // On les affiche par exemple en gris pour les différencier des nouvelles
+    state.pret.damages = JSON.parse(loan.degats_coords || "[]");
+    renderDamages(true); // Une version de ta fonction qui dessine en gris
+    
+    // 5. On prévient l'utilisateur
+    alert("Prêt chargé ! KM au départ : " + loan.km + ". Marquez les NOUVEAUX dégâts si nécessaire.");
 }
 
 setTimeout(() => setVehicle('VOITURE'), 200);

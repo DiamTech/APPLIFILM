@@ -249,7 +249,7 @@ async function finalize() {
     btn.disabled = true;
     btn.innerHTML = "<span>TRANSMISSION...</span>";
     
-    const GOOGLE_URL = 'https://script.google.com/macros/s/AKfycby8fC4tLtri-KHVwjciLmw0D0QT1jAlUxZiT5Z2OtA1JylZuDXKu5Ta16FZ0S6VGHka/exec';
+    const GOOGLE_URL = 'https://script.google.com/macros/s/AKfycbwf2GH4-Fj2Ags-0d-eNkUonx0pZVZLX72VnEiiSl7knUOWHXb3WXMqBHagQsbaTrM9/exec';
 
     // On prépare les données proprement
     const blob = new Blob([JSON.stringify({ interventions: state.batch })], { type: 'application/json' });

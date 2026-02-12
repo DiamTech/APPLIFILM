@@ -319,13 +319,17 @@ async function finalize() {
         });
 
         if (response.ok) {
-            history = [...state.batch, ...history].slice(0, 50); // On garde les 50 derniers
-    localStorage.setItem('scannerHistory', JSON.stringify(history));
-    
-    showModal("Succès", "Données envoyées et archivées !", "success");
+            // --- CETTE PARTIE EST NOUVELLE ---
+            // On ajoute le lot actuel au début de l'historique
+            history = [...state.batch, ...history].slice(0, 50); 
+            // On enregistre l'historique dans le téléphone
+            localStorage.setItem('scannerHistory', JSON.stringify(history));
+            // ---------------------------------
+
             showModal("Succès", "Toutes les données ont été envoyées !", "success");
+            
             setTimeout(() => {
-                localStorage.clear();
+                localStorage.removeItem('scannerState'); // On vide seulement le lot en cours
                 location.reload();
             }, 2000);
         } else {

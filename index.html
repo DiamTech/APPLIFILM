@@ -3,31 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Scanner VIN & Signature</title>
+    <title>Scanner Pro - Pose de Films</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 
     <style>
         .window-btn { transition: all 0.2s; border: 2px solid #e2e8f0; cursor: pointer; }
         .window-btn.selected { background-color: #4f46e5 !important; color: white !important; border-color: #4338ca !important; transform: scale(0.95); }
-        #cam-canvas { width: 100%; height: 100%; object-fit: cover; }
-        .scanner-target {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 80%; height: 120px; border: 2px solid rgba(255,255,255,0.8);
-            border-radius: 15px; box-shadow: 0 0 0 4000px rgba(0,0,0,0.6);
-            z-index: 10; pointer-events: none;
-        }
         #signature-pad { touch-action: none; cursor: crosshair; }
+        .animate-in { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body class="bg-slate-50 font-sans pb-32">
+<body class="bg-slate-50 font-sans pb-40">
 
     <header class="bg-indigo-600 text-white p-4 shadow-lg sticky top-0 z-50">
         <div class="flex justify-between items-center max-w-md mx-auto">
             <h1 class="font-bold text-lg flex items-center gap-2">
-                <i data-lucide="scan-line"></i> Scanner Pro V7
+                <i data-lucide="scan-line"></i> SCANNER V8
             </h1>
             <span id="batch-count" class="bg-white text-indigo-600 px-3 py-1 rounded-full text-xs font-bold">0</span>
         </div>
@@ -36,18 +30,18 @@
     <main class="max-w-md mx-auto p-4 space-y-6">
 
         <section class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
-            <label class="block text-sm font-semibold text-slate-700 mb-2">Identification Véhicule</label>
+            <label class="block text-sm font-semibold text-slate-700 mb-2 tracking-tight">Identification Véhicule</label>
             <div class="flex gap-2">
                 <input type="text" id="vin-input" placeholder="Scanner ou taper le VIN" 
-                    class="flex-1 bg-slate-100 border-none rounded-xl p-3 text-sm font-mono uppercase focus:ring-2 focus:ring-indigo-500">
-                <button onclick="startCamera()" class="bg-indigo-600 text-white p-3 rounded-xl hover:bg-indigo-700">
+                    class="flex-1 bg-slate-100 border-none rounded-xl p-3 text-sm font-mono uppercase focus:ring-2 focus:ring-indigo-500 outline-none">
+                <button class="bg-indigo-600 text-white p-3 rounded-xl">
                     <i data-lucide="camera"></i>
                 </button>
             </div>
         </section>
 
         <section class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
-            <label class="block text-sm font-semibold text-slate-700 mb-6 text-center uppercase tracking-wider">Plan des vitres</label>
+            <label class="block text-sm font-semibold text-slate-700 mb-6 text-center uppercase tracking-widest">Plan d'intervention</label>
             
             <div class="relative mx-auto mb-6" style="width: 240px; height: 460px; background: #f8fafc; border-radius: 50px; border: 3px solid #cbd5e1;">
                 <button onclick="toggleWindow('Toit-Avant')" id="win-Toit-Avant" class="window-btn absolute top-32 left-[70px] w-[100px] h-[70px] rounded-xl text-[10px] font-bold border bg-indigo-50 border-indigo-200 flex items-center justify-center text-center">TOIT AVANT</button>
@@ -63,13 +57,13 @@
             </div>
         </section>
 
-        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm mt-4">
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
             <label class="block text-[10px] font-bold text-slate-500 uppercase mb-2 ml-1 tracking-wider">Observations / Défauts</label>
             <textarea id="observation-input" rows="2" placeholder="Ex: Rayure porte AR, impact..." 
-                class="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none"></textarea>
+                class="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none transition-all"></textarea>
         </div>
 
-        <div class="grid grid-cols-3 gap-2 mt-4">
+        <div class="grid grid-cols-3 gap-2">
             <label class="flex flex-col items-center p-3 border-2 rounded-xl bg-white cursor-pointer shadow-sm">
                 <input type="radio" name="type_inter" value="Pose" checked class="w-4 h-4 accent-indigo-600">
                 <span class="text-[10px] font-bold uppercase mt-1 text-slate-700">Pose</span>
@@ -88,42 +82,30 @@
             <i data-lucide="plus-circle"></i> AJOUTER AU LOT
         </button>
 
-        <div id="batch-container" class="space-y-2 mt-4"></div>
+        <div id="batch-container" class="space-y-3 mt-6"></div>
 
-        <div class="flex gap-2 mt-6">
-    <button id="btn-open-sign" onclick="openSignature()" class="flex-1 bg-amber-500 text-white p-4 rounded-2xl font-bold shadow-md flex items-center justify-center gap-2">
-        <i data-lucide="pen-tool"></i> SIGNER LE BON
-    </button>
-    <button id="btn-clear-sign" onclick="resetSignature()" class="hidden bg-red-100 text-red-600 p-4 rounded-2xl font-bold flex items-center justify-center shadow-sm">
-        <i data-lucide="trash-2"></i>
-    </button>
-</div>
+        <div class="flex gap-2 mt-8">
+            <button id="btn-open-sign" onclick="openSignature()" class="flex-1 bg-amber-500 text-white p-4 rounded-2xl font-bold shadow-md flex items-center justify-center gap-2 transition-all">
+                <i data-lucide="pen-tool"></i> SIGNER LE BON
+            </button>
+            <button id="btn-clear-sign" onclick="resetSignature()" class="hidden bg-red-100 text-red-600 px-5 rounded-2xl font-bold flex items-center justify-center shadow-sm active:scale-90 transition-all">
+                <i data-lucide="trash-2"></i>
+            </button>
+        </div>
 
     </main>
 
-    <div class="fixed bottom-0 inset-x-0 p-4 bg-slate-50 border-t border-slate-200 z-40">
-        <button onclick="finalize()" class="w-full bg-green-600 text-white p-4 rounded-2xl font-extrabold shadow-xl text-lg flex items-center justify-center gap-2">
+    <div class="fixed bottom-0 inset-x-0 p-4 bg-white/80 backdrop-blur-md border-t border-slate-200 z-40">
+        <button onclick="finalize()" class="w-full bg-green-600 text-white p-4 rounded-2xl font-extrabold shadow-xl text-lg flex items-center justify-center gap-2 active:scale-95 transition-all">
             <i data-lucide="send"></i> FINALISER & ENVOYER
         </button>
     </div>
 
-    <div id="cam-overlay" class="fixed inset-0 bg-black z-[100] hidden flex-col">
-        <div class="relative flex-1">
-            <video id="hidden-video" class="hidden" playsinline></video>
-            <canvas id="cam-canvas"></canvas>
-            <div class="scanner-target"></div>
-        </div>
-        <div class="p-6 bg-black text-white flex justify-between items-center">
-            <span id="cam-status" class="text-xs font-bold uppercase tracking-widest px-3 py-1 bg-red-600 rounded">Analyse...</span>
-            <button onclick="stopCamera()" class="bg-white/20 p-3 rounded-full"><i data-lucide="x"></i></button>
-        </div>
-    </div>
-
-    <div id="signature-overlay" class="fixed inset-0 bg-black/80 z-[200] hidden flex-col items-center justify-center p-4">
+    <div id="signature-overlay" class="fixed inset-0 bg-slate-900/90 z-[200] hidden flex-col items-center justify-center p-4">
         <div class="bg-white w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl">
             <div class="p-4 border-b flex justify-between items-center bg-slate-50">
                 <h3 class="font-bold text-slate-800">Signature Client</h3>
-                <button onclick="clearSignature()" class="text-red-500 text-xs font-bold uppercase">Effacer</button>
+                <button onclick="clearSignature()" class="text-red-500 text-xs font-bold uppercase tracking-tighter">Effacer</button>
             </div>
             <canvas id="signature-pad" class="w-full h-64 bg-slate-50 border-b"></canvas>
             <div class="p-4 bg-white space-y-2">
@@ -133,18 +115,19 @@
         </div>
     </div>
 
-    <script src="script.js?v=73"></script>
     <div id="custom-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[300] hidden flex items-center justify-center p-4">
-    <div class="bg-white w-full max-w-xs rounded-3xl p-6 shadow-2xl scale-95 transition-all">
-        <div id="modal-icon" class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
-            <i data-lucide="info" class="w-8 h-8"></i>
+        <div class="bg-white w-full max-w-xs rounded-3xl p-6 shadow-2xl scale-100 animate-in">
+            <div id="modal-icon" class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i data-lucide="info" class="w-8 h-8"></i>
+            </div>
+            <h3 id="modal-title" class="text-center font-bold text-slate-800 text-lg leading-tight">Message</h3>
+            <p id="modal-text" class="text-center text-slate-500 text-sm mt-2 mb-6">Description du message ici.</p>
+            <button onclick="closeModal()" class="w-full bg-slate-900 text-white p-4 rounded-2xl font-bold shadow-lg active:scale-95 transition-all">
+                D'ACCORD
+            </button>
         </div>
-        <h3 id="modal-title" class="text-center font-bold text-slate-800 text-lg">Message</h3>
-        <p id="modal-text" class="text-center text-slate-500 text-sm mt-2 mb-6">Description du message ici.</p>
-        <button onclick="closeModal()" class="w-full bg-slate-800 text-white p-4 rounded-2xl font-bold shadow-lg active:scale-95 transition-all">
-            D'ACCORD
-        </button>
     </div>
-</div>
+
+    <script src="script.js?v=82"></script>
 </body>
 </html>

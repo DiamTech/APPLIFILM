@@ -345,33 +345,48 @@ const VEHICLES_CONFIG = {
             { id: "LUN. D (X2)", pos: "bottom: 15px; right: 30px; width: 75px; height: 50px;" }
         ]
     },
-    FOURGON: {
+     FOURGON : {
+        shape: '<svg viewBox="0 0 200 550" class="w-full h-full stroke-slate-300 dark:stroke-slate-600 fill-none" stroke-width="2"><path d="M50 20 C50 10, 150 10, 150 20 L175 100 L175 480 C175 510, 25 510, 25 480 L25 100 Z"/><path d="M30 110 L170 110 M30 350 L170 350"/></svg>',
         vitres: [
-            { id: 'PB', pos: 'top: 5%; left: 50%; transform: translateX(-50%); width: 140px !important;' }, // Pare-brise plus large
-            { id: 'AV-G', pos: 'top: 22%; left: 2%;' },
-            { id: 'AV-D', pos: 'top: 22%; right: 2%;' },
-            { id: 'LAT-AV-G', pos: 'top: 40%; left: 2%;' },
-            { id: 'LAT-AV-D', pos: 'top: 40%; right: 2%;' },
-            { id: 'LAT-AR-G', pos: 'top: 60%; left: 2%;' },
-            { id: 'LAT-AR-D', pos: 'top: 60%; right: 2%;' },
-            { id: 'LUN-AR', pos: 'bottom: 5%; left: 50%; transform: translateX(-50%); width: 140px !important;' }
+            { id: "P-BRISE", pos: "top: 30px; left: 50%; transform: translateX(-50%); width: 160px; height: 60px;" },
+            { id: "CUST. AV-G", pos: "top: 105px; left: 5px; width: 55px; height: 45px;" },
+            { id: "CUST. AV-D", pos: "top: 105px; right: 5px; width: 55px; height: 45px;" },
+            { id: "VITRE AV-G", pos: "top: 160px; left: 5px; width: 60px; height: 75px;" },
+            { id: "VITRE AV-D", pos: "top: 160px; right: 5px; width: 60px; height: 75px;" },
+            { id: "TOIT 1", pos: "top: 150px; left: 50%; transform: translateX(-50%); width: 80px; height: 55px;" },
+            { id: "TOIT 2", pos: "top: 230px; left: 50%; transform: translateX(-50%); width: 80px; height: 55px;" },
+            { id: "VITRE AR-G", pos: "top: 245px; left: 5px; width: 60px; height: 75px;" },
+            { id: "VITRE AR-D", pos: "top: 245px; right: 5px; width: 60px; height: 75px;" },
+            { id: "DEMI AR-G", pos: "top: 330px; left: 5px; width: 60px; height: 50px;" },
+            { id: "DEMI AR-D", pos: "top: 330px; right: 5px; width: 60px; height: 50px;" },
+            { id: "CUST. EXT-G", pos: "top: 390px; left: 5px; width: 55px; height: 70px;" },
+            { id: "CUST. EXT-D", pos: "top: 390px; right: 5px; width: 55px; height: 70px;" },
+            { id: "LUNETTE", pos: "bottom: 75px; left: 50%; transform: translateX(-50%); width: 150px; height: 50px;" },
+            { id: "LUN. G (X2)", pos: "bottom: 15px; left: 30px; width: 75px; height: 50px;" },
+            { id: "LUN. D (X2)", pos: "bottom: 15px; right: 30px; width: 75px; height: 50px;" }
         ]
     },
-    VDL: {
+     VDL: {
+        shape: '<svg viewBox="0 0 200 550" class="w-full h-full stroke-slate-300 dark:stroke-slate-600 fill-none" stroke-width="2"><path d="M50 20 C50 10, 150 10, 150 20 L175 100 L175 480 C175 510, 25 510, 25 480 L25 100 Z"/><path d="M30 110 L170 110 M30 350 L170 350"/></svg>',
         vitres: [
-            { id: 'PB', pos: 'top: 3%; left: 50%; transform: translateX(-50%); width: 160px !important;' },
-            { id: 'AV-G', pos: 'top: 15%; left: 2%;' },
-            { id: 'AV-D', pos: 'top: 15%; right: 2%;' },
-            { id: 'LAT-1-G', pos: 'top: 32%; left: 2%;' },
-            { id: 'LAT-1-D', pos: 'top: 32%; right: 2%;' },
-            { id: 'LAT-2-G', pos: 'top: 52%; left: 2%;' },
-            { id: 'LAT-2-D', pos: 'top: 52%; right: 2%;' },
-            { id: 'LAT-3-G', pos: 'top: 72%; left: 2%;' },
-            { id: 'LAT-3-D', pos: 'top: 72%; right: 2%;' },
-            { id: 'LUN-AR', pos: 'bottom: 3%; left: 50%; transform: translateX(-50%); width: 160px !important;' }
+            { id: "P-BRISE", pos: "top: 30px; left: 50%; transform: translateX(-50%); width: 160px; height: 60px;" },
+            { id: "CUST. AV-G", pos: "top: 105px; left: 5px; width: 55px; height: 45px;" },
+            { id: "CUST. AV-D", pos: "top: 105px; right: 5px; width: 55px; height: 45px;" },
+            { id: "VITRE AV-G", pos: "top: 160px; left: 5px; width: 60px; height: 75px;" },
+            { id: "VITRE AV-D", pos: "top: 160px; right: 5px; width: 60px; height: 75px;" },
+            { id: "TOIT 1", pos: "top: 150px; left: 50%; transform: translateX(-50%); width: 80px; height: 55px;" },
+            { id: "TOIT 2", pos: "top: 230px; left: 50%; transform: translateX(-50%); width: 80px; height: 55px;" },
+            { id: "VITRE AR-G", pos: "top: 245px; left: 5px; width: 60px; height: 75px;" },
+            { id: "VITRE AR-D", pos: "top: 245px; right: 5px; width: 60px; height: 75px;" },
+            { id: "DEMI AR-G", pos: "top: 330px; left: 5px; width: 60px; height: 50px;" },
+            { id: "DEMI AR-D", pos: "top: 330px; right: 5px; width: 60px; height: 50px;" },
+            { id: "CUST. EXT-G", pos: "top: 390px; left: 5px; width: 55px; height: 70px;" },
+            { id: "CUST. EXT-D", pos: "top: 390px; right: 5px; width: 55px; height: 70px;" },
+            { id: "LUNETTE", pos: "bottom: 75px; left: 50%; transform: translateX(-50%); width: 150px; height: 50px;" },
+            { id: "LUN. G (X2)", pos: "bottom: 15px; left: 30px; width: 75px; height: 50px;" },
+            { id: "LUN. D (X2)", pos: "bottom: 15px; right: 30px; width: 75px; height: 50px;" }
         ]
-    }
-};
+    },
 
 function setVehicle(type) {
     state.vehiculeType = type;

@@ -12,7 +12,6 @@ let canvas, ctx, drawing = false;
 
 // --- INITIALISATION ---
 window.addEventListener('load', () => {
-    // On attend un peu que le DOM soit stable pour Lucide
     setTimeout(() => {
         initSignature();
         if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -42,29 +41,19 @@ async function startScanner() {
             { facingMode: "environment" }, 
             { fps: 10, qrbox: { width: 250, height: 150 } }, 
             async (text) => {
-                // 1. On remplit le champ VIN
                 document.getElementById('vin-input').value = text;
-
-                // 2. CAPTURE AUTOMATIQUE DE LA PHOTO
                 try {
                     const video = document.querySelector('#reader video');
-                    const canvas = document.createElement('canvas');
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(video, 0, 0);
-                    
-                    // On compresse légèrement et on ajoute aux photos
-                    const photoVIN = canvas.toDataURL('image/jpeg', 0.7);
-                    state.photos.push(photoVIN);
-                    renderPhotos(); // Met à jour l'affichage des photos
-                } catch (e) {
-                    console.log("Erreur capture auto :", e);
-                }
+                    const canvasPhoto = document.createElement('canvas');
+                    canvasPhoto.width = video.videoWidth;
+                    canvasPhoto.height = video.videoHeight;
+                    const ctxPhoto = canvasPhoto.getContext('2d');
+                    ctxPhoto.drawImage(video, 0, 0);
+                    state.photos.push(canvasPhoto.toDataURL('image/jpeg', 0.7));
+                    renderPhotos();
+                } catch (e) { console.log("Erreur capture auto", e); }
 
-                // 3. On arrête le scanner
                 stopScanner();
-                alert("VIN détecté et photo de preuve enregistrée !");
             }
         );
     } catch (err) {
@@ -89,10 +78,7 @@ function initSignature() {
     const getPos = (e) => {
         const rect = canvas.getBoundingClientRect();
         const ev = e.touches ? e.touches[0] : e;
-        return { 
-            x: ev.clientX - rect.left, 
-            y: ev.clientY - rect.top 
-        };
+        return { x: ev.clientX - rect.left, y: ev.clientY - rect.top };
     };
 
     const start = (e) => { 
@@ -116,16 +102,13 @@ function initSignature() {
     canvas.addEventListener('mousedown', start);
     canvas.addEventListener('mousemove', move);
     window.addEventListener('mouseup', stop);
-
     canvas.addEventListener('touchstart', start, { passive: false });
     canvas.addEventListener('touchmove', move, { passive: false });
     canvas.addEventListener('touchend', stop);
 }
 
 function openSignature() { 
-    const modal = document.getElementById('modal-sig');
-    if (modal) modal.classList.remove('hidden'); 
-    
+    document.getElementById('modal-sig').classList.remove('hidden'); 
     setTimeout(() => {
         const rect = canvas.getBoundingClientRect();
         canvas.width = rect.width;
@@ -136,43 +119,29 @@ function openSignature() {
     }, 250);
 }
 
-// CETTE FONCTION MANQUAIT :
 function closeSignature() { 
-    const modal = document.getElementById('modal-sig');
-    if (modal) modal.classList.add('hidden'); 
+    document.getElementById('modal-sig').classList.add('hidden'); 
 }
 
 function saveSignature() { 
     state.signature = canvas.toDataURL('image/png'); 
-    const btnOpen = document.getElementById('btn-sig-open');
-    const statusDiv = document.getElementById('sig-status');
-    
-    if (btnOpen) btnOpen.classList.add('hidden'); 
-    if (statusDiv) statusDiv.classList.remove('hidden'); 
-    
-    closeSignature(); // Maintenant elle fonctionne !
+    document.getElementById('btn-sig-open').classList.add('hidden'); 
+    document.getElementById('sig-status').classList.remove('hidden'); 
+    closeSignature(); 
 }
 
-// CETTE FONCTION MANQUAIT AUSSI :
 function clearCanvas() { 
-    if (ctx && canvas) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height); 
-    }
+    if (ctx && canvas) ctx.clearRect(0, 0, canvas.width, canvas.height); 
 }
 
 function resetSignature() { 
     state.signature = null; 
     clearCanvas(); 
-    const btnOpen = document.getElementById('btn-sig-open');
-    const statusDiv = document.getElementById('sig-status');
-    
-    if (btnOpen) btnOpen.classList.remove('hidden'); 
-    if (statusDiv) statusDiv.classList.add('hidden'); 
+    document.getElementById('btn-sig-open').classList.remove('hidden'); 
+    document.getElementById('sig-status').classList.add('hidden'); 
 }
 
-
-
-// --- PHOTOS AVEC COMPRESSION (Vital pour éviter les erreurs de connexion) ---
+// --- PHOTOS ---
 function handlePhotos(input) {
     const files = Array.from(input.files);
     files.forEach(file => {
@@ -180,16 +149,13 @@ function handlePhotos(input) {
         reader.onload = (e) => {
             const img = new Image();
             img.onload = () => {
-                const canvas = document.createElement('canvas');
-                let width = img.width;
-                let height = img.height;
-                const max_size = 1000; // Max 1000px
+                const canvasPhoto = document.createElement('canvas');
+                let width = img.width, height = img.height, max_size = 1000;
                 if (width > height) { if (width > max_size) { height *= max_size / width; width = max_size; } }
                 else { if (height > max_size) { width *= max_size / height; height = max_size; } }
-                canvas.width = width; canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
-                state.photos.push(canvas.toDataURL('image/jpeg', 0.6)); // 60% qualité pour la légèreté
+                canvasPhoto.width = width; canvasPhoto.height = height;
+                canvasPhoto.getContext('2d').drawImage(img, 0, 0, width, height);
+                state.photos.push(canvasPhoto.toDataURL('image/jpeg', 0.6));
                 renderPhotos();
             };
             img.src = e.target.result;
@@ -213,7 +179,7 @@ function renderPhotos() {
 function removePhoto(index) { state.photos.splice(index, 1); renderPhotos(); }
 
 // --- LOGIQUE METIER ---
-let currentPendingWindow = null; // Stocke la vitre en cours de sélection
+let currentPendingWindow = null;
 
 function toggleWindow(id) {
     currentPendingWindow = id;
@@ -228,54 +194,69 @@ function closeTintModal() {
 
 function selectTint(tint) {
     const id = currentPendingWindow;
-    // On cherche si la vitre est déjà dans la liste
     const index = state.selectedWindows.findIndex(w => w.id === id);
+    if (index > -1) state.selectedWindows[index].tint = tint;
+    else state.selectedWindows.push({ id: id, tint: tint });
     
-    if (index > -1) {
-        state.selectedWindows[index].tint = tint; // On met à jour la teinte
-    } else {
-        state.selectedWindows.push({ id: id, tint: tint }); // On ajoute la vitre
-    }
-    
-    // Mise à jour visuelle du bouton sur le schéma
-    const btn = document.getElementById('win-' + id);
-    btn.classList.add('selected');
-    btn.innerHTML = `<span class="block text-[7px] opacity-70">${id}</span><span class="block">${tint}</span>`;
-    
+    // Mise à jour visuelle forcée ici pour s'assurer que le violet s'applique
+    renderVitraux();
     closeTintModal();
 }
 
 function deselectWindow() {
     const id = currentPendingWindow;
     state.selectedWindows = state.selectedWindows.filter(w => w.id !== id);
-    const btn = document.getElementById('win-' + id);
-    btn.classList.remove('selected');
-    btn.innerHTML = id; // On remet le nom d'origine
+    renderVitraux();
     closeTintModal();
 }
 
+// --- AJOUT AU LOT (CORRIGÉ AVEC SÉCURITÉS STRICTES) ---
 function addToBatch() {
     const vinInput = document.getElementById('vin-input');
-    const vin = vinInput.value.trim();
-    if(!vin && state.selectedWindows.length === 0) return alert("Veuillez saisir un VIN ou sélectionner une vitre.");
+    const vinValue = vinInput.value.trim();
+
+    // 1. VERROU VIN : Si pas de VIN, on arrête tout
+    if (!vinValue) {
+        alert("⚠️ Le numéro VIN est OBLIGATOIRE pour ajouter le véhicule.");
+        vinInput.focus();
+        return; 
+    }
+
+    // 2. VERROU VITRES : Si aucune vitre dans la liste, on arrête tout
+    if (state.selectedWindows.length === 0) {
+        alert("⚠️ Vous devez sélectionner AU MOINS UNE VITRE.");
+        return; 
+    }
+
+    // 3. VERROU SIGNATURE : Si pas de signature validée, on arrête tout
+    if (!state.signature) {
+        alert("⚠️ La signature est OBLIGATOIRE pour valider l'intervention.");
+        return; 
+    }
     
-    // APRÈS (Ce que tu dois mettre) :
-state.batch.push({
-    vin: vin || "SANS VIN",
-    type: document.querySelector('input[name="type"]:checked').value,
-    obs: document.getElementById('obs').value,
-    // MODIFICATION ICI :
-    windows: state.selectedWindows.map(w => `${w.id} (${w.tint})`), 
-    photos: [...state.photos],
-    signature: state.signature,
-    date: new Date().toLocaleString('fr-FR')
-});
+    // Si on arrive ici, c'est que tout est bon
+    state.batch.push({
+        vin: vinValue,
+        type: document.querySelector('input[name="type"]:checked').value,
+        obs: document.getElementById('obs').value,
+        windows: state.selectedWindows.map(w => `${w.id} (${w.tint})`), 
+        photos: [...state.photos],
+        signature: state.signature,
+        date: new Date().toLocaleString('fr-FR')
+    });
     
-    // Reset
-    vinInput.value = ""; document.getElementById('obs').value = "";
-    document.querySelectorAll('.window-btn').forEach(b => b.classList.remove('selected'));
-    state.selectedWindows = []; state.photos = []; resetSignature(); renderPhotos(); updateBatchUI();
-    alert("Véhicule ajouté au lot !");
+    // Reset de l'interface pour le prochain véhicule
+    vinInput.value = ""; 
+    document.getElementById('obs').value = "";
+    state.selectedWindows = []; 
+    state.photos = []; 
+    
+    resetSignature(); 
+    renderPhotos(); 
+    renderVitraux(); // Remet les vitres à blanc
+    updateBatchUI();
+    
+    alert("✅ Véhicule ajouté au lot avec succès !");
 }
 
 function updateBatchUI() { 
@@ -283,50 +264,41 @@ function updateBatchUI() {
     if(counter) counter.innerText = `${state.batch.length} EN ATTENTE`; 
 }
 
-function toggleHistoryMenu() { document.getElementById('history-menu').classList.toggle('hidden'); updateHistoryUI(); }
+function toggleHistoryMenu() { 
+    document.getElementById('history-menu').classList.toggle('hidden'); 
+    updateHistoryUI(); 
+}
 
 function updateHistoryUI() {
     const list = document.getElementById('sent-list');
+    if(!list) return;
     list.innerHTML = state.sentHistory.length === 0 ? '<p class="text-center py-6 text-[10px] opacity-50 uppercase">Aucun envoi</p>' : 
     state.sentHistory.map(item => `<div class="p-3 border-b border-slate-100 dark:border-slate-700"><div class="flex justify-between text-[10px] font-black"><span class="text-indigo-500">${item.vin}</span><span>${item.sentTime}</span></div></div>`).reverse().join('');
 }
 
-// --- ENVOI FINAL (VERSION BLINDÉE MOBILE) ---
 async function finalize() {
-    if(!state.batch.length) return alert("Le lot est vide !");
+    // Comme on ne peut ajouter au lot QUE si c'est signé, vérifier si le lot est vide suffit
+    if(!state.batch.length) return alert("Le lot est vide ! Ajoutez d'abord un véhicule.");
     
     const btn = document.getElementById('btn-final');
     btn.disabled = true;
     const originalContent = btn.innerHTML;
     btn.innerHTML = "<span>ENVOI EN COURS...</span>";
     
-    // Ton URL Google Script exacte
     const GOOGLE_URL = 'https://script.google.com/macros/s/AKfycbxNU3VrpgcdShsFfG_ETvgpis7x1nJCIQChoUTideIU4pxS1NZgr46hj8xEQiZEdq8y/exec';
 
     try {
-        // On utilise NO-CORS pour éviter le blocage du téléphone
         await fetch(GOOGLE_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            cache: 'no-cache',
+            method: 'POST', mode: 'no-cors', cache: 'no-cache',
             body: JSON.stringify({ interventions: state.batch })
         });
-
-        // Comme on est en no-cors, on ne peut pas lire la réponse "OK"
-        // Mais si on n'a pas d'erreur réseau, on valide l'historique
         const now = new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
-        state.batch.forEach(v => {
-            state.sentHistory.push({ vin: v.vin, sentTime: now });
-        });
-
+        state.batch.forEach(v => { state.sentHistory.push({ vin: v.vin, sentTime: now }); });
         state.batch = [];
-        updateBatchUI();
-        updateHistoryUI();
-        alert("TERMINÉ ! Les données ont été transmises.");
-
+        updateBatchUI(); updateHistoryUI();
+        alert("TERMINÉ ! Lot envoyé.");
     } catch(e) {
-        console.error(e);
-        alert("Erreur de connexion. Vérifiez votre 4G/5G.");
+        alert("Erreur réseau.");
     } finally {
         btn.disabled = false;
         btn.innerHTML = originalContent;
@@ -337,8 +309,6 @@ async function finalize() {
 function toggleDarkMode() {
     const isDark = document.documentElement.classList.toggle('dark');
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
-    
-    // Mise à jour de l'icône si nécessaire
     const icon = document.getElementById('dark-icon');
     if (icon) {
         icon.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
@@ -346,18 +316,14 @@ function toggleDarkMode() {
     }
 }
 
-// Au chargement de la page, appliquer le thème sauvegardé
-if (localStorage.getItem('theme') === 'dark' || 
-    (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
     document.documentElement.classList.add('dark');
 }
 
-// --- GESTION DU MENU ---
 function toggleMenu(open) {
     const menu = document.getElementById('side-menu');
     const overlay = document.getElementById('menu-overlay');
     const panel = document.getElementById('menu-panel');
-    
     if (open) {
         menu.classList.remove('invisible');
         setTimeout(() => {
@@ -371,123 +337,59 @@ function toggleMenu(open) {
     }
 }
 
-// --- CHANGEMENT DE VUE ---
 function switchView(view) {
-    toggleMenu(false); // Ferme le menu
-    
-    // Pour l'instant on prépare juste la logique
-    if (view === 'pret') {
-        alert("Interface 'Prêt de véhicule' en cours de préparation...");
-    } else {
-        alert("Retour à l'interface Vitrages");
-    }
-    
-    // On mettra ici le code pour cacher/afficher les sections HTML
+    toggleMenu(false);
+    if (view === 'pret') alert("Interface 'Prêt de véhicule' en préparation...");
+    else alert("Retour à l'interface Vitrages");
 }
 
+// --- CONFIGURATION IDENTIQUE POUR TOUS LES VEHICULES (RESTÉE INCHANGÉE) ---
+const COMMON_VITRES = [
+    { id: "P-BRISE", pos: "top: 5%; left: 50%; transform: translateX(-50%); width: 160px !important;" },
+    { id: "CUST. AV-G", pos: "top: 18%; left: 2%;" },
+    { id: "CUST. AV-D", pos: "top: 18%; right: 2%;" },
+    { id: "VITRE AV-G", pos: "top: 28%; left: 2%;" },
+    { id: "VITRE AV-D", pos: "top: 28%; right: 2%;" },
+    { id: "TOIT 1", pos: "top: 25%; left: 50%; transform: translateX(-50%); width: 100px !important;" },
+    { id: "TOIT 2", pos: "top: 38%; left: 50%; transform: translateX(-50%); width: 100px !important;" },
+    { id: "VITRE AR-G", pos: "top: 42%; left: 2%;" },
+    { id: "VITRE AR-D", pos: "top: 42%; right: 2%;" },
+    { id: "DEMI AR-G", pos: "top: 55%; left: 2%;" },
+    { id: "DEMI AR-D", pos: "top: 55%; right: 2%;" },
+    { id: "CUST. EXT-G", pos: "top: 68%; left: 2%;" },
+    { id: "CUST. EXT-D", pos: "top: 68%; right: 2%;" },
+    { id: "LUNETTE", pos: "bottom: 15%; left: 50%; transform: translateX(-50%); width: 160px !important;" },
+    { id: "LUN. G (X2)", pos: "bottom: 3%; left: 5%; width: 100px !important;" },
+    { id: "LUN. D (X2)", pos: "bottom: 3%; right: 5%; width: 100px !important;" }
+];
+
 const VEHICLES_CONFIG = {
-    VOITURE: {
-        shape: '<svg viewBox="0 0 200 550" class="w-full h-full stroke-slate-300 dark:stroke-slate-600 fill-none" stroke-width="2"><path d="M50 20 C50 10, 150 10, 150 20 L175 100 L175 480 C175 510, 25 510, 25 480 L25 100 Z"/><path d="M30 110 L170 110 M30 350 L170 350"/></svg>',
-        vitres: [
-            { id: "P-BRISE", pos: "top: 5%; left: 50%; transform: translateX(-50%); width: 160px !important;" },
-            { id: "CUST. AV-G", pos: "top: 18%; left: 2%;" },
-            { id: "CUST. AV-D", pos: "top: 18%; right: 2%;" },
-            { id: "VITRE AV-G", pos: "top: 28%; left: 2%;" },
-            { id: "VITRE AV-D", pos: "top: 28%; right: 2%;" },
-            { id: "TOIT 1", pos: "top: 25%; left: 50%; transform: translateX(-50%); width: 100px !important;" },
-            { id: "TOIT 2", pos: "top: 38%; left: 50%; transform: translateX(-50%); width: 100px !important;" },
-            { id: "VITRE AR-G", pos: "top: 42%; left: 2%;" },
-            { id: "VITRE AR-D", pos: "top: 42%; right: 2%;" },
-            { id: "DEMI AR-G", pos: "top: 55%; left: 2%;" },
-            { id: "DEMI AR-D", pos: "top: 55%; right: 2%;" },
-            { id: "CUST. EXT-G", pos: "top: 68%; left: 2%;" },
-            { id: "CUST. EXT-D", pos: "top: 68%; right: 2%;" },
-            { id: "LUNETTE", pos: "bottom: 15%; left: 50%; transform: translateX(-50%); width: 160px !important;" },
-            { id: "LUN. G (X2)", pos: "bottom: 3%; left: 5%; width: 100px !important;" },
-            { id: "LUN. D (X2)", pos: "bottom: 3%; right: 5%; width: 100px !important;" }
-        ]
-    },
-    FOURGON: {
-        shape: '<svg viewBox="0 0 200 550" class="w-full h-full stroke-slate-300 dark:stroke-slate-600 fill-none" stroke-width="2"><path d="M50 20 C50 10, 150 10, 150 20 L175 100 L175 480 C175 510, 25 510, 25 480 L25 100 Z"/><path d="M30 110 L170 110 M30 350 L170 350"/></svg>',
-        vitres: [
-            { id: "P-BRISE", pos: "top: 5%; left: 50%; transform: translateX(-50%); width: 160px !important;" },
-            { id: "CUST. AV-G", pos: "top: 18%; left: 2%;" },
-            { id: "CUST. AV-D", pos: "top: 18%; right: 2%;" },
-            { id: "VITRE AV-G", pos: "top: 28%; left: 2%;" },
-            { id: "VITRE AV-D", pos: "top: 28%; right: 2%;" },
-            { id: "TOIT 1", pos: "top: 25%; left: 50%; transform: translateX(-50%); width: 100px !important;" },
-            { id: "TOIT 2", pos: "top: 38%; left: 50%; transform: translateX(-50%); width: 100px !important;" },
-            { id: "VITRE AR-G", pos: "top: 42%; left: 2%;" },
-            { id: "VITRE AR-D", pos: "top: 42%; right: 2%;" },
-            { id: "DEMI AR-G", pos: "top: 55%; left: 2%;" },
-            { id: "DEMI AR-D", pos: "top: 55%; right: 2%;" },
-            { id: "CUST. EXT-G", pos: "top: 68%; left: 2%;" },
-            { id: "CUST. EXT-D", pos: "top: 68%; right: 2%;" },
-            { id: "LUNETTE", pos: "bottom: 15%; left: 50%; transform: translateX(-50%); width: 160px !important;" },
-            { id: "LUN. G (X2)", pos: "bottom: 3%; left: 5%; width: 100px !important;" },
-            { id: "LUN. D (X2)", pos: "bottom: 3%; right: 5%; width: 100px !important;" }
-        ]
-    },
-    VDL: {
-        shape: '<svg viewBox="0 0 200 550" class="w-full h-full stroke-slate-300 dark:stroke-slate-600 fill-none" stroke-width="2"><path d="M50 20 C50 10, 150 10, 150 20 L175 100 L175 480 C175 510, 25 510, 25 480 L25 100 Z"/><path d="M30 110 L170 110 M30 350 L170 350"/></svg>',
-        vitres: [
-            { id: "P-BRISE", pos: "top: 5%; left: 50%; transform: translateX(-50%); width: 160px !important;" },
-            { id: "CUST. AV-G", pos: "top: 18%; left: 2%;" },
-            { id: "CUST. AV-D", pos: "top: 18%; right: 2%;" },
-            { id: "VITRE AV-G", pos: "top: 28%; left: 2%;" },
-            { id: "VITRE AV-D", pos: "top: 28%; right: 2%;" },
-            { id: "TOIT 1", pos: "top: 25%; left: 50%; transform: translateX(-50%); width: 100px !important;" },
-            { id: "TOIT 2", pos: "top: 38%; left: 50%; transform: translateX(-50%); width: 100px !important;" },
-            { id: "VITRE AR-G", pos: "top: 42%; left: 2%;" },
-            { id: "VITRE AR-D", pos: "top: 42%; right: 2%;" },
-            { id: "DEMI AR-G", pos: "top: 55%; left: 2%;" },
-            { id: "DEMI AR-D", pos: "top: 55%; right: 2%;" },
-            { id: "CUST. EXT-G", pos: "top: 68%; left: 2%;" },
-            { id: "CUST. EXT-D", pos: "top: 68%; right: 2%;" },
-            { id: "LUNETTE", pos: "bottom: 15%; left: 50%; transform: translateX(-50%); width: 160px !important;" },
-            { id: "LUN. G (X2)", pos: "bottom: 3%; left: 5%; width: 100px !important;" },
-            { id: "LUN. D (X2)", pos: "bottom: 3%; right: 5%; width: 100px !important;" }
-        ]
-    }
+    VOITURE: { shape: '<svg viewBox="0 0 200 550" class="w-full h-full stroke-slate-300 dark:stroke-slate-600 fill-none" stroke-width="2"><path d="M50 20 C50 10, 150 10, 150 20 L175 100 L175 480 C175 510, 25 510, 25 480 L25 100 Z"/><path d="M30 110 L170 110 M30 350 L170 350"/></svg>', vitres: COMMON_VITRES },
+    FOURGON: { shape: '<svg viewBox="0 0 200 550" class="w-full h-full stroke-slate-300 dark:stroke-slate-600 fill-none" stroke-width="2"><path d="M50 20 C50 10, 150 10, 150 20 L175 100 L175 480 C175 510, 25 510, 25 480 L25 100 Z"/><path d="M30 110 L170 110 M30 350 L170 350"/></svg>', vitres: COMMON_VITRES },
+    VDL: { shape: '<svg viewBox="0 0 200 550" class="w-full h-full stroke-slate-300 dark:stroke-slate-600 fill-none" stroke-width="2"><path d="M50 20 C50 10, 150 10, 150 20 L175 100 L175 480 C175 510, 25 510, 25 480 L25 100 Z"/><path d="M30 110 L170 110 M30 350 L170 350"/></svg>', vitres: COMMON_VITRES }
 };
+
 function setVehicle(type) {
     state.vehiculeType = type;
-    
-    // UI Onglets
     ['VOITURE', 'FOURGON', 'VDL'].forEach(t => {
         const btn = document.getElementById('tab-' + t);
-        if(btn) btn.classList.toggle('opacity-50', t !== type);
-        if(btn) btn.classList.toggle('bg-white', t === type);
+        if(btn) { btn.classList.toggle('opacity-50', t !== type); btn.classList.toggle('bg-white', t === type); }
     });
-
-    // Injecter le contour SVG
     document.getElementById('vehicle-svg-container').innerHTML = VEHICLES_CONFIG[type].shape;
-
-    // Dessiner les boutons
     renderVitraux();
 }
 
 function renderVitraux() {
     const container = document.getElementById('vitres-container');
     const config = VEHICLES_CONFIG[state.vehiculeType];
-    
     container.innerHTML = config.vitres.map(v => {
         const selection = state.selectedWindows.find(sw => sw.id === v.id);
         const isSelected = selection ? 'selected' : '';
-        
         const label = selection 
-            ? `<div style="font-size: 7px; opacity: 0.6;">${v.id}</div>
-               <div style="font-weight: 900; color: #4f46e5;">${selection.tint}</div>` 
+            ? `<div style="font-size: 7px; opacity: 0.6;">${v.id}</div><div style="font-weight: 900; color: #4f46e5;">${selection.tint}</div>` 
             : `<div>${v.id}</div>`;
-        
-        return `
-            <button type="button" onclick="toggleWindow('${v.id}')" id="win-${v.id}" 
-                style="position: absolute; ${v.pos}"
-                class="window-btn rounded-xl border border-slate-300 dark:border-slate-600 bg-white/90 dark:bg-slate-800/90 shadow-sm ${isSelected}">
-                ${label}
-            </button>
-        `;
+        return `<button type="button" onclick="toggleWindow('${v.id}')" id="win-${v.id}" style="position: absolute; ${v.pos}" class="window-btn rounded-xl border border-slate-300 dark:border-slate-600 bg-white/90 dark:bg-slate-800/90 shadow-sm ${isSelected}">${label}</button>`;
     }).join('');
 }
-// Initialisation au chargement
+
 setTimeout(() => setVehicle('VOITURE'), 200);

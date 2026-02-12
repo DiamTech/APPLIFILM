@@ -285,19 +285,14 @@ function addToBatch() {
         type: document.querySelector('input[name="type"]:checked').value,
         obs: document.getElementById('obs').value,
         windows: [...state.selectedWindows],
-        photos: [...state.photos],
-        sig: state.signature,
-        date: new Date().toLocaleTimeString('fr-FR')
+        photos: [...state.photos], // Tableau de photos
+        signature: state.signature, // La signature seule (Base64)
+        date: new Date().toLocaleString('fr-FR')
     });
 
-    // Reset
-    document.getElementById('vin-input').value = "";
-    document.getElementById('obs').value = "";
-    document.querySelectorAll('.window-btn').forEach(b => b.classList.remove('selected'));
-    state.selectedWindows = []; state.photos = []; resetSignature();
-    document.getElementById('photo-count').innerText = "0";
+    // Reset de l'interface après ajout
+    resetUI(); 
     updateBatchUI();
-    alert("Véhicule ajouté au lot !");
 }
 
 function updateBatchUI() {
@@ -326,7 +321,7 @@ async function finalize() {
     
     try {
         // Remplace par ton URL Google Script /exec
-        await fetch('https://script.google.com/macros/s/AKfycbybQoN5JD72b3o3KlePS3ZCFtr2nL5TJJizmnGGLxZopWAQFwB9aPiJZGSWYMmIxwSX/exec', {
+        await fetch('https://script.google.com/macros/s/AKfycby8fC4tLtri-KHVwjciLmw0D0QT1jAlUxZiT5Z2OtA1JylZuDXKu5Ta16FZ0S6VGHka/exec', {
             method: 'POST',
             mode: 'no-cors',
             body: JSON.stringify({ interventions: state.batch })

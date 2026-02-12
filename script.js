@@ -32,10 +32,10 @@ window.addEventListener('load', () => {
 
 // --- NAVIGATION ENTRE LES PAGES ---
 function switchView(view) {
-    toggleMenu(false); // On ferme le menu latéral
+    toggleMenu(false); // On ferme le menu
 
-    // 1. On récupère les 3 vues (Vitrage, Prêt, Historique)
-    const vVitrage = document.getElementById('view-vitrage');
+    // 1. On récupère tes vues (J'ai corrigé le nom pour coller à ton HTML)
+    const vVitrage = document.getElementById('view-intervention'); // C'est ici que ça bloquait
     const vPret = document.getElementById('view-pret');
     const vHistory = document.getElementById('view-history');
 
@@ -45,15 +45,17 @@ function switchView(view) {
     if(vHistory) vHistory.classList.add('hidden');
 
     // 3. On affiche la vue demandée
-    if (view === 'vitrage') {
-        if(vVitrage) vVitrage.classList.remove('hidden');
-    } 
-    else if (view === 'pret') {
+    if (view === 'pret') {
         if(vPret) vPret.classList.remove('hidden');
     } 
     else if (view === 'history') {
         if(vHistory) vHistory.classList.remove('hidden');
-        updateHistoryUI(); // Met à jour la liste si on va sur l'historique
+        // Si la fonction existe, on met à jour la liste
+        if(typeof updateHistoryUI === 'function') updateHistoryUI();
+    }
+    else {
+        // Par défaut (ou si on clique sur Vitrage), on affiche l'intervention
+        if(vVitrage) vVitrage.classList.remove('hidden');
     }
 }
 

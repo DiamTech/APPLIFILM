@@ -931,43 +931,44 @@ async function fetchActiveLoans() {
         }
 
         container.innerHTML = loans.map(loan => {
-    // 1. Formatage propre de la date
-    const dateObj = new Date(loan.date);
-    const datePretty = dateObj.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
-
-    // 2. Sécurisation du KM (pour éviter le "undefined")
-    const mileage = loan.km || "0";
-
-    return `
-        <button type="button" onclick="selectLoanForReturn('${loan.immat}')" 
-            class="w-full bg-white dark:bg-slate-900 p-5 rounded-[2rem] border border-slate-100 dark:border-slate-800 text-left flex flex-col gap-3 active:scale-[0.98] transition-all shadow-sm mb-2">
+            const d = new Date(loan.date);
+            const datePropre = d.toLocaleDateString('fr-FR', {day: '2-digit', month: '2-digit'});
+        
+            // On récupère le KM, s'il n'existe pas on met 0
+            const kmAffichage = loan.km || "0";
             
-            <div class="flex justify-between items-start">
-                <div>
-                    <span class="text-[9px] font-black text-indigo-400 uppercase tracking-widest block mb-1">Modèle</span>
-                    <div class="font-black text-slate-800 dark:text-white text-base leading-none">
-                        ${loan.modele || "Véhicule"} 
+            // LOGIQUE TITRE : Si on a un modèle on le met, sinon on met la plaque en gros
+            const titrePrincipal = loan.modele && loan.modele !== "Véhicule" ? loan.modele : loan.immat;
+            const sousTitre = loan.modele && loan.modele !== "Véhicule" ? loan.immat : "";
+        
+            return `
+                <button type="button" onclick="selectLoanForReturn('${loan.immat}')" 
+                        class="w-full bg-indigo-600 p-5 rounded-[2rem] text-left shadow-lg mb-3 flex flex-col gap-6 active:scale-95 transition-all">
+                    
+                    <div class="flex justify-between items-start">
+                        <div class="flex flex-col">
+                            <span class="text-[10px] font-black text-indigo-200 uppercase tracking-widest">MODÈLE</span>
+                            <span class="font-black text-white text-xl leading-tight">${titrePrincipal}</span>
+                            <span class="text-[11px] font-bold text-indigo-200 opacity-80">${sousTitre}</span>
+                        </div>
+                        <span class="text-[11px] font-black bg-black text-white px-3 py-1.5 rounded-xl">
+                            ${datePropre}
+                        </span>
                     </div>
-                    <div class="text-[10px] text-slate-400 font-bold mt-1">${loan.immat}</div>
-                </div>
-                <div class="text-[10px] font-bold text-slate-400 bg-slate-50 dark:bg-slate-950 px-3 py-1 rounded-full">
-                    ${datePretty}
-                </div>
-            </div>
-
-            <div class="flex justify-between items-end mt-2">
-                <div class="max-w-[60%]">
-                    <span class="text-[9px] font-bold text-slate-300 uppercase block mb-1">Client</span>
-                    <div class="text-xs font-bold text-slate-600 dark:text-slate-300 truncate">${loan.nom}</div>
-                </div>
-                <div class="text-right">
-                    <span class="text-[9px] font-bold text-slate-300 uppercase block mb-1">Compteur</span>
-                    <div class="text-sm font-black text-indigo-600">${mileage} <span class="text-[10px]">KM</span></div>
-                </div>
-            </div>
-        </button>
-    `;
-}).join('');
+        
+                    <div class="flex justify-between items-end">
+                        <div class="flex flex-col">
+                            <span class="text-[10px] font-black text-indigo-200 uppercase tracking-widest">CLIENT</span>
+                            <span class="text-sm font-bold text-white uppercase tracking-wide">${loan.nom}</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-[10px] font-black text-indigo-200 uppercase tracking-widest block">COMPTEUR</span>
+                            <span class="text-sm font-black text-white">${kmAffichage} KM</span>
+                        </div>
+                    </div>
+                </button>
+            `;
+        }).join('');
     } catch (e) {
         console.error(e);
         container.innerHTML = '<div class="text-[10px] font-bold text-center py-4 text-red-400 uppercase">⚠️ Erreur de connexion</div>';

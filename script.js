@@ -1102,13 +1102,15 @@ function selectLoanForReturn(immat) {
 
 function resetPretForm() {
     state.pretMode = 'DEPART';
-    toggleFormLock(false);
+    toggleFormLock(false); // On déverrouille tout
 
-    // On remet le contenu d'origine dans les boites de photos
+    // On recrée les zones d'upload avec leurs icônes et leurs inputs
     const resetZone = (id, label) => {
         const zone = document.getElementById(id);
+        if (!zone) return;
+        
         zone.style.pointerEvents = "auto";
-        zone.style.border = "2px dashed #e2e8f0"; // Style d'origine
+        zone.style.border = "2px dashed #e2e8f0";
         zone.innerHTML = `
             <input type="file" accept="image/*" capture="environment" class="hidden" onchange="handlePhoto(this, '${id}')">
             <i data-lucide="camera" class="w-5 h-5 text-slate-400"></i>
@@ -1119,10 +1121,19 @@ function resetPretForm() {
     resetZone('preview-recto', 'Recto');
     resetZone('preview-verso', 'Verso');
 
+    // On vide les champs texte
+    const fields = ['pret-nom', 'pret-dob', 'pret-lieu-naiss', 'pret-permis-num', 'pret-permis-lieu', 'pret-km-depart', 'pret-degats-obs'];
+    fields.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = "";
+    });
+
+    // On vide les croix
+    state.pret.damages = [];
+    renderDamages();
+
     // Relancer les icônes Lucide
     if (typeof lucide !== 'undefined') lucide.createIcons();
-    
-    // ... reste de ton reset (vider les inputs etc) ...
 }
 
 function renderDamages() {
@@ -1156,50 +1167,23 @@ function addDamage(event) {
 }
 
 function toggleFormLock(isReturn) {
-    // 1. Liste des champs à verrouiller (Identité + Véhicule)
-    const fieldsToLock = [
-        'pret-vehicule-select', 
-        'pret-nom', 
-        'pret-dob', 
-        'pret-lieu-naiss', 
-        'pret-permis-num', 
-        'pret-permis-lieu'
-    ];
-    
+    // 1. Verrouillage des textes et sélecteurs
+    const fieldsToLock = ['pret-vehicule-select', 'pret-nom', 'pret-dob', 'pret-lieu-naiss', 'pret-permis-num', 'pret-permis-lieu'];
     fieldsToLock.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
-            // Un <select> se bloque avec .disabled, un <input> avec .readOnly
-            if (el.tagName === 'SELECT') {
-                el.disabled = isReturn;
-            } else {
-                el.readOnly = isReturn;
-            }
-            
-            // Style visuel "Grisé"
-            el.style.backgroundColor = isReturn ? "#f1f5f9" : ""; 
-            el.style.color = isReturn ? "#64748b" : "";
-            el.style.cursor = isReturn ? "not-allowed" : "text";
+            if (el.tagName === 'SELECT') el.disabled = isReturn;
+            else el.readOnly = isReturn;
+            el.style.backgroundColor = isReturn ? "#f1f5f9" : "";
         }
     });
 
-    // 2. Blocage des zones photos
-    const photoZones = document.querySelectorAll('.photo-upload-zone');
-    photoZones.forEach(zone => {
-        zone.style.pointerEvents = isReturn ? "none" : "auto";
-    });
-
-    // 3. Champs qui restent toujours libres (KM, Obs, Carburant)
-    const fieldsToKeepFree = ['pret-km-depart', 'pret-degats-obs', 'pret-carburant']; 
-    fieldsToKeepFree.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            el.readOnly = false;
-            el.disabled = false; // Au cas où le carburant est un select
-            el.style.backgroundColor = "";
-            el.style.color = "";
-            el.style.cursor = "text";
-        }
+    // 2. VERROUILLAGE PHYSIQUE DES INPUTS PHOTOS
+    // On désactive TOUS les sélecteurs de fichiers pour qu'ils ne s'ouvrent plus
+    const allFileInputs = document.querySelectorAll('input[type="file"]');
+    allFileInputs.forEach(input => {
+        input.disabled = isReturn; 
+        if (isReturn) input.value = ""; // On vide la sélection en cours
     });
 }
 

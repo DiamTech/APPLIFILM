@@ -296,12 +296,16 @@ function closeSignature() {
 // ==========================================
 async function finalize() {
     if (state.batch.length === 0) return alert("⚠️ Le lot est vide !");
+    
     const finalBtn = document.querySelector('button[onclick="finalize()"]');
     finalBtn.disabled = true;
-    finalBtn.innerHTML = "ENVOI...";
+    finalBtn.innerHTML = "ENVOI EN COURS...";
 
     try {
-        const response = await fetch("ICI_METS_TON_LIEN_SHEETDB", { 
+        // REMPLACE BIEN L'URL CI-DESSOUS PAR LA TIENNE
+        const url = "https://sheetdb.io/api/v1/gc2df6w3b42tw"; 
+        
+        const response = await fetch(url, { 
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -316,21 +320,24 @@ async function finalize() {
             })
         });
 
-        const result = await response.json();
-        
+        // On vérifie d'abord si la réponse réseau est OK
         if (response.ok) {
-            alert("✅ RÉUSSI : " + result.created + " ligne(s) ajoutée(s) !");
+            alert("✅ DONNÉES ENVOYÉES AVEC SUCCÈS !");
             localStorage.clear();
             location.reload();
         } else {
-            // C'est ici que tu sauras pourquoi ça rate
-            alert("❌ ERREUR SERVEUR : " + JSON.stringify(result));
+            // Si le serveur répond une erreur (404, 500, etc.)
+            const errorText = await response.text();
+            console.error("Détail erreur:", errorText);
+            alert("❌ Erreur serveur : Vérifiez que votre lien SheetDB est toujours valide.");
             finalBtn.disabled = false;
             finalBtn.innerHTML = "RÉESSAYER";
         }
 
     } catch (e) {
-        alert("❌ ERREUR RÉSEAU : " + e.message);
+        // Erreur de connexion (internet coupé, etc.)
+        alert("❌ Problème de connexion internet.");
         finalBtn.disabled = false;
+        finalBtn.innerHTML = "RÉESSAYER";
     }
 }

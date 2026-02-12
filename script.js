@@ -916,32 +916,59 @@ function setPretMode(mode) {
 
 async function fetchActiveLoans() {
     const container = document.getElementById('loans-container');
-    container.innerHTML = '<div class="text-[10px] font-bold text-center py-4 text-slate-400">CHARGEMENT DES PRÊTS...</div>';
+    container.innerHTML = '<div class="text-[10px] font-bold text-center py-4 text-slate-400 animate-pulse">CHARGEMENT DES PRÊTS...</div>';
 
     try {
-        // IMPORTANT : On demande au sheet de nous donner la liste
         const response = await fetch(URL_PRET + "?action=get_active");
         const loans = await response.json();
         
+        // IMPORTANT : On sauvegarde la liste dans le state pour pouvoir cliquer dessus après
+        state.activeLoans = loans;
+
         if (!loans || loans.length === 0) {
             container.innerHTML = '<div class="text-[10px] font-bold text-center py-4 text-slate-400 italic">AUCUN VÉHICULE DEHORS</div>';
             return;
         }
 
-        container.innerHTML = loans.map(loan => `
-            <button type="button" onclick="selectLoanForReturn('${loan.immat}')" class="w-full bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 text-left flex justify-between items-center active:scale-95 transition-all shadow-sm">
-                <div>
-                    <div class="font-black text-indigo-600 text-sm">${loan.immat}</div>
-                    <div class="text-[10px] font-bold text-slate-400 uppercase">${loan.nom}</div>
-                </div>
-                <div class="text-right">
-                    <div class="text-[9px] font-bold text-slate-300">${loan.date}</div>
-                    <div class="text-[9px] font-black text-indigo-400 uppercase">${loan.km_depart} KM</div>
-                </div>
-            </button>
-        `).join('');
+        container.innerHTML = loans.map(loan => {
+            // --- FORMATAGE DE LA DATE (Pour éviter le format 2026-02-12T...) ---
+            const dateObj = new Date(loan.date);
+            const datePretty = dateObj.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+
+            // --- VÉRIFICATION DU KM ---
+            // On vérifie 'km' ou 'km_depart' selon ce que ton Apps Script envoie
+            const mileage = loan.km || loan.km_depart || "0";
+
+            return `
+                <button type="button" onclick="selectLoanForReturn('${loan.immat}')" 
+                    class="w-full bg-white dark:bg-slate-900 p-5 rounded-[2rem] border border-slate-100 dark:border-slate-800 text-left flex flex-col gap-3 active:scale-[0.98] transition-all shadow-sm mb-2">
+                    
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="text-[9px] font-black text-indigo-400 uppercase tracking-widest block mb-1">Véhicule</span>
+                            <div class="font-black text-slate-800 dark:text-white text-base leading-none">${loan.immat}</div>
+                        </div>
+                        <div class="text-[10px] font-bold text-slate-400 bg-slate-50 dark:bg-slate-950 px-3 py-1 rounded-full">
+                            ${datePretty}
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-end">
+                        <div class="max-w-[60%]">
+                            <span class="text-[9px] font-bold text-slate-300 uppercase block mb-1">Client</span>
+                            <div class="text-xs font-bold text-slate-600 dark:text-slate-300 truncate">${loan.nom}</div>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-[9px] font-bold text-slate-300 uppercase block mb-1">Compteur</span>
+                            <div class="text-sm font-black text-indigo-600">${mileage} <span class="text-[10px]">KM</span></div>
+                        </div>
+                    </div>
+                </button>
+            `;
+        }).join('');
     } catch (e) {
-        container.innerHTML = '<div class="text-[10px] font-bold text-center py-4 text-red-400">ERREUR DE CHARGEMENT</div>';
+        console.error(e);
+        container.innerHTML = '<div class="text-[10px] font-bold text-center py-4 text-red-400 uppercase">⚠️ Erreur de connexion</div>';
     }
 }
 

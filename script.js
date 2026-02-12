@@ -311,3 +311,59 @@ function switchView(view) {
     
     // On mettra ici le code pour cacher/afficher les sections HTML
 }
+
+const VEHICLES_DATA = {
+    VOITURE: [
+        "PARE-BRISE", "LUNETTE AR", "VITRE AV-G", "VITRE AV-D", 
+        "VITRE AR-G", "VITRE AR-D", "CUSTODE AV-G", "CUSTODE AV-D",
+        "CUSTODE AR-G", "CUSTODE AR-D"
+    ],
+    FOURGON: [
+        "PARE-BRISE", "LUNETTE SIMPLE", "LUNETTE DOUBLE", 
+        "VITRE AV-G", "VITRE AV-D", "LATÉRALE G", "LATÉRALE D",
+        "TOIT OUVRANT 1", "TOIT OUVRANT 2"
+    ],
+    VDL: [
+        "PARE-BRISE", "LUNETTE AR", "BAIE LATÉRALE G", "BAIE LATÉRALE D",
+        "LANTERNEAU 1", "LANTERNEAU 2", "VITRE CABINE G", "VITRE CABINE D"
+    ]
+};
+
+function setVehicle(type) {
+    state.vehiculeType = type;
+    
+    // Mise à jour visuelle des onglets
+    ['VOITURE', 'FOURGON', 'VDL'].forEach(t => {
+        const btn = document.getElementById('tab-' + t);
+        if(btn) {
+            btn.classList.toggle('bg-white', t === type);
+            btn.classList.toggle('shadow-sm', t === type);
+            btn.classList.toggle('opacity-50', t !== type);
+        }
+    });
+
+    renderVitraux();
+}
+
+function renderVitraux() {
+    const container = document.getElementById('vitres-container');
+    if (!container) return;
+    
+    const vitres = VEHICLES_DATA[state.vehiculeType] || VEHICLES_DATA.VOITURE;
+    
+    container.innerHTML = vitres.map(v => {
+        const selection = state.selectedWindows.find(sw => sw.id === v);
+        const isSelected = selection ? 'selected' : '';
+        const label = selection ? `<span class="block text-[7px] opacity-70">${v}</span><span class="block text-[10px] font-black">${selection.tint}</span>` : v;
+        
+        return `
+            <button type="button" onclick="toggleWindow('${v}')" id="win-${v}" 
+                class="window-btn p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-[9px] font-bold uppercase transition-all ${isSelected}">
+                ${label}
+            </button>
+        `;
+    }).join('');
+}
+
+// Lancer l'affichage par défaut au démarrage
+setTimeout(() => setVehicle('VOITURE'), 100);

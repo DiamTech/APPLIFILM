@@ -21,7 +21,7 @@ let state = {
 
 // Mets tes vraies URLs ici
 const URL_VITRAGE = "https://script.google.com/macros/s/AKfycbyl-hYWhxxK8-1jLGxHC_QNFgrVFZtbUv69Ozr2hMAdqWz2iQvP5oG92Div0LbG-L5x/exec";
-const URL_PRET = "https://script.google.com/macros/s/AKfycbzq54rMzq9J27FbQtOaxf1p3igk8iYiASjnBhaIiEGBv_s2y79YrZbodgjST83IFI57Vw/exec";
+const URL_PRET = "https://script.google.com/macros/s/AKfycbwmEBV23uwCdXlmhJmFxrWxA7AqiMqbpb5CZRyZgN-WdsgpURHN3JSdjIT0B_CJ7OK-SA/exec";
 
 let scanner, canvas, ctx, drawing = false;
 
@@ -1033,29 +1033,61 @@ function selectLoanForReturn(immat) {
     const loan = state.activeLoans.find(l => l.immat === immat);
     if (!loan) return;
 
-    // 2. On remplit les champs automatiquement
+    // 2. Remplissage des champs d'identité et du permis
     document.getElementById('pret-vehicule-select').value = loan.immat;
-    document.getElementById('pret-nom').value = loan.nom;
+    document.getElementById('pret-nom').value = loan.nom || "";
+    document.getElementById('pret-lieu-naiss').value = loan.lieu_naiss || "";
+    document.getElementById('pret-permis-num').value = loan.permis_num || "";
+    document.getElementById('pret-permis-lieu').value = loan.permis_lieu || "";
     
-    // 3. SYNCHRONISATION : On stocke le KM de départ dans la bonne variable
-    state.pret.km_depart_initial = parseInt(loan.km);
-    
-    // 4. RÉCUPÉRATION DES DÉGÂTS DU DÉPART
-    try {
-        state.pret.damages = JSON.parse(loan.degats_coords || "[]");
-        renderDamages(); // On dessine les croix existantes
-    } catch(e) {
-        state.pret.damages = [];
+    // Formatage de la date de naissance pour l'input HTML (YYYY-MM-DD)
+    if (loan.dob) {
+        try {
+            const d = new Date(loan.dob);
+            const formattedDate = d.toISOString().split('T')[0];
+            document.getElementById('pret-dob').value = formattedDate;
+        } catch(e) { console.error("Erreur formatage date naissance", e); }
     }
-    
-    // On met à jour l'UI pour montrer que c'est chargé
+
+    // 3. Synchronisation du kilométrage
+    state.pret.km_depart_initial = parseInt(loan.km);
     const kmInput = document.getElementById('pret-km-depart');
     if(kmInput) {
         kmInput.placeholder = "Départ : " + loan.km + " km";
-        kmInput.value = ""; // On laisse vide pour saisir le nouveau KM
+        kmInput.value = ""; // On laisse vide pour saisir le KM de retour
     }
+
+    // 4. Affichage des aperçus des photos du permis
+    const previewRecto = document.getElementById('preview-recto');
+    const previewVerso = document.getElementById('preview-verso');
     
-    alert("✅ Véhicule " + immat + " sélectionné.\nKM au départ : " + loan.km);
+    if (loan.recto && loan.recto.startsWith('http')) {
+        previewRecto.innerHTML = `<img src="${loan.recto}" class="w-full h-full object-cover rounded-xl shadow-inner">`;
+        state.pret.permis_recto = loan.recto; // On stocke l'URL pour la renvoyer au retour
+    }
+    if (loan.verso && loan.verso.startsWith('http')) {
+        previewVerso.innerHTML = `<img src="${loan.verso}" class="w-full h-full object-cover rounded-xl shadow-inner">`;
+        state.pret.permis_verso = loan.verso;
+    }
+
+    // 5. Récupération des dégâts du départ (Croix grises)
+    try {
+        const oldCoords = JSON.parse(loan.degats_coords || "[]");
+        // On marque ces dégâts comme "old" pour que renderDamages() les dessine en gris
+        state.pret.damages = oldCoords.map(c => ({ ...c, type: 'old' }));
+        renderDamages(); 
+    } catch(e) {
+        state.pret.damages = [];
+        console.error("Erreur lors du chargement des coordonnées de dégâts", e);
+    }
+
+    // 6. Rappel de l'état des observations au départ
+    const obsField = document.getElementById('pret-degats-obs');
+    if (obsField) {
+        obsField.value = "ÉTAT DÉPART : " + (loan.details || "RAS");
+    }
+
+    alert("✅ Dossier complet de " + loan.nom + " récupéré !\nKM au départ : " + loan.km);
 }
 
 setTimeout(() => setVehicle('VOITURE'), 200);

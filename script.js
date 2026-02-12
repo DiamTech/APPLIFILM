@@ -1123,8 +1123,9 @@ function addDamage(event) {
 }
 
 function toggleFormLock(isReturn) {
-    // 1. Liste des champs qui deviennent "Lecture seule" au retour
+    // 1. Liste des champs à verrouiller (Identité + Véhicule)
     const fieldsToLock = [
+        'pret-vehicule-select', 
         'pret-nom', 
         'pret-dob', 
         'pret-lieu-naiss', 
@@ -1135,29 +1136,56 @@ function toggleFormLock(isReturn) {
     fieldsToLock.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
-            el.readOnly = isReturn;
-            // Style visuel pour montrer que c'est bloqué
-            el.style.backgroundColor = isReturn ? "#f8fafc" : ""; 
+            // Un <select> se bloque avec .disabled, un <input> avec .readOnly
+            if (el.tagName === 'SELECT') {
+                el.disabled = isReturn;
+            } else {
+                el.readOnly = isReturn;
+            }
+            
+            // Style visuel "Grisé"
+            el.style.backgroundColor = isReturn ? "#f1f5f9" : ""; 
             el.style.color = isReturn ? "#64748b" : "";
+            el.style.cursor = isReturn ? "not-allowed" : "text";
         }
     });
 
-    // 2. Blocage des zones photos (on ne peut plus cliquer pour changer la photo)
+    // 2. Blocage des zones photos
     const photoZones = document.querySelectorAll('.photo-upload-zone');
     photoZones.forEach(zone => {
         zone.style.pointerEvents = isReturn ? "none" : "auto";
-        zone.style.opacity = isReturn ? "1" : "1"; // On garde l'opacité pour voir l'image
     });
 
-    // 3. Les champs qui DOIVENT rester libres
-    const fieldsToKeepFree = ['pret-km-depart', 'pret-degats-obs', 'pret-carburant']; // Adapte l'ID carburant si besoin
+    // 3. Champs qui restent toujours libres (KM, Obs, Carburant)
+    const fieldsToKeepFree = ['pret-km-depart', 'pret-degats-obs', 'pret-carburant']; 
     fieldsToKeepFree.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
             el.readOnly = false;
+            el.disabled = false; // Au cas où le carburant est un select
             el.style.backgroundColor = "";
+            el.style.color = "";
+            el.style.cursor = "text";
         }
     });
+}
+
+function resetDamages() {
+    if (state.pret.inspectionValidated) {
+        return alert("⚠️ Déverrouillez d'abord l'inspection pour modifier les points.");
+    }
+
+    if (state.pretMode === 'RETOUR') {
+        // AU RETOUR : On ne garde que les points de type 'old' (Gris)
+        state.pret.damages = state.pret.damages.filter(d => d.type === 'old');
+        alert("🧹 Nouveaux dégâts (rouges) effacés. Les dégâts de départ (gris) sont conservés.");
+    } else {
+        // AU DÉPART : On vide tout
+        state.pret.damages = [];
+        alert("🧹 Tous les points ont été effacés.");
+    }
+    
+    renderDamages();
 }
 
 setTimeout(() => setVehicle('VOITURE'), 200);

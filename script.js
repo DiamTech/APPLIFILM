@@ -389,15 +389,16 @@ function renderVitraux() {
         const selection = state.selectedWindows.find(sw => sw.id === v.id);
         const isSelected = selection ? 'selected' : '';
         
-        // Police agrandie à text-[10px] et interlignage serré
+        // On affine les tailles : 9px pour le nom, 10px pour la teinte (au lieu de 11)
         const label = selection 
-            ? `<span class="text-[9px] leading-tight opacity-80">${v.id}</span><span class="text-[11px] font-black leading-none">${selection.tint}</span>` 
-            : `<span class="text-[10px] font-bold leading-tight">${v.id}</span>`;
+            ? `<span class="text-[8px] uppercase opacity-70 leading-tight">${v.id}</span>
+               <span class="text-[10px] font-black leading-none text-indigo-600 dark:text-indigo-400">${selection.tint}</span>` 
+            : `<span class="text-[9px] font-bold leading-tight px-1">${v.id}</span>`;
         
         return `
             <button type="button" onclick="toggleWindow('${v.id}')" id="win-${v.id}" 
                 style="position: absolute; ${v.pos}"
-                class="window-btn rounded-2xl border border-slate-300 dark:border-slate-600 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm shadow-sm transition-all flex flex-col items-center justify-center p-1 text-center ${isSelected}">
+                class="window-btn rounded-xl border border-slate-300 dark:border-slate-600 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm shadow-sm transition-all flex flex-col items-center justify-center overflow-hidden text-center p-0.5 ${isSelected}">
                 ${label}
             </button>
         `;

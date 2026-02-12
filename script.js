@@ -1235,4 +1235,54 @@ function openFullscreen(url) {
     }
 }
 
+async function handleSave() {
+    if (state.pretMode === 'RETOUR') {
+        await saveReturn(); // La logique pour fermer le dossier
+    } else {
+        await saveNewLoan(); // Ta logique actuelle pour créer un prêt
+    }
+}
+
+async function saveReturn() {
+    const immat = document.getElementById('pret-vehicule-select').value;
+    const kmRetour = parseInt(document.getElementById('pret-km-depart').value);
+    const kmDepart = state.pret.km_depart_initial;
+
+    // 1. Validation de sécurité
+    if (isNaN(kmRetour) || kmRetour < kmDepart) {
+        return alert(`⚠️ Erreur KM : Le retour (${kmRetour}) ne peut pas être inférieur au départ (${kmDepart}) !`);
+    }
+
+    // On prépare les données
+    const payload = {
+        action: 'FINALIZE_RETURN',
+        immat: immat,
+        km_retour: kmRetour,
+        carburant_retour: document.getElementById('pret-carburant').value,
+        details_retour: document.getElementById('pret-degats-obs').value,
+        // On envoie TOUS les dégâts (les anciens gris + les nouveaux rouges)
+        degats_finaux: JSON.stringify(state.pret.damages), 
+        date_retour: new Date().toLocaleString('fr-FR')
+    };
+
+    try {
+        showLoading(true); // Si tu as un indicateur de chargement
+        const response = await fetch(SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+        
+        const res = await response.json();
+        if (res.status === 'success') {
+            alert("✅ Retour enregistré. Le véhicule est de nouveau disponible.");
+            resetPretForm();
+            switchView('home');
+        }
+    } catch (e) {
+        alert("❌ Erreur de connexion au serveur.");
+    } finally {
+        showLoading(false);
+    }
+}
+
 setTimeout(() => setVehicle('VOITURE'), 200);

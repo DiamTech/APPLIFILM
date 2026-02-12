@@ -249,18 +249,23 @@
 
             <section class="bg-white dark:bg-slate-800 p-6 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
                 <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Permis (Recto/Verso Obligatoire)</label>
-                <div class="grid grid-cols-2 gap-3" id="permis-preview-container">
-                    <label class="aspect-[1.6/1] flex flex-col items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl cursor-pointer bg-slate-50 dark:bg-slate-950 active:scale-95 transition-transform">
-                        <i data-lucide="camera" class="w-5 h-5 text-slate-400"></i>
-                        <span class="text-[8px] mt-1 text-slate-400 font-bold uppercase">Recto</span>
-                        <input type="file" accept="image/*" capture="environment" class="hidden" onchange="handlePermis(this, 'recto')">
-                    </label>
-                    <label class="aspect-[1.6/1] flex flex-col items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl cursor-pointer bg-slate-50 dark:bg-slate-950 active:scale-95 transition-transform">
-                        <i data-lucide="camera" class="w-5 h-5 text-slate-400"></i>
-                        <span class="text-[8px] mt-1 text-slate-400 font-bold uppercase">Verso</span>
-                        <input type="file" accept="image/*" capture="environment" class="hidden" onchange="handlePermis(this, 'verso')">
-                    </label>
-                </div>
+               <div class="grid grid-cols-2 gap-3" id="permis-preview-container">
+    <label class="relative aspect-[1.6/1] flex flex-col items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl cursor-pointer bg-slate-50 dark:bg-slate-950 active:scale-95 transition-transform overflow-hidden">
+        <input type="file" accept="image/*" capture="environment" class="hidden" onchange="handlePermis(this, 'recto')">
+        <div id="preview-recto" class="flex flex-col items-center">
+            <i data-lucide="camera" class="w-5 h-5 text-slate-400"></i>
+            <span class="text-[8px] mt-1 text-slate-400 font-bold uppercase">Recto</span>
+        </div>
+    </label>
+
+    <label class="relative aspect-[1.6/1] flex flex-col items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl cursor-pointer bg-slate-50 dark:bg-slate-950 active:scale-95 transition-transform overflow-hidden">
+        <input type="file" accept="image/*" capture="environment" class="hidden" onchange="handlePermis(this, 'verso')">
+        <div id="preview-verso" class="flex flex-col items-center">
+            <i data-lucide="camera" class="w-5 h-5 text-slate-400"></i>
+            <span class="text-[8px] mt-1 text-slate-400 font-bold uppercase">Verso</span>
+        </div>
+    </label>
+</div>
 
                 <div class="space-y-3 pt-2">
                     <input type="text" id="pret-nom" placeholder="Nom Prénom Client" class="w-full bg-slate-50 dark:bg-slate-950 border-none rounded-2xl py-4 px-5 text-sm font-bold">

@@ -19,6 +19,44 @@ window.addEventListener('load', () => {
     }, 1500);
 });
 
+let html5QrCode;
+
+async function startScanner() {
+    // 1. On affiche la zone du scanner (le div qui doit avoir l'id 'reader')
+    const readerDiv = document.getElementById('reader');
+    readerDiv.classList.remove('hidden');
+
+    html5QrCode = new Html5Qrcode("reader");
+    
+    const config = { fps: 10, qrbox: { width: 250, height: 150 } };
+
+    try {
+        await html5QrCode.start(
+            { facingMode: "environment" }, 
+            config,
+            (decodedText) => {
+                // 2. Quand on détecte le VIN
+                document.getElementById('vin-input').value = decodedText;
+                stopScanner(); // On arrête après détection
+                
+                // Petit retour visuel
+                document.getElementById('vin-input').classList.add('ring-4', 'ring-green-500');
+                setTimeout(() => document.getElementById('vin-input').classList.remove('ring-4', 'ring-green-500'), 1000);
+            }
+        );
+    } catch (err) {
+        console.error("Erreur caméra:", err);
+        alert("Impossible d'ouvrir la caméra pour le scan.");
+    }
+}
+
+function stopScanner() {
+    if (html5QrCode) {
+        html5QrCode.stop().then(() => {
+            document.getElementById('reader').classList.add('hidden');
+        });
+    }
+}
 // --- GESTION DES VITRES ---
 function toggleWindow(id) {
     const btn = document.getElementById('win-' + id);

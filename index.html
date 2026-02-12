@@ -46,37 +46,39 @@
                 <input type="text" id="vin-input" placeholder="Scanner ou saisir VIN..." class="w-full bg-white dark:bg-slate-800 rounded-2xl py-4 pl-5 pr-14 shadow-sm border-none text-sm font-mono tracking-wider dark:text-white ring-1 ring-slate-200 dark:ring-slate-700 focus:ring-2 focus:ring-indigo-500">
                 <button onclick="startScanner()" class="absolute right-2 bg-indigo-600 text-white p-3 rounded-xl shadow-lg active:scale-90"><i data-lucide="camera" class="w-5 h-5"></i></button>
             </div>
-        </section>
-
-        <section class="bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 relative overflow-hidden">
-            <p class="text-[10px] text-center text-slate-400 font-black uppercase mb-4 tracking-widest">Vitrages</p>
+            </section>
+            
+            <section class="bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 relative overflow-hidden">
+            <p class="text-[10px] text-center text-slate-400 dark:text-slate-500 font-black uppercase mb-4 tracking-widest">Vitrages</p>
+            
             <div class="relative mx-auto" style="width: 280px; height: 500px;">
-                <svg viewBox="0 0 200 480" class="absolute inset-0 w-full h-full fill-none stroke-slate-200 dark:stroke-slate-700" stroke-width="1.5">
-                    <path d="M50 20 C50 10, 150 10, 150 20 L165 90 L165 420 C165 440, 35 440, 35 420 L35 90 Z" />
-                </svg>
-
-                <button onclick="toggleWindow('TOIT-AV')" id="win-TOIT-AV" class="window-btn absolute top-[100px] left-1/2 -ml-10 w-20 h-8 rounded-lg text-[8px] font-bold bg-white border shadow-sm">TOIT AV</button>
-                <button onclick="toggleWindow('TOIT-AR')" id="win-TOIT-AR" class="window-btn absolute top-[250px] left-1/2 -ml-10 w-20 h-8 rounded-lg text-[8px] font-bold bg-white border shadow-sm">TOIT AR</button>
-                <button onclick="toggleWindow('PARE-BRISE')" id="win-PARE-BRISE" class="window-btn absolute top-[15px] left-1/2 -ml-20 w-40 h-14 rounded-2xl text-[10px] font-bold bg-white border shadow-md">PARE-BRISE</button>
-
-                <div class="absolute left-[-20px] top-[90px] bottom-[110px] flex flex-col justify-between w-20">
-                    <button onclick="toggleWindow('PORT-G')" id="win-PORT-G" class="window-btn w-16 h-16 rounded-2xl text-[9px] bg-white border font-bold shadow-sm">PORT. G</button>
-                    <button onclick="toggleWindow('LAT-G1')" id="win-LAT-G1" class="window-btn w-16 h-20 rounded-2xl text-[9px] bg-white border font-bold shadow-sm">LAT. G1</button>
-                    <button onclick="toggleWindow('LAT-G2')" id="win-LAT-G2" class="window-btn w-16 h-20 rounded-2xl text-[9px] bg-white border font-bold shadow-sm">LAT. G2</button>
-                </div>
-
-                <div class="absolute right-[-20px] top-[90px] bottom-[110px] flex flex-col justify-between items-end w-20">
-                    <button onclick="toggleWindow('PORT-D')" id="win-PORT-D" class="window-btn w-16 h-16 rounded-2xl text-[9px] bg-white border font-bold shadow-sm">PORT. D</button>
-                    <button onclick="toggleWindow('LAT-D1')" id="win-LAT-D1" class="window-btn w-16 h-20 rounded-2xl text-[9px] bg-white border font-bold shadow-sm">LAT. D1</button>
-                    <button onclick="toggleWindow('LAT-D2')" id="win-LAT-D2" class="window-btn w-16 h-20 rounded-2xl text-[9px] bg-white border font-bold shadow-sm">LAT. D2</button>
-                </div>
-
-                <div class="absolute bottom-[20px] left-1/2 -ml-24 w-48 flex gap-2">
-                    <button onclick="toggleWindow('LUN-G')" id="win-LUN-G" class="window-btn flex-1 h-14 rounded-2xl text-[9px] font-bold bg-white border shadow-md">LUN. G</button>
-                    <button onclick="toggleWindow('LUN-D')" id="win-LUN-D" class="window-btn flex-1 h-14 rounded-2xl text-[9px] font-bold bg-white border shadow-md">LUN. D</button>
-                </div>
+            <svg viewBox="0 0 200 480" class="absolute inset-0 w-full h-full fill-none stroke-slate-200 dark:stroke-slate-700" stroke-width="1.5">
+                <path d="M50 20 C50 10, 150 10, 150 20 L165 90 L165 420 C165 440, 35 440, 35 420 L35 90 Z" />
+            </svg>
+            
+            <button onclick="toggleWindow('TOIT-AV')" id="win-TOIT-AV" class="window-btn absolute top-[100px] left-1/2 -ml-10 w-20 h-8 rounded-lg text-[8px] font-bold bg-white dark:bg-slate-700 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-600 shadow-sm">TOIT AV</button>
+            <button onclick="toggleWindow('TOIT-AR')" id="win-TOIT-AR" class="window-btn absolute top-[250px] left-1/2 -ml-10 w-20 h-8 rounded-lg text-[8px] font-bold bg-white dark:bg-slate-700 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-600 shadow-sm">TOIT AR</button>
+            
+            <button onclick="toggleWindow('PARE-BRISE')" id="win-PARE-BRISE" class="window-btn absolute top-[15px] left-1/2 -ml-20 w-40 h-14 rounded-2xl text-[10px] font-bold bg-white dark:bg-slate-700 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-600 shadow-md">PARE-BRISE</button>
+            
+            <div class="absolute left-[-20px] top-[90px] bottom-[110px] flex flex-col justify-between w-20">
+                <button onclick="toggleWindow('PORT-G')" id="win-PORT-G" class="window-btn w-16 h-16 rounded-2xl text-[9px] bg-white dark:bg-slate-700 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-600 font-bold shadow-sm">PORT. G</button>
+                <button onclick="toggleWindow('LAT-G1')" id="win-LAT-G1" class="window-btn w-16 h-20 rounded-2xl text-[9px] bg-white dark:bg-slate-700 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-600 font-bold shadow-sm">LAT. G1</button>
+                <button onclick="toggleWindow('LAT-G2')" id="win-LAT-G2" class="window-btn w-16 h-20 rounded-2xl text-[9px] bg-white dark:bg-slate-700 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-600 font-bold shadow-sm">LAT. G2</button>
             </div>
-        </section>
+            
+            <div class="absolute right-[-20px] top-[90px] bottom-[110px] flex flex-col justify-between items-end w-20">
+                <button onclick="toggleWindow('PORT-D')" id="win-PORT-D" class="window-btn w-16 h-16 rounded-2xl text-[9px] bg-white dark:bg-slate-700 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-600 font-bold shadow-sm">PORT. D</button>
+                <button onclick="toggleWindow('LAT-D1')" id="win-LAT-D1" class="window-btn w-16 h-20 rounded-2xl text-[9px] bg-white dark:bg-slate-700 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-600 font-bold shadow-sm">LAT. D1</button>
+                <button onclick="toggleWindow('LAT-D2')" id="win-LAT-D2" class="window-btn w-16 h-20 rounded-2xl text-[9px] bg-white dark:bg-slate-700 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-600 font-bold shadow-sm">LAT. D2</button>
+            </div>
+            
+            <div class="absolute bottom-[20px] left-1/2 -ml-24 w-48 flex gap-2">
+                <button onclick="toggleWindow('LUN-G')" id="win-LUN-G" class="window-btn flex-1 h-14 rounded-2xl text-[9px] font-bold bg-white dark:bg-slate-700 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-600 shadow-md">LUN. G</button>
+                <button onclick="toggleWindow('LUN-D')" id="win-LUN-D" class="window-btn flex-1 h-14 rounded-2xl text-[9px] font-bold bg-white dark:bg-slate-700 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-600 shadow-md">LUN. D</button>
+            </div>
+            </div>
+            </section>
 
         <section class="space-y-4">
             <div class="flex gap-2">
@@ -116,7 +118,9 @@
     </div>
 </section>
 
-        <button onclick="addToBatch()" class="w-full bg-slate-900 dark:bg-white dark:text-slate-900 py-5 rounded-3xl font-black text-xs uppercase tracking-widest shadow-lg active:scale-95 transition-all">Ajouter au lot</button>
+        <button onclick="addToBatch()" class="w-full bg-indigo-600 dark:bg-white text-white dark:text-slate-900 py-5 rounded-3xl font-black text-xs uppercase tracking-widest shadow-lg active:scale-95 transition-all">
+            Ajouter au lot
+        </button>
     </main>
 
     <div class="fixed-bottom">

@@ -346,7 +346,7 @@ const VEHICLES_CONFIG = {
         ]
     },
     FOURGON: {
-        shape: '<svg viewBox="0 0 200 550" class="w-full h-full stroke-slate-300 dark:stroke-slate-600 fill-none" stroke-width="2"><path d="M40 10 L160 10 L180 500 L20 500 Z"/><path d="M25 120 L175 120"/></svg>',
+        shape: '<svg viewBox="0 0 200 550" class="w-full h-full stroke-slate-300 dark:stroke-slate-600 fill-none" stroke-width="2"><path d="M50 20 C50 10, 150 10, 150 20 L175 100 L175 480 C175 510, 25 510, 25 480 L25 100 Z"/><path d="M30 110 L170 110 M30 350 L170 350"/></svg>',
         vitres: [
             { id: "P-BRISE", pos: "top: 5%; left: 50%; transform: translateX(-50%); width: 160px !important;" },
             { id: "CUST. AV-G", pos: "top: 18%; left: 2%;" },
@@ -367,7 +367,7 @@ const VEHICLES_CONFIG = {
         ]
     },
     VDL: {
-        shape: '<svg viewBox="0 0 200 550" class="w-full h-full stroke-slate-300 dark:stroke-slate-600 fill-none" stroke-width="2"><rect x="20" y="20" width="160" height="500" rx="10"/></svg>',
+        shape: '<svg viewBox="0 0 200 550" class="w-full h-full stroke-slate-300 dark:stroke-slate-600 fill-none" stroke-width="2"><path d="M50 20 C50 10, 150 10, 150 20 L175 100 L175 480 C175 510, 25 510, 25 480 L25 100 Z"/><path d="M30 110 L170 110 M30 350 L170 350"/></svg>',
         vitres: [
             { id: "P-BRISE", pos: "top: 5%; left: 50%; transform: translateX(-50%); width: 160px !important;" },
             { id: "CUST. AV-G", pos: "top: 18%; left: 2%;" },

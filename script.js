@@ -908,29 +908,45 @@ function setPretMode(mode) {
     state.pretMode = mode;
     const isDepart = mode === 'DEPART';
     
-    // 1. Mise à jour visuelle des boutons du haut
     const btnDepart = document.getElementById('btn-mode-depart');
     const btnRetour = document.getElementById('btn-mode-retour');
     const btnFinal = document.getElementById('btn-final-pret');
     const title = document.querySelector('#view-pret h2');
 
+    // On définit les classes de base (communes aux deux)
+    const baseClass = "flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all duration-200 ";
+
     if (isDepart) {
-        btnDepart.className = "flex-1 py-3 rounded-xl font-black text-[10px] uppercase bg-white shadow-sm text-indigo-600";
-        btnRetour.className = "flex-1 py-3 rounded-xl font-black text-[10px] uppercase text-slate-500";
+        // --- STYLE DÉPART ---
+        // Bouton gauche actif (Blanc sur Indigo)
+        btnDepart.className = baseClass + "bg-indigo-600 text-white shadow-md shadow-indigo-100";
+        // Bouton droite inactif (Gris discret)
+        btnRetour.className = baseClass + "bg-transparent text-slate-400";
+        
+        // Bouton final en bas
+        btnFinal.className = "w-full bg-indigo-600 text-white py-4 rounded-2xl font-black text-xs uppercase flex items-center justify-center gap-2 shadow-lg shadow-indigo-200 mt-6";
         btnFinal.innerHTML = '<span>Valider le départ</span> <i data-lucide="check" class="w-4 h-4"></i>';
-        title.innerText = "Nouveau Prêt";
+        
+        if (title) title.innerText = "Nouveau Prêt";
         document.getElementById('active-loans-list').classList.add('hidden');
-        resetPretForm(); // On vide tout pour un nouveau prêt
+        resetPretForm(); 
     } else {
-        btnRetour.className = "flex-1 py-3 rounded-xl font-black text-[10px] uppercase bg-white shadow-sm text-indigo-600";
-        btnDepart.className = "flex-1 py-3 rounded-xl font-black text-[10px] uppercase text-slate-500";
+        // --- STYLE RETOUR ---
+        // Bouton droite actif (Blanc sur Vert/Emeraude)
+        btnRetour.className = baseClass + "bg-emerald-500 text-white shadow-md shadow-emerald-100";
+        // Bouton gauche inactif (Gris discret)
+        btnDepart.className = baseClass + "bg-transparent text-slate-400";
+        
+        // Bouton final en bas
+        btnFinal.className = "w-full bg-emerald-500 text-white py-4 rounded-2xl font-black text-xs uppercase flex items-center justify-center gap-2 shadow-lg shadow-emerald-200 mt-6";
         btnFinal.innerHTML = '<span>Enregistrer le retour</span> <i data-lucide="log-in" class="w-4 h-4"></i>';
-        title.innerText = "Retour de Véhicule";
+        
+        if (title) title.innerText = "Retour de Véhicule";
         document.getElementById('active-loans-list').classList.remove('hidden');
         
-        // On lance la récupération des véhicules dehors
         fetchActiveLoans();
     }
+
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 

@@ -550,23 +550,49 @@ function updateHistoryUI() {
 }
 
 async function finalize() {
+    // 1. Récupération des éléments HTML
+    const techEl = document.getElementById('input-tech-name');
+    const clientEl = document.getElementById('input-client-name');
+    
+    // On récupère les valeurs sans valeur par défaut ("Inconnu" / "Anonyme")
+    const tech = techEl?.value.trim() || "";
+    const client = clientEl?.value.trim() || "";
+
+    // 2. LE BLOQUEUR : On vérifie si c'est vide
+    let errors = [];
+    
+    // Reset des bordures avant vérification
+    if (techEl) techEl.style.border = "none";
+    if (clientEl) clientEl.style.border = "none";
+
+    if (!tech) {
+        errors.push("Nom du Technicien");
+        if (techEl) techEl.style.border = "2px solid #ef4444"; // Bordure rouge
+    }
+    if (!client) {
+        errors.push("Nom du Client");
+        if (clientEl) clientEl.style.border = "2px solid #ef4444"; // Bordure rouge
+    }
+
+    if (errors.length > 0) {
+        return alert("⚠️ CHAMPS OBLIGATOIRES MANQUANTS :\n" + errors.join(" et ") + ".");
+    }
+
+    // 3. Vérifications classiques (Lot et Signature)
     if(!state.batch.length) return alert("Le lot est vide !");
-    if(!state.signature) return alert("⚠️ Signature obligatoire !");
+    if(!state.signature) return alert("⚠️ Signature client obligatoire !");
 
-    // Récupération des noms (ajoute ces inputs dans ton HTML comme vu avant)
-    const tech = document.getElementById('input-tech-name')?.value.trim() || "Inconnu";
-    const client = document.getElementById('input-client-name')?.value.trim() || "Anonyme";
-
+    // 4. Lancement de la procédure d'envoi
     const btn = document.getElementById('btn-final');
     btn.disabled = true;
     const originalContent = btn.innerHTML;
     btn.innerHTML = "<span>GÉNÉRATION & ARCHIVAGE...</span>";
     
     try {
-        // 1. Générer le PDF et récupérer son contenu
+        // Génération du PDF
         const pdfBase64 = await generateVitragePDF(state.batch, state.signature, tech, client);
 
-        // 2. Préparer le paquet final
+        // Préparation du paquet final
         const payload = {
             technicien: tech,
             client: client,
@@ -579,7 +605,7 @@ async function finalize() {
             }))
         };
 
-        // 3. Envoi au Google Script
+        // Envoi au Google Script
         await fetch(URL_VITRAGE, {
             method: 'POST', 
             mode: 'no-cors', 
@@ -593,16 +619,22 @@ async function finalize() {
             state.sentHistory.push({ vin: v.vin, sentTime: now }); 
         });
 
-        // Reset
+        // --- RESET APRÈS SUCCÈS ---
         state.batch = [];
         state.signature = null;
-        if(document.getElementById('input-client-name')) document.getElementById('input-client-name').value = "";
+        
+        // On vide le client mais ON GARDE le technicien (plus pratique)
+        if(clientEl) {
+            clientEl.value = "";
+            clientEl.style.border = "none";
+        }
+        if(techEl) techEl.style.border = "none";
         
         updateBatchUI(); 
         updateHistoryUI();
         resetSignature();
         
-        alert("✅ TERMINÉ ! Données envoyées et PDF archivé sur Drive.");
+        alert("✅ TERMINÉ !\nLe lot a été envoyé et la fiche archivée pour " + client);
         
     } catch(e) {
         console.error(e);

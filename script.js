@@ -984,53 +984,55 @@ function setPretMode(mode) {
     const btnRetour = document.getElementById('btn-mode-retour');
     const btnFinal = document.getElementById('btn-final-pret');
     const title = document.querySelector('#view-pret h2');
+    const loansListWrapper = document.getElementById('active-loans-list');
 
-    // On définit les classes de base (communes aux deux)
     const baseClass = "flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all duration-200 ";
 
     if (isDepart) {
-        // --- STYLE DÉPART ---
-        // Bouton gauche actif (Blanc sur Indigo)
         btnDepart.className = baseClass + "bg-indigo-600 text-white shadow-md shadow-indigo-100";
-        // Bouton droite inactif (Gris discret)
         btnRetour.className = baseClass + "bg-transparent text-slate-400";
-        
-        // Bouton final en bas
         btnFinal.className = "w-full bg-indigo-600 text-white py-4 rounded-2xl font-black text-xs uppercase flex items-center justify-center gap-2 shadow-lg shadow-indigo-200 mt-6";
         btnFinal.innerHTML = '<span>Valider le départ</span> <i data-lucide="check" class="w-4 h-4"></i>';
         
         if (title) title.innerText = "Nouveau Prêt";
-        document.getElementById('active-loans-list').classList.add('hidden');
+        if (loansListWrapper) loansListWrapper.classList.add('hidden');
         resetPretForm(); 
     } else {
-        // --- STYLE RETOUR ---
-        // Bouton droite actif (Blanc sur Vert/Emeraude)
         btnRetour.className = baseClass + "bg-emerald-500 text-white shadow-md shadow-emerald-100";
-        // Bouton gauche inactif (Gris discret)
         btnDepart.className = baseClass + "bg-transparent text-slate-400";
-        
-        // Bouton final en bas
         btnFinal.className = "w-full bg-emerald-500 text-white py-4 rounded-2xl font-black text-xs uppercase flex items-center justify-center gap-2 shadow-lg shadow-emerald-200 mt-6";
         btnFinal.innerHTML = '<span>Enregistrer le retour</span> <i data-lucide="log-in" class="w-4 h-4"></i>';
         
         if (title) title.innerText = "Retour de Véhicule";
-        document.getElementById('active-loans-list').classList.remove('hidden');
         
-        fetchActiveLoans();
+        // ON AFFICHE LE BLOC ET ON CHARGE
+        if (loansListWrapper) {
+            loansListWrapper.classList.remove('hidden');
+            fetchActiveLoans();
+        }
     }
 
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 async function fetchActiveLoans() {
-    // ON VISE LE BON ID : active-loans-list
-    const container = document.getElementById('active-loans-list');
-    if (!container) return console.error("L'élément active-loans-list est introuvable !");
+    const wrapper = document.getElementById('active-loans-list'); // Le parent (pour la visibilité)
+    const container = document.getElementById('loans-container'); // Le fils (pour les cartes)
 
-    container.innerHTML = '<div class="text-[10px] font-bold text-center py-4 text-slate-400 animate-pulse uppercase tracking-widest">CHARGEMENT DES PRÊTS...</div>';
+    if (!wrapper || !container) {
+        return console.error("Erreur : Les IDs active-loans-list ou loans-container sont introuvables !");
+    }
+
+    // 1. ON ENLÈVE LE CACHÉ (Allume la lumière)
+    wrapper.classList.remove('hidden');
+    
+    // 2. Message d'attente dans le container (on ne touche pas au titre du parent)
+    container.innerHTML = '<div class="text-[10px] font-black text-center py-4 text-indigo-400 animate-pulse uppercase tracking-widest">Récupération des dossiers...</div>';
 
     try {
-        const response = await fetch(URL_PRET + "?action=get_active");
+        // Note : On retire le "?action=get_active" si ton doGet ne le gère pas, 
+        // ou on le garde si c'est nécessaire.
+        const response = await fetch(URL_PRET); 
         const loans = await response.json();
         
         state.activeLoans = loans;
@@ -1043,6 +1045,7 @@ async function fetchActiveLoans() {
             return;
         }
 
+        // 3. On injecte les cartes uniquement dans loans-container
         container.innerHTML = loans.map(loan => {
             const d = new Date(loan.date);
             const datePropre = d.toLocaleDateString('fr-FR', {day: '2-digit', month: '2-digit'});
@@ -1052,7 +1055,7 @@ async function fetchActiveLoans() {
         
             return `
                 <button type="button" onclick="selectLoanForReturn('${loan.immat}')" 
-                        class="w-full bg-indigo-600 p-5 rounded-[2rem] text-left shadow-lg mb-4 flex flex-col gap-6 active:scale-95 transition-all border-b-4 border-indigo-800">
+                        class="w-full bg-indigo-600 p-5 rounded-[2rem] text-left shadow-lg mb-2 flex flex-col gap-6 active:scale-95 transition-all border-b-4 border-indigo-800">
                     
                     <div class="flex justify-between items-start">
                         <div class="flex flex-col">
@@ -1080,7 +1083,7 @@ async function fetchActiveLoans() {
         }).join('');
     } catch (e) {
         console.error(e);
-        container.innerHTML = '<div class="text-[10px] font-bold text-center py-4 text-red-400 uppercase tracking-widest">⚠️ Erreur de connexion au serveur</div>';
+        container.innerHTML = '<div class="text-[10px] font-bold text-center py-4 text-red-400 uppercase">⚠️ Erreur de connexion</div>';
     }
 }
 

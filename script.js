@@ -984,20 +984,26 @@ function setPretMode(mode) {
     const btnRetour = document.getElementById('btn-mode-retour');
     const btnFinal = document.getElementById('btn-final-pret');
     const title = document.querySelector('#view-pret h2');
-    const loansListWrapper = document.getElementById('active-loans-list');
+    
+    // ATTENTION ICI : On utilise le nouvel ID 'active-loans-wrapper'
+    const loansListWrapper = document.getElementById('active-loans-wrapper');
 
     const baseClass = "flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all duration-200 ";
 
     if (isDepart) {
+        // --- STYLE DÉPART (Indigo) ---
         btnDepart.className = baseClass + "bg-indigo-600 text-white shadow-md shadow-indigo-100";
         btnRetour.className = baseClass + "bg-transparent text-slate-400";
         btnFinal.className = "w-full bg-indigo-600 text-white py-4 rounded-2xl font-black text-xs uppercase flex items-center justify-center gap-2 shadow-lg shadow-indigo-200 mt-6";
         btnFinal.innerHTML = '<span>Valider le départ</span> <i data-lucide="check" class="w-4 h-4"></i>';
         
         if (title) title.innerText = "Nouveau Prêt";
+        
+        // On cache la liste des véhicules dehors
         if (loansListWrapper) loansListWrapper.classList.add('hidden');
         resetPretForm(); 
     } else {
+        // --- STYLE RETOUR (Emeraude) ---
         btnRetour.className = baseClass + "bg-emerald-500 text-white shadow-md shadow-emerald-100";
         btnDepart.className = baseClass + "bg-transparent text-slate-400";
         btnFinal.className = "w-full bg-emerald-500 text-white py-4 rounded-2xl font-black text-xs uppercase flex items-center justify-center gap-2 shadow-lg shadow-emerald-200 mt-6";
@@ -1005,10 +1011,10 @@ function setPretMode(mode) {
         
         if (title) title.innerText = "Retour de Véhicule";
         
-        // ON AFFICHE LE BLOC ET ON CHARGE
+        // ON AFFICHE LE BLOC ET ON CHARGE LES DONNÉES
         if (loansListWrapper) {
             loansListWrapper.classList.remove('hidden');
-            fetchActiveLoans();
+            fetchActiveLoans(); // Cette fonction va remplir 'loans-container'
         }
     }
 

@@ -1402,72 +1402,90 @@ async function handleSave() {
     }
 }
 
-// --- 1. FONCTION GÉNÉRATION PDF (CORRIGÉE) ---
-async function generateVitragePDF(batch, signature, tech, client) {
+async function generatePretPDF(data, mode, tech, client) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
-
-    // URL du logo
+    const primaryColor = mode === "DEPART" ? [79, 70, 229] : [16, 185, 129];
     const logoUrl = 'https://www.applifilm.fr/wp-content/uploads/2020/07/applifilm.png';
 
-    // --- LOGO & ENTÊTE (Avec pré-chargement pour éviter le lag) ---
+    // --- LOGO & ENTÊTE ---
     try {
-        const img = new Image();
-        img.src = logoUrl;
-        img.crossOrigin = "Anonymous"; // Obligatoire pour charger une image externe
-
-        // On attend que l'image soit chargée par le téléphone
-        await new Promise((resolve, reject) => {
-            img.onload = resolve;
-            img.onerror = reject;
-        });
-
-        doc.addImage(img, 'PNG', 20, 10, 40, 15);
+        doc.addImage(logoUrl, 'PNG', 20, 10, 40, 15);
     } catch (e) {
-        // Fallback texte si le logo ne charge pas
         doc.setFont("helvetica", "bold");
         doc.setFontSize(22);
-        doc.setTextColor(79, 70, 229);
+        doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
         doc.text("APPLIFILM", 20, 25);
     }
     
     doc.setFont("helvetica", "bold");
     doc.setFontSize(10);
     doc.setTextColor(100);
-    doc.text("BON D'INTERVENTION VITRAGE", pageWidth - 20, 22, { align: "right" });
+    doc.text(`CONTRAT DE PRÊT VÉHICULE - ${mode}`, pageWidth - 20, 22, { align: "right" });
 
     // --- INFOS GÉNÉRALES ---
-    doc.setTextColor(40);
+    doc.setDrawColor(230);
+    doc.line(20, 35, pageWidth - 20, 35);
+
     doc.setFontSize(10);
+    doc.setTextColor(40);
     doc.text(`Technicien : ${tech.toUpperCase()}`, 20, 45);
     doc.text(`Client : ${client.toUpperCase()}`, 20, 52);
-    doc.text(`Date : ${new Date().toLocaleDateString('fr-FR')}`, pageWidth - 20, 45, { align: "right" });
+    doc.text(`Date : ${new Date().toLocaleString('fr-FR')}`, pageWidth - 20, 45, { align: "right" });
 
-    const body = batch.map(item => [item.vin, item.type, item.windows.join('\n')]);
+    // --- TABLEAU VÉHICULE & INFOS ---
+    const rows = [
+        ["VÉHICULE", `${data.modele} (${data.immat})`],
+        ["KILOMÉTRAGE", `${data.km} km`],
+        ["PERMIS", data.permis_num || "N/A"],
+    ];
+
+    if (mode === "RETOUR" && state.pret.km_depart_initial) {
+        const diff = data.km - state.pret.km_depart_initial;
+        rows.push(["DISTANCE PARCOURUE", `${diff} km`]);
+    }
+
     doc.autoTable({
         startY: 60,
-        head: [['VIN', 'TYPE', 'VITRAGES']],
-        body: body,
+        head: [['CATÉGORIE', 'DÉTAILS']],
+        body: rows,
         theme: 'grid',
-        headStyles: { fillColor: [79, 70, 229] },
-        styles: { fontSize: 9 }
+        headStyles: { fillColor: primaryColor }
     });
 
-    let finalY = doc.lastAutoTable.finalY + 15;
-    if (finalY > 250) { doc.addPage(); finalY = 20; } // Sécurité saut de page
+    // --- ÉTAT DE LA CARROSSERIE ---
+    let yPos = doc.lastAutoTable.finalY + 15;
+    doc.setFont("helvetica", "bold");
+    doc.text("ÉTAT DES LIEUX / OBSERVATIONS :", 20, yPos);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    const splitObs = doc.splitTextToSize(data.degats_details || "RAS", pageWidth - 40);
+    doc.text(splitObs, 20, yPos + 7);
+
+    // --- SIGNATURE ---
+    yPos = yPos + (splitObs.length * 5) + 20;
+    if (yPos > 240) { doc.addPage(); yPos = 20; }
 
     doc.setFont("helvetica", "bold");
-    doc.text("SIGNATURE CLIENT :", 20, finalY);
-    doc.addImage(signature, 'PNG', 20, finalY + 5, 50, 25);
+    doc.text("SIGNATURE DU CLIENT :", 20, yPos);
+    doc.addImage(data.signature, 'PNG', 20, yPos + 5, 50, 25);
 
-    doc.setFontSize(8);
+    // --- MENTIONS LÉGALES ---
+    doc.setFontSize(7);
     doc.setTextColor(150);
-    doc.text("Certifié conforme par Applifilm. Document généré numériquement.", pageWidth / 2, 285, { align: "center" });
+    const mentions = [
+        "Le client reconnaît prendre/rendre le véhicule dans l'état décrit ci-dessus.",
+        "En cas de sinistre, la franchise reste à la charge du client.",
+        "APPLIFILM - Prêt de véhicule de courtoisie."
+    ];
+    mentions.forEach((m, i) => doc.text(m, pageWidth / 2, 280 + (i * 3), { align: "center" }));
 
-    // On utilise la compression pour que l'envoi au Google Sheet soit rapide
-    return doc.output('datauristring', { compress: true });
+    return doc.output('datauristring');
 }
+
+
 
 async function generateVitragePDF(batch, signature, tech, client) {
     const { jsPDF } = window.jspdf;

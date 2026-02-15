@@ -224,30 +224,89 @@ function addToBatch() {
     const vinInput = document.getElementById('vin-input');
     const vinValue = vinInput.value.trim();
 
-    if (!vinValue) { alert("⚠️ Le numéro VIN est OBLIGATOIRE."); return vinInput.focus(); }
-    if (state.selectedWindows.length === 0) return alert("⚠️ Sélectionnez au moins une vitre.");
-    if (!state.signature) return alert("⚠️ La signature est OBLIGATOIRE.");
+    // 1. VÉRIFICATIONS (Sans la signature)
+    if (!vinValue) { 
+        alert("⚠️ Le numéro VIN est OBLIGATOIRE."); 
+        return vinInput.focus(); 
+    }
+    if (state.selectedWindows.length === 0) {
+        return alert("⚠️ Sélectionnez au moins une vitre.");
+    }
     
+    // 2. RÉCUPÉRATION DE L'HEURE ACTUELLE
+    const now = new Date();
+    const heureSaisie = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+
+    // 3. AJOUT AU LOT
     state.batch.push({
         vin: vinValue,
         type: document.querySelector('input[name="type"]:checked').value,
         obs: document.getElementById('obs').value,
         windows: state.selectedWindows.map(w => `${w.id} (${w.tint})`), 
         photos: [...state.photos],
-        signature: state.signature,
-        date: new Date().toLocaleString('fr-FR')
+        heure: heureSaisie, // Pour le récapitulatif
+        date: now.toLocaleString('fr-FR')
     });
     
-    // Reset
-    vinInput.value = ""; document.getElementById('obs').value = "";
-    state.selectedWindows = []; state.photos = []; 
-    resetSignature(); renderPhotos(); renderVitraux(); updateBatchUI();
-    alert("✅ Véhicule vitrage ajouté au lot !");
+    // 4. RESET DU FORMULAIRE (On ne reset PAS la signature ici)
+    vinInput.value = ""; 
+    document.getElementById('obs').value = "";
+    state.selectedWindows = []; 
+    state.photos = []; 
+    
+    // 5. MISE À JOUR VISUELLE
+    renderPhotos(); 
+    renderVitraux(); 
+    updateBatchUI(); // Va dessiner les rectangles
+    
+    alert("✅ Véhicule ajouté au lot !");
 }
 
 function updateBatchUI() { 
     const counter = document.getElementById('batch-counter');
-    if(counter) counter.innerText = `${state.batch.length} EN ATTENTE`; 
+    const recapContainer = document.getElementById('batch-recap-container');
+    const sigSection = document.getElementById('signature-section-vitrage');
+
+    // Mise à jour du compteur
+    if(counter) counter.innerText = `${state.batch.length} VÉHICULE(S) EN ATTENTE`; 
+
+    // Gestion de l'affichage de la zone de signature
+    if (sigSection) {
+        if (state.batch.length > 0) sigSection.classList.remove('hidden');
+        else sigSection.classList.add('hidden');
+    }
+
+    // Rendu des rectangles récapitulatifs
+    if (recapContainer) {
+        recapContainer.innerHTML = state.batch.map((item, index) => `
+            <div class="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between mb-3 animate-in fade-in slide-in-from-right duration-300">
+                <div class="flex-1">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="text-[8px] font-black bg-slate-100 text-slate-500 px-2 py-0.5 rounded uppercase tracking-tighter">${item.heure}</span>
+                        <span class="text-[8px] font-black bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded uppercase tracking-tighter">${item.type}</span>
+                    </div>
+                    <div class="text-sm font-black text-slate-900 uppercase tracking-tight">${item.vin}</div>
+                    <div class="text-[9px] text-slate-400 font-bold truncate w-48 mt-1 italic">
+                        ${item.windows.join(' • ')}
+                    </div>
+                </div>
+                
+                <button onclick="removeFromBatch(${index})" class="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-2xl active:scale-90 transition-transform">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+            </div>
+        `).join('');
+    }
+
+    if (window.lucide) lucide.createIcons();
+}
+
+// Fonction pour supprimer un véhicule du lot avant l'envoi
+function removeFromBatch(index) {
+    if (confirm("Supprimer ce véhicule du lot ?")) {
+        state.batch.splice(index, 1);
+        updateBatchUI();
+    }
 }
 
 function renderDailyHistory() {

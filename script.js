@@ -22,6 +22,10 @@ let state = {
 // Mets tes vraies URLs ici
 const URL_VITRAGE = "https://script.google.com/macros/s/AKfycbz64BaiGZIaYza94KxRLPFDIz_YGG5gm_nUXLxmcGu8X_8lC7D5y94BQX-NKkY3ljo/exec";
 const URL_PRET = "https://script.google.com/macros/s/AKfycbwhcluLbGJ0OSsBDPZhWjZR6HxRcGscYHH4bXwbwFu-3RF5EgsWHoHeADiobGOZdLLEuA/exec";
+// On pré-charge le logo APPLIFILM dès le démarrage de l'appli
+const logoApplifilm = new Image();
+logoApplifilm.src = 'https://www.applifilm.fr/wp-content/uploads/2020/07/applifilm.png';
+logoApplifilm.crossOrigin = "Anonymous";
 
 let scanner, canvas, ctx, drawing = false;
 
@@ -1404,21 +1408,29 @@ async function generateVitragePDF(batch, signature, tech, client) {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
 
-    // On définit l'URL ici (légère car juste du texte)
-    const logoUrl = 'https://i.imgur.com/8mX5Z5T.png'; 
+    // URL du logo
+    const logoUrl = 'https://www.applifilm.fr/wp-content/uploads/2020/07/applifilm.png';
 
-    // --- LOGO & ENTÊTE ---
+    // --- LOGO & ENTÊTE (Avec pré-chargement pour éviter le lag) ---
     try {
-        // jsPDF va télécharger l'image instantanément
-        doc.addImage(logoUrl, 'PNG', 20, 10, 40, 15);
+        const img = new Image();
+        img.src = logoUrl;
+        img.crossOrigin = "Anonymous"; // Obligatoire pour charger une image externe
+
+        // On attend que l'image soit chargée par le téléphone
+        await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+        });
+
+        doc.addImage(img, 'PNG', 20, 10, 40, 15);
     } catch (e) {
+        // Fallback texte si le logo ne charge pas
         doc.setFont("helvetica", "bold");
         doc.setFontSize(22);
         doc.setTextColor(79, 70, 229);
         doc.text("APPLIFILM", 20, 25);
     }
-    
-    // ... Reste de ton code (Tableau, Infos, etc.)
     
     doc.setFont("helvetica", "bold");
     doc.setFontSize(10);
@@ -1443,6 +1455,8 @@ async function generateVitragePDF(batch, signature, tech, client) {
     });
 
     let finalY = doc.lastAutoTable.finalY + 15;
+    if (finalY > 250) { doc.addPage(); finalY = 20; } // Sécurité saut de page
+
     doc.setFont("helvetica", "bold");
     doc.text("SIGNATURE CLIENT :", 20, finalY);
     doc.addImage(signature, 'PNG', 20, finalY + 5, 50, 25);
@@ -1451,10 +1465,8 @@ async function generateVitragePDF(batch, signature, tech, client) {
     doc.setTextColor(150);
     doc.text("Certifié conforme par Applifilm. Document généré numériquement.", pageWidth / 2, 285, { align: "center" });
 
-    const fileName = `Applifilm_${client.replace(/\s+/g, '_')}.pdf`;
-    doc.save(fileName); 
-
-    return doc.output('datauristring');
+    // On utilise la compression pour que l'envoi au Google Sheet soit rapide
+    return doc.output('datauristring', { compress: true });
 }
 
 async function generatePretPDF(data, mode, tech, client) {

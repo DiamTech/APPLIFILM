@@ -901,14 +901,19 @@ function validateInspection() {
 
     // Débloquer la signature
     const sigSection = document.getElementById('signature-section');
-    sigSection.classList.remove('opacity-30', 'pointer-events-none');
+    if (sigSection) {
+        sigSection.classList.remove('opacity-30', 'pointer-events-none');
+    }
     
-    // UI du bouton
+    // UI du bouton : ON LE DÉSACTIVE après validation
     const btn = document.getElementById('btn-lock-inspection');
-    btn.innerHTML = "✅ INSPECTION TERMINÉE";
-    btn.classList.replace('bg-slate-100', 'bg-green-100');
-    btn.classList.replace('text-slate-600', 'text-green-600');
-    btn.disabled = true;
+    if (btn) {
+        btn.innerHTML = "✅ INSPECTION TERMINÉE";
+        // On remplace les classes de couleur
+        btn.classList.remove('bg-slate-100', 'text-slate-600', 'border-slate-200');
+        btn.classList.add('bg-green-100', 'text-green-600', 'border-green-200');
+        btn.disabled = true; // Verrouillé tant qu'on ne reset pas
+    }
 
     alert("Inspection validée. Vous pouvez maintenant faire signer le client.");
 }
@@ -1257,51 +1262,51 @@ function toggleFormLock(isReturn) {
 }
 
 function resetDamages() {
-    // 1. ON DÉTERMINE LE MESSAGE DE CONFIRMATION
-    // Si une signature existe déjà, on prévient qu'elle sera effacée
-    let confirmMessage = "Voulez-vous vraiment effacer les points de carrosserie ?";
+    // 1. GESTION DU MESSAGE (Avec alerte signature)
+    let msg = "Voulez-vous vraiment effacer les points de carrosserie ?";
     if (state.signature) {
-        confirmMessage = "⚠️ ATTENTION : Effacer les points supprimera la signature actuelle. Il faudra obligatoirement refaire signer le client. Continuer ?";
+        msg = "⚠️ ATTENTION : Cela supprimera aussi la signature. Il faudra refaire signer le client. Continuer ?";
     }
 
-    // 2. BOÎTE DE CONFIRMATION
-    if (!confirm(confirmMessage)) return;
+    if (!confirm(msg)) return;
 
-    // 3. LOGIQUE DE RÉINITIALISATION SELON LE MODE
+    // 2. RÉINITIALISATION DES DONNÉES
     if (state.pretMode === 'DEPART') {
-        // AU DÉPART : On vide tout
         state.pret.damages = [];
     } else {
-        // AU RETOUR : On ne garde que les points gris (anciens dégâts)
+        // Mode RETOUR : On garde les anciens (gris)
         state.pret.damages = state.pret.damages.filter(d => d.type === 'old');
     }
 
-    // 4. DÉVERROUILLAGE ET SUPPRESSION DE LA SIGNATURE
-    state.pret.inspectionValidated = false; 
-    state.signature = null; // On supprime la signature en mémoire
+    // On libère les verrous
+    state.pret.inspectionValidated = false;
+    state.signature = null; // On efface la signature
 
-    // 5. MISE À JOUR DE L'INTERFACE (UI)
-    
-    // On remet le bouton de confirmation à l'état initial (gris)
+    // 3. RÉACTIVATION DU BOUTON (La correction est ici !)
     const btnLock = document.getElementById('btn-lock-inspection');
     if (btnLock) {
+        btnLock.disabled = false; // ON RÉACTIVE LE CLIC
         btnLock.innerText = "Confirmer l'inspection";
+        // On remet le style gris d'origine
         btnLock.className = "w-full mt-4 bg-slate-100 text-slate-600 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border-2 border-slate-200 active:scale-95 transition-all";
     }
 
-    // On cache le message "Signature OK" et on réinitialise l'aspect de la zone de signature
-    const sigOkMsg = document.getElementById('pret-sig-ok');
-    if (sigOkMsg) sigOkMsg.classList.add('hidden');
-
+    // 4. RESET VISUEL DE LA SIGNATURE
     const sigSection = document.getElementById('signature-section');
+    const sigOkMsg = document.getElementById('pret-sig-ok'); // Si tu as un message "Signature OK"
+    
     if (sigSection) {
         sigSection.classList.add('opacity-30', 'pointer-events-none');
     }
-
-    // On rafraîchit le schéma pour enlever les croix
-    renderDamages();
+    if (sigOkMsg) {
+        sigOkMsg.classList.add('hidden');
+    }
     
-    alert("🧹 Dégâts effacés et signature supprimée. Vous pouvez recommencer l'inspection.");
+    // Si tu as un canvas de signature, on le vide aussi
+    if (typeof resetSignaturePret === "function") resetSignaturePret();
+
+    renderDamages();
+    alert("🧹 Reset effectué. L'inspection est déverrouillée.");
 }
 
 function openFullscreen(url) {

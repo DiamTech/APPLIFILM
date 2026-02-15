@@ -647,29 +647,23 @@ async function finalize() {
 async function finalizePret() {
     const btn = document.getElementById('btn-final-pret');
     
-    // 1. RÉCUPÉRATION DES ÉLÉMENTS POUR VALIDATION
+    // 1. RÉCUPÉRATION ET VALIDATION
     const techInput = document.getElementById('pret-tech-name');
-    const clientInput = document.getElementById('pret-nom'); // Le nom du client emprunteur
-    
+    const clientInput = document.getElementById('pret-nom');
     const tech = techInput?.value.trim();
     const client = clientInput?.value.trim();
 
-    // Reset des styles (on enlève le rouge s'il y était)
     if(techInput) techInput.style.border = "none";
     if(clientInput) clientInput.style.border = "none";
 
-    // --- SÉCURITÉ OBLIGATOIRE : TECH & CLIENT ---
     if (!tech || !client) {
         if (!tech && techInput) techInput.style.border = "2px solid #ef4444";
         if (!client && clientInput) clientInput.style.border = "2px solid #ef4444";
-        
-        return alert("⚠️ STOP ! Le nom du TECHNICIEN et du CLIENT sont obligatoires pour valider le prêt.");
+        return alert("⚠️ STOP ! Le nom du TECHNICIEN et du CLIENT sont obligatoires.");
     }
 
-    // 2. RÉCUPÉRATION DES DONNÉES DE BASE
     const selectVehicule = document.getElementById('pret-vehicule-select');
     const fullSelectValue = selectVehicule ? selectVehicule.value : "";
-
     let modeleExtraite = "Véhicule";
     let plaqueAuto = "";
 
@@ -677,12 +671,9 @@ async function finalizePret() {
         const parts = fullSelectValue.split(':');
         modeleExtraite = parts[0].trim();
         plaqueAuto = parts[1].trim();
-    } else {
-        plaqueAuto = fullSelectValue;
-    }
+    } else { plaqueAuto = fullSelectValue; }
 
     const kmSaisi = parseInt(document.getElementById('pret-km-depart')?.value) || 0;
-
     const inputs = {
         dob: document.getElementById('pret-dob')?.value,
         lieu_naiss: document.getElementById('pret-lieu-naiss')?.value.trim(),
@@ -690,74 +681,63 @@ async function finalizePret() {
         permis_lieu: document.getElementById('pret-permis-lieu')?.value.trim()
     };
 
-    // 3. VÉRIFICATIONS DE SÉCURITÉ SUPPLÉMENTAIRES
-    if (!plaqueAuto || plaqueAuto === "N/C" || plaqueAuto === "-- Choisir un véhicule --") {
-        return alert("⚠️ Veuillez choisir un véhicule !");
-    }
-    if (!kmSaisi || kmSaisi <= 0) return alert("⚠️ Veuillez saisir le kilométrage !");
-    if (!state.signature) return alert("⚠️ La signature du client est obligatoire !");
-    if (!state.pret.inspectionValidated) return alert("⚠️ Vous devez valider l'inspection (bouton Confirmer) !");
+    // VÉRIFICATIONS SÉCURITÉ
+    if (!plaqueAuto || plaqueAuto === "-- Choisir un véhicule --") return alert("⚠️ Choisis un véhicule !");
+    if (kmSaisi <= 0) return alert("⚠️ Saisis le kilométrage !");
+    if (!state.signature) return alert("⚠️ Signature obligatoire !");
+    if (!state.pret.inspectionValidated) return alert("⚠️ Valide l'inspection !");
 
     if (state.pretMode === "DEPART") {
-        if (!inputs.dob || !inputs.permis_num) {
-            return alert("⚠️ Infos client incomplètes pour un départ !");
-        }
-        if (!state.pret.permis_recto) return alert("⚠️ Photo du permis obligatoire au départ !");
+        if (!inputs.dob || !inputs.permis_num) return alert("⚠️ Infos client incomplètes !");
+        if (!state.pret.permis_recto) return alert("⚠️ Photo du permis obligatoire !");
     }
 
-    // 4. LOGIQUE DÉGÂTS ET KM
+    // LOGIQUE TEXTE
     let texteSaisi = document.getElementById('pret-degats-obs')?.value.trim() || "";
     const nbCroix = state.pret.damages ? state.pret.damages.length : 0;
-    
-    let degatsFinalText = texteSaisi;
-    if (texteSaisi === "") {
-        degatsFinalText = nbCroix > 0 
-            ? "Dégâts marqués sur le schéma (" + nbCroix + " impact(s))" 
-            : "Aucun dégât signalé (Véhicule intact)";
-    }
+    let degatsFinalText = texteSaisi === "" ? (nbCroix > 0 ? `Dégâts sur schéma (${nbCroix} impacts)` : "Aucun dégât") : texteSaisi;
 
-    let kmInfoMessage = "";
     if (state.pretMode === "RETOUR" && state.pret.km_depart_initial) {
         const diff = kmSaisi - state.pret.km_depart_initial;
         degatsFinalText += ` | KM départ: ${state.pret.km_depart_initial} | Parcouru: ${diff}km`;
-        kmInfoMessage = `\nDistance parcourue : ${diff} km`;
     }
 
-    // 5. PRÉPARATION DU PAQUET (PAYLOAD)
-    const payload = {
-        type: "PRET",
-        status: state.pretMode, 
-        technicien: tech,       // Nouveau champ
-        client: client,         // Nouveau champ
-        immat: plaqueAuto,      
-        modele: modeleExtraite, 
-        km: kmSaisi,
-        nom: client,            // On garde 'nom' pour ton Sheet actuel
-        dob: inputs.dob,
-        lieu_naiss: inputs.lieu_naiss,
-        permis_num: inputs.permis_num,
-        permis_lieu: inputs.permis_lieu,
-        degats_details: degatsFinalText,
-        degats_coords: JSON.stringify(state.pret.damages || []), 
-        permis_recto: state.pret.permis_recto || "N/A",
-        permis_verso: state.pret.permis_verso || "N/A",
-        signature: state.signature,
-        date: new Date().toLocaleString('fr-FR')
-    };
-
-    // 6. ENVOI
+    // --- ENVOI ---
     btn.disabled = true;
     const originalText = btn.innerText;
-    btn.innerText = "TRANSMISSION...";
+    btn.innerText = "GÉNÉRATION PDF...";
 
     try {
+        const payload = {
+            type: "PRET",
+            status: state.pretMode,
+            technicien: tech,
+            client: client,
+            immat: plaqueAuto,
+            modele: modeleExtraite,
+            km: kmSaisi,
+            nom: client,
+            dob: inputs.dob,
+            permis_num: inputs.permis_num,
+            degats_details: degatsFinalText,
+            degats_coords: JSON.stringify(state.pret.damages || []),
+            permis_recto: state.pret.permis_recto || "N/A",
+            signature: state.signature,
+            date: new Date().toLocaleString('fr-FR')
+        };
+
+        // 1. GÉNÉRER LE PDF ET L'AJOUTER AU PAQUET
+        const pdfBase64 = await generatePretPDF(payload, state.pretMode, tech, client);
+        payload.pdfBase64 = pdfBase64;
+
+        // 2. FETCH
         await fetch(URL_PRET, {
             method: 'POST',
             mode: 'no-cors',
             body: JSON.stringify(payload)
         });
 
-        alert(`✅ ${state.pretMode} ENREGISTRÉ POUR ${client} !${kmInfoMessage}`);
+        alert(`✅ ${state.pretMode} ENREGISTRÉ ET PDF ARCHIVÉ !`);
         resetPretForm(); 
         switchView('vitrage');
 
@@ -769,7 +749,6 @@ async function finalizePret() {
         btn.innerText = originalText;
     }
 }
-
 
 // Petite fonction pour tout vider proprement
 function resetPretForm() {
@@ -1430,6 +1409,83 @@ async function generateVitragePDF(batch, signature, tech, client) {
 
     return doc.output('datauristring');
 } // <-- Fin correcte de generateVitragePDF
+
+async function generatePretPDF(data, mode, tech, client) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const primaryColor = mode === "DEPART" ? [79, 70, 229] : [16, 185, 129]; // Indigo pour départ, Vert pour retour
+
+    // --- ENTÊTE ---
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.text("APPLIFILM", 20, 25);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`CONTRAT DE PRÊT VÉHICULE - ${mode}`, pageWidth - 20, 25, { align: "right" });
+
+    // --- INFOS GÉNÉRALES ---
+    doc.setDrawColor(230);
+    doc.line(20, 35, pageWidth - 20, 35);
+
+    doc.setFontSize(10);
+    doc.setTextColor(40);
+    doc.text(`Technicien : ${tech.toUpperCase()}`, 20, 45);
+    doc.text(`Client : ${client.toUpperCase()}`, 20, 52);
+    doc.text(`Date : ${new Date().toLocaleString('fr-FR')}`, pageWidth - 20, 45, { align: "right" });
+
+    // --- TABLEAU VÉHICULE & INFOS ---
+    const rows = [
+        ["VÉHICULE", `${data.modele} (${data.immat})`],
+        ["KILOMÉTRAGE", `${data.km} km`],
+        ["PERMIS", data.permis_num || "N/A"],
+    ];
+
+    if (mode === "RETOUR" && state.pret.km_depart_initial) {
+        const diff = data.km - state.pret.km_depart_initial;
+        rows.push(["DISTANCE PARCOURUE", `${diff} km`]);
+    }
+
+    doc.autoTable({
+        startY: 60,
+        head: [['CATÉGORIE', 'DÉTAILS']],
+        body: rows,
+        theme: 'grid',
+        headStyles: { fillColor: primaryColor }
+    });
+
+    // --- ÉTAT DE LA CARROSSERIE ---
+    let yPos = doc.lastAutoTable.finalY + 15;
+    doc.setFont("helvetica", "bold");
+    doc.text("ÉTAT DES LIEUX / OBSERVATIONS :", 20, yPos);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    const splitObs = doc.splitTextToSize(data.degats_details, pageWidth - 40);
+    doc.text(splitObs, 20, yPos + 7);
+
+    // --- SIGNATURE ---
+    yPos = yPos + (splitObs.length * 5) + 20;
+    if (yPos > 240) { doc.addPage(); yPos = 20; }
+
+    doc.setFont("helvetica", "bold");
+    doc.text("SIGNATURE DU CLIENT :", 20, yPos);
+    doc.addImage(data.signature, 'PNG', 20, yPos + 5, 50, 25);
+
+    // --- MENTIONS LÉGALES ---
+    doc.setFontSize(7);
+    doc.setTextColor(150);
+    const mentions = [
+        "Le client reconnaît prendre/rendre le véhicule dans l'état décrit ci-dessus.",
+        "En cas de sinistre, la franchise reste à la charge du client.",
+        "APPLIFILM - Prêt de véhicule de courtoisie."
+    ];
+    mentions.forEach((m, i) => doc.text(m, pageWidth / 2, 280 + (i * 3), { align: "center" }));
+
+    return doc.output('datauristring');
+}
 
 async function saveReturn() {
     const immat = document.getElementById('pret-vehicule-select').value;

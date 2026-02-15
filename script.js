@@ -617,11 +617,29 @@ async function finalize() {
 async function finalizePret() {
     const btn = document.getElementById('btn-final-pret');
     
-    // 1. RÉCUPÉRATION DES DONNÉES DE BASE
-    const selectVehicule = document.getElementById('pret-vehicule-select');
-    const fullSelectValue = selectVehicule ? selectVehicule.value : ""; // "Citroen C3 : DC-580-DS"
+    // 1. RÉCUPÉRATION DES ÉLÉMENTS POUR VALIDATION
+    const techInput = document.getElementById('pret-tech-name');
+    const clientInput = document.getElementById('pret-nom'); // Le nom du client emprunteur
+    
+    const tech = techInput?.value.trim();
+    const client = clientInput?.value.trim();
 
-    // --- NOUVEAU : DÉCOUPAGE MODÈLE ET PLAQUE ---
+    // Reset des styles (on enlève le rouge s'il y était)
+    if(techInput) techInput.style.border = "none";
+    if(clientInput) clientInput.style.border = "none";
+
+    // --- SÉCURITÉ OBLIGATOIRE : TECH & CLIENT ---
+    if (!tech || !client) {
+        if (!tech && techInput) techInput.style.border = "2px solid #ef4444";
+        if (!client && clientInput) clientInput.style.border = "2px solid #ef4444";
+        
+        return alert("⚠️ STOP ! Le nom du TECHNICIEN et du CLIENT sont obligatoires pour valider le prêt.");
+    }
+
+    // 2. RÉCUPÉRATION DES DONNÉES DE BASE
+    const selectVehicule = document.getElementById('pret-vehicule-select');
+    const fullSelectValue = selectVehicule ? selectVehicule.value : "";
+
     let modeleExtraite = "Véhicule";
     let plaqueAuto = "";
 
@@ -636,14 +654,13 @@ async function finalizePret() {
     const kmSaisi = parseInt(document.getElementById('pret-km-depart')?.value) || 0;
 
     const inputs = {
-        nom: document.getElementById('pret-nom')?.value.trim(),
         dob: document.getElementById('pret-dob')?.value,
         lieu_naiss: document.getElementById('pret-lieu-naiss')?.value.trim(),
         permis_num: document.getElementById('pret-permis-num')?.value.trim(),
         permis_lieu: document.getElementById('pret-permis-lieu')?.value.trim()
     };
 
-    // 2. VÉRIFICATIONS DE SÉCURITÉ
+    // 3. VÉRIFICATIONS DE SÉCURITÉ SUPPLÉMENTAIRES
     if (!plaqueAuto || plaqueAuto === "N/C" || plaqueAuto === "-- Choisir un véhicule --") {
         return alert("⚠️ Veuillez choisir un véhicule !");
     }
@@ -652,13 +669,13 @@ async function finalizePret() {
     if (!state.pret.inspectionValidated) return alert("⚠️ Vous devez valider l'inspection (bouton Confirmer) !");
 
     if (state.pretMode === "DEPART") {
-        if (!inputs.nom || !inputs.dob || !inputs.permis_num) {
+        if (!inputs.dob || !inputs.permis_num) {
             return alert("⚠️ Infos client incomplètes pour un départ !");
         }
         if (!state.pret.permis_recto) return alert("⚠️ Photo du permis obligatoire au départ !");
     }
 
-    // 3. LOGIQUE POUR LES DÉGÂTS ET CALCUL KM
+    // 4. LOGIQUE DÉGÂTS ET KM
     let texteSaisi = document.getElementById('pret-degats-obs')?.value.trim() || "";
     const nbCroix = state.pret.damages ? state.pret.damages.length : 0;
     
@@ -676,14 +693,16 @@ async function finalizePret() {
         kmInfoMessage = `\nDistance parcourue : ${diff} km`;
     }
 
-    // 4. PRÉPARATION DU PAQUET (PAYLOAD)
+    // 5. PRÉPARATION DU PAQUET (PAYLOAD)
     const payload = {
         type: "PRET",
         status: state.pretMode, 
-        immat: plaqueAuto,      // Va en colonne B
-        modele: modeleExtraite, // VA EN COLONNE O (C'est ce qui manquait !)
+        technicien: tech,       // Nouveau champ
+        client: client,         // Nouveau champ
+        immat: plaqueAuto,      
+        modele: modeleExtraite, 
         km: kmSaisi,
-        nom: inputs.nom,
+        nom: client,            // On garde 'nom' pour ton Sheet actuel
         dob: inputs.dob,
         lieu_naiss: inputs.lieu_naiss,
         permis_num: inputs.permis_num,
@@ -696,7 +715,7 @@ async function finalizePret() {
         date: new Date().toLocaleString('fr-FR')
     };
 
-    // 5. ENVOI AU SHEET
+    // 6. ENVOI
     btn.disabled = true;
     const originalText = btn.innerText;
     btn.innerText = "TRANSMISSION...";
@@ -708,9 +727,7 @@ async function finalizePret() {
             body: JSON.stringify(payload)
         });
 
-        alert(`✅ ${state.pretMode} ENREGISTRÉ !${kmInfoMessage}`);
-        
-        // 6. RÉINITIALISATION COMPLÈTE
+        alert(`✅ ${state.pretMode} ENREGISTRÉ POUR ${client} !${kmInfoMessage}`);
         resetPretForm(); 
         switchView('vitrage');
 
@@ -722,6 +739,8 @@ async function finalizePret() {
         btn.innerText = originalText;
     }
 }
+
+
 // Petite fonction pour tout vider proprement
 function resetPretForm() {
     state.signature = null;

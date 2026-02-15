@@ -197,23 +197,40 @@ function renderActiveLoans() {
     const list = document.getElementById('active-loans-list');
     if(!list) return;
 
-    if(state.activeLoans.length === 0) {
-        list.innerHTML = '<div class="text-center text-xs text-slate-300 italic py-4">Aucun véhicule sorti</div>';
+    if(!state.activeLoans || state.activeLoans.length === 0) {
+        list.innerHTML = `
+            <div class="bg-slate-50 dark:bg-slate-900/50 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl p-8 text-center">
+                <p class="text-slate-400 text-xs font-bold italic">Aucun véhicule en cours de prêt</p>
+            </div>`;
         return;
     }
 
-    list.innerHTML = state.activeLoans.map((l, i) => `
-        <div onclick="returnVehicle(${i})" class="bg-indigo-50 dark:bg-slate-900 p-4 rounded-2xl border border-indigo-100 dark:border-slate-700 flex justify-between items-center cursor-pointer active:scale-95 transition-transform mb-2 shadow-sm">
-            <div>
-                <div class="font-black text-xs text-indigo-600">${l.vehicule}</div>
-                <div class="text-[10px] text-slate-500 font-bold uppercase mt-1">${l.nom}</div>
+    list.innerHTML = state.activeLoans.map((l, i) => {
+        // On prépare un affichage propre pour le véhicule
+        const vehiculeNom = `${l.modele} - ${l.immat}`;
+        // On récupère juste la date
+        const dateSortie = l.date ? l.date.split(' ')[0] : 'Inconnue';
+
+        return `
+            <div onclick="selectLoanForReturn(${i})" class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 flex justify-between items-center cursor-pointer active:scale-[0.98] transition-all mb-3 shadow-sm hover:border-emerald-300">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600">
+                        <i data-lucide="car" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <div class="font-black text-xs text-slate-800 dark:text-white uppercase">${vehiculeNom}</div>
+                        <div class="text-[10px] text-slate-500 font-bold uppercase mt-0.5">${l.nom}</div>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-xs font-black text-emerald-600">${l.km} KM</div>
+                    <div class="text-[9px] text-slate-400 font-bold">Sorti le ${dateSortie}</div>
+                </div>
             </div>
-            <div class="text-right">
-                <div class="text-xs font-bold text-slate-700 dark:text-slate-300">${l.km} km</div>
-                <div class="text-[9px] text-slate-400">Sorti le ${l.date.split(' ')[0]}</div>
-            </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 // ==========================================

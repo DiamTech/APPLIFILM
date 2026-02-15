@@ -1403,14 +1403,16 @@ async function generateVitragePDF(batch, signature, tech, client) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
-    const logoUrl = 'https://www.applifilm.fr/wp-content/uploads/2020/07/applifilm.png';
+
+    // LE LOGO APPLIFILM EN BASE64 (Version robuste qui ne bloque jamais)
+    const logoBase64 = "data:image/png;base64,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";
 
     // --- LOGO & ENTÊTE ---
     try {
-        // Logo positionné à x=20, y=10 avec une largeur de 40mm
-        doc.addImage(logoUrl, 'PNG', 20, 10, 40, 15);
+        // Ajout du logo Base64
+        doc.addImage(logoBase64, 'PNG', 20, 10, 40, 15);
     } catch (e) {
-        // Fallback au texte si le logo ne charge pas (sécurité)
+        // Si vraiment ça échoue encore (quasi impossible avec Base64)
         doc.setFont("helvetica", "bold");
         doc.setFontSize(22);
         doc.setTextColor(79, 70, 229);

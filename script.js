@@ -276,21 +276,20 @@ function updateBatchUI() {
 
     if (recapContainer) {
         recapContainer.innerHTML = state.batch.map((item, index) => `
-            <div class="bg-white p-5 rounded-[2rem] border border-slate-200 shadow-sm flex items-start justify-between mb-3 animate-in fade-in slide-in-from-right duration-300">
-                <div class="flex-1 pr-2"> 
+            <div class="bg-white p-5 rounded-[2.5rem] border border-slate-200 shadow-sm flex items-start justify-between mb-3 overflow-hidden">
+                <div class="flex-1 pr-4"> 
                     <div class="flex items-center gap-2 mb-2">
-                        <span class="text-[8px] font-black bg-slate-100 text-slate-500 px-2 py-0.5 rounded uppercase">${item.heure}</span>
-                        <span class="text-[8px] font-black bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded uppercase">${item.type}</span>
+                        <span class="text-[8px] font-black bg-slate-100 text-slate-500 px-2 py-1 rounded uppercase tracking-widest">${item.heure}</span>
+                        <span class="text-[8px] font-black bg-indigo-100 text-indigo-600 px-2 py-1 rounded uppercase tracking-widest">${item.type}</span>
                     </div>
-                    <div class="text-sm font-black text-slate-900 uppercase leading-none mb-2">${item.vin}</div>
-                    
+                    <div class="text-sm font-black text-slate-900 uppercase mb-2">${item.vin}</div>
                     <div class="text-[10px] text-slate-400 font-bold italic leading-relaxed break-words">
                         ${item.windows.join(' • ')}
                     </div>
                 </div>
                 
                 <button onclick="removeFromBatch(${index})" 
-                        class="w-9 h-9 flex-shrink-0 flex items-center justify-center bg-red-50 text-red-500 rounded-xl active:scale-90 transition-transform mt-1">
+                        class="btn-icon w-10 h-10 flex-shrink-0 flex items-center justify-center bg-red-50 text-red-500 rounded-2xl active:scale-95 transition-all mt-1">
                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                 </button>
             </div>

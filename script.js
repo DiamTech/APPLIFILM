@@ -1431,66 +1431,6 @@ async function generateVitragePDF(batch, signature, tech, client) {
     return doc.output('datauristring');
 } // <-- Fin correcte de generateVitragePDF
 
-// --- 2. FONCTION FINALIZE (CORRIGÉE) ---
-async function finalize() {
-    if(!state.batch.length) return alert("Le lot est vide !");
-    if(!state.signature) return alert("⚠️ Signature obligatoire !");
-
-    const tech = document.getElementById('input-tech-name')?.value.trim() || "Inconnu";
-    const client = document.getElementById('input-client-name')?.value.trim() || "Anonyme";
-
-    const btn = document.getElementById('btn-final');
-    btn.disabled = true;
-    const originalContent = btn.innerHTML;
-    btn.innerHTML = "<span>GÉNÉRATION & ARCHIVAGE...</span>";
-    
-    try {
-        const pdfBase64 = await generateVitragePDF(state.batch, state.signature, tech, client);
-
-        const payload = {
-            technicien: tech,
-            client: client,
-            pdfBase64: pdfBase64,
-            interventions: state.batch.map(item => ({
-                ...item,
-                technicien: tech,
-                client: client,
-                signature: state.signature
-            }))
-        };
-
-        await fetch(URL_VITRAGE, {
-            method: 'POST', 
-            mode: 'no-cors', 
-            cache: 'no-cache',
-            body: JSON.stringify(payload)
-        });
-
-        const now = new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
-        state.batch.forEach(v => { 
-            state.sentHistory.push({ vin: v.vin, sentTime: now }); 
-        });
-
-        state.batch = [];
-        state.signature = null;
-        if(document.getElementById('input-client-name')) document.getElementById('input-client-name').value = "";
-        
-        updateBatchUI(); 
-        updateHistoryUI();
-        resetSignature();
-        
-        alert("✅ TERMINÉ ! Données envoyées et PDF archivé sur Drive.");
-        
-    } catch(e) {
-        console.error(e);
-        alert("❌ Erreur lors de la finalisation.");
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalContent;
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-    }
-} // <-- Fin correcte de finalize
-
 async function saveReturn() {
     const immat = document.getElementById('pret-vehicule-select').value;
     const kmRetour = parseInt(document.getElementById('pret-km-depart').value);

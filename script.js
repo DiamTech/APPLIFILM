@@ -1403,16 +1403,26 @@ async function generateVitragePDF(batch, signature, tech, client) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
+    const logoUrl = 'https://www.applifilm.fr/wp-content/uploads/2020/07/applifilm.png';
 
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(22);
-    doc.setTextColor(79, 70, 229);
-    doc.text("APPLIFILM", 20, 25);
+    // --- LOGO & ENTÊTE ---
+    try {
+        // Logo positionné à x=20, y=10 avec une largeur de 40mm
+        doc.addImage(logoUrl, 'PNG', 20, 10, 40, 15);
+    } catch (e) {
+        // Fallback au texte si le logo ne charge pas (sécurité)
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(22);
+        doc.setTextColor(79, 70, 229);
+        doc.text("APPLIFILM", 20, 25);
+    }
     
+    doc.setFont("helvetica", "bold");
     doc.setFontSize(10);
     doc.setTextColor(100);
-    doc.text("BON D'INTERVENTION VITRAGE", pageWidth - 20, 25, { align: "right" });
+    doc.text("BON D'INTERVENTION VITRAGE", pageWidth - 20, 22, { align: "right" });
 
+    // --- INFOS GÉNÉRALES ---
     doc.setTextColor(40);
     doc.setFontSize(10);
     doc.text(`Technicien : ${tech.toUpperCase()}`, 20, 45);
@@ -1442,23 +1452,29 @@ async function generateVitragePDF(batch, signature, tech, client) {
     doc.save(fileName); 
 
     return doc.output('datauristring');
-} // <-- Fin correcte de generateVitragePDF
+}
 
 async function generatePretPDF(data, mode, tech, client) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
-    const primaryColor = mode === "DEPART" ? [79, 70, 229] : [16, 185, 129]; // Indigo pour départ, Vert pour retour
+    const primaryColor = mode === "DEPART" ? [79, 70, 229] : [16, 185, 129];
+    const logoUrl = 'https://www.applifilm.fr/wp-content/uploads/2020/07/applifilm.png';
 
-    // --- ENTÊTE ---
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(22);
-    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.text("APPLIFILM", 20, 25);
+    // --- LOGO & ENTÊTE ---
+    try {
+        doc.addImage(logoUrl, 'PNG', 20, 10, 40, 15);
+    } catch (e) {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(22);
+        doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.text("APPLIFILM", 20, 25);
+    }
     
+    doc.setFont("helvetica", "bold");
     doc.setFontSize(10);
     doc.setTextColor(100);
-    doc.text(`CONTRAT DE PRÊT VÉHICULE - ${mode}`, pageWidth - 20, 25, { align: "right" });
+    doc.text(`CONTRAT DE PRÊT VÉHICULE - ${mode}`, pageWidth - 20, 22, { align: "right" });
 
     // --- INFOS GÉNÉRALES ---
     doc.setDrawColor(230);
@@ -1497,7 +1513,7 @@ async function generatePretPDF(data, mode, tech, client) {
     
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
-    const splitObs = doc.splitTextToSize(data.degats_details, pageWidth - 40);
+    const splitObs = doc.splitTextToSize(data.degats_details || "RAS", pageWidth - 40);
     doc.text(splitObs, 20, yPos + 7);
 
     // --- SIGNATURE ---

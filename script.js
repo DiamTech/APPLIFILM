@@ -1376,6 +1376,9 @@ async function generateVitragePDF(batch, signature, tech, client) {
     doc.setTextColor(150);
     doc.text("Certifié conforme par Applifilm. Document généré numériquement.", pageWidth / 2, 285, { align: "center" });
 
+    const fileName = `Applifilm_${client.replace(/\s+/g, '_')}.pdf`;
+    doc.save(fileName); 
+
     return doc.output('datauristring');
 } // <-- Fin correcte de generateVitragePDF
 

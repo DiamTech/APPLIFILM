@@ -280,18 +280,18 @@ function updateBatchUI() {
     if (recapContainer) {
         recapContainer.innerHTML = state.batch.map((item, index) => `
             <div class="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between mb-3 animate-in fade-in slide-in-from-right duration-300">
-                <div class="flex-1">
-                    <div class="flex items-center gap-2 mb-1">
+                <div class="flex-1 pr-4"> <div class="flex items-center gap-2 mb-1">
                         <span class="text-[8px] font-black bg-slate-100 text-slate-500 px-2 py-0.5 rounded uppercase tracking-tighter">${item.heure}</span>
                         <span class="text-[8px] font-black bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded uppercase tracking-tighter">${item.type}</span>
                     </div>
                     <div class="text-sm font-black text-slate-900 uppercase tracking-tight">${item.vin}</div>
-                    <div class="text-[9px] text-slate-400 font-bold truncate w-48 mt-1 italic">
+                    
+                    <div class="text-[9px] text-slate-400 font-bold mt-1 italic leading-relaxed">
                         ${item.windows.join(' • ')}
                     </div>
                 </div>
                 
-                <button onclick="removeFromBatch(${index})" class="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-2xl active:scale-90 transition-transform">
+                <button onclick="removeFromBatch(${index})" class="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-red-50 text-red-500 rounded-2xl active:scale-90 transition-transform">
                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                 </button>
             </div>

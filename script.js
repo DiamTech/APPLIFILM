@@ -1023,35 +1023,36 @@ function setPretMode(mode) {
 }
 
 async function fetchActiveLoans() {
-    const container = document.getElementById('loans-container');
-    container.innerHTML = '<div class="text-[10px] font-bold text-center py-4 text-slate-400 animate-pulse">CHARGEMENT DES PRÊTS...</div>';
+    // ON VISE LE BON ID : active-loans-list
+    const container = document.getElementById('active-loans-list');
+    if (!container) return console.error("L'élément active-loans-list est introuvable !");
+
+    container.innerHTML = '<div class="text-[10px] font-bold text-center py-4 text-slate-400 animate-pulse uppercase tracking-widest">CHARGEMENT DES PRÊTS...</div>';
 
     try {
         const response = await fetch(URL_PRET + "?action=get_active");
         const loans = await response.json();
         
-        // IMPORTANT : On sauvegarde la liste dans le state pour pouvoir cliquer dessus après
         state.activeLoans = loans;
 
         if (!loans || loans.length === 0) {
-            container.innerHTML = '<div class="text-[10px] font-bold text-center py-4 text-slate-400 italic">AUCUN VÉHICULE DEHORS</div>';
+            container.innerHTML = `
+                <div class="p-8 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[2rem]">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">AUCUN VÉHICULE DEHORS</p>
+                </div>`;
             return;
         }
 
         container.innerHTML = loans.map(loan => {
             const d = new Date(loan.date);
             const datePropre = d.toLocaleDateString('fr-FR', {day: '2-digit', month: '2-digit'});
-        
-            // On récupère le KM, s'il n'existe pas on met 0
             const kmAffichage = loan.km || "0";
-            
-            // LOGIQUE TITRE : Si on a un modèle on le met, sinon on met la plaque en gros
             const titrePrincipal = loan.modele && loan.modele !== "Véhicule" ? loan.modele : loan.immat;
             const sousTitre = loan.modele && loan.modele !== "Véhicule" ? loan.immat : "";
         
             return `
                 <button type="button" onclick="selectLoanForReturn('${loan.immat}')" 
-                        class="w-full bg-indigo-600 p-5 rounded-[2rem] text-left shadow-lg mb-3 flex flex-col gap-6 active:scale-95 transition-all">
+                        class="w-full bg-indigo-600 p-5 rounded-[2rem] text-left shadow-lg mb-4 flex flex-col gap-6 active:scale-95 transition-all border-b-4 border-indigo-800">
                     
                     <div class="flex justify-between items-start">
                         <div class="flex flex-col">
@@ -1079,7 +1080,7 @@ async function fetchActiveLoans() {
         }).join('');
     } catch (e) {
         console.error(e);
-        container.innerHTML = '<div class="text-[10px] font-bold text-center py-4 text-red-400 uppercase">⚠️ Erreur de connexion</div>';
+        container.innerHTML = '<div class="text-[10px] font-bold text-center py-4 text-red-400 uppercase tracking-widest">⚠️ Erreur de connexion au serveur</div>';
     }
 }
 
@@ -1140,12 +1141,30 @@ function selectLoanForReturn(immat) {
     const loan = state.activeLoans.find(l => l.immat === immat);
     if (!loan) return alert("❌ Dossier introuvable.");
 
-    // A. MODE RETOUR ET VERROUILLAGE
+    // A. MODE RETOUR ET RESET SÉCURITÉ
     state.pretMode = 'RETOUR';
-    toggleFormLock(true); 
+    if (typeof toggleFormLock === 'function') toggleFormLock(true); 
+    
+    // On vide obligatoirement le technicien et la signature pour le retour
+    const techField = document.getElementById('pret-tech-name');
+    if (techField) {
+        techField.value = ""; 
+        techField.style.border = "none";
+    }
+    resetSignature(); // Sécurité : on ne garde pas la signature du départ !
 
-    // B. REMPLISSAGE IDENTITÉ
-    document.getElementById('pret-vehicule-select').value = loan.immat;
+    // B. RÉCUPÉRATION DU VÉHICULE (Boucle intelligente)
+    const selectVehicule = document.getElementById('pret-vehicule-select');
+    if (selectVehicule) {
+        for (let option of selectVehicule.options) {
+            if (option.value.includes(immat)) {
+                selectVehicule.value = option.value;
+                break;
+            }
+        }
+    }
+
+    // C. REMPLISSAGE IDENTITÉ
     document.getElementById('pret-nom').value = loan.nom || "";
     document.getElementById('pret-lieu-naiss').value = loan.lieu_naiss || "";
     document.getElementById('pret-permis-num').value = loan.permis_num || "";
@@ -1158,68 +1177,71 @@ function selectLoanForReturn(immat) {
         }
     }
 
-    // C. CHAMPS ÉDITABLES
+    // D. KM DÉPART (Pour calcul automatique)
     state.pret.km_depart_initial = parseInt(loan.km) || 0;
     const kmInput = document.getElementById('pret-km-depart');
     if(kmInput) {
-        kmInput.placeholder = "Départ : " + loan.km + " km";
-        kmInput.value = ""; 
+        kmInput.placeholder = "KM au départ : " + loan.km;
+        kmInput.value = ""; // On laisse vide pour saisir le nouveau KM
+        kmInput.style.border = "none";
     }
     
+    // E. GESTION DES PHOTOS DRIVE
     const renderPhoto = (id, url) => {
-    const zone = document.getElementById(id);
-    if (!zone) return;
+        const zone = document.getElementById(id);
+        if (!zone) return;
 
-    if (url && url.length > 10) {
-        let fileId = "";
-        try {
-            if (url.includes('id=')) fileId = url.split('id=')[1].split('&')[0];
-            else if (url.includes('/d/')) fileId = url.split('/d/')[1].split('/')[0];
-            else fileId = url.match(/[-\w]{25,}/);
-        } catch(e) {}
+        if (url && url.length > 10) {
+            let fileId = "";
+            try {
+                if (url.includes('id=')) fileId = url.split('id=')[1].split('&')[0];
+                else if (url.includes('/d/')) fileId = url.split('/d/')[1].split('/')[0];
+                else fileId = url.match(/[-\w]{25,}/);
+            } catch(e) {}
 
-        const finalUrl = fileId ? `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000` : url;
+            const finalUrl = fileId ? `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000` : url;
 
-        zone.innerHTML = `
-            <img src="${finalUrl}" 
-                 referrerpolicy="no-referrer" 
-                 onclick="openFullscreen('${finalUrl}')" 
-                 class="w-full h-full object-cover rounded-xl border-2 border-indigo-500 shadow-lg cursor-zoom-in">
-            <div class="absolute bottom-1 right-1 bg-black/50 rounded-full p-1">
-                <i data-lucide="maximize" class="w-2 h-2 text-white"></i>
-            </div>
-        `;
-        
-        // --- CHANGEMENT ICI ---
-        zone.style.pointerEvents = "auto"; // On autorise le clic pour la loupe
-        zone.style.border = "none";
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-    } else {
-        zone.innerHTML = `<div class="text-[10px] text-slate-500 font-bold italic">AUCUN DOCUMENT</div>`;
-    }
-};
+            zone.innerHTML = `
+                <img src="${finalUrl}" 
+                     referrerpolicy="no-referrer" 
+                     onclick="openFullscreen('${finalUrl}')" 
+                     class="w-full h-full object-cover rounded-xl border-2 border-indigo-500 shadow-lg cursor-zoom-in">
+                <div class="absolute bottom-1 right-1 bg-black/50 rounded-full p-1">
+                    <i data-lucide="maximize" class="w-2 h-2 text-white"></i>
+                </div>
+            `;
+            zone.style.pointerEvents = "auto";
+            zone.style.border = "none";
+        } else {
+            zone.innerHTML = `<div class="text-[10px] text-slate-500 font-bold italic">AUCUN DOCUMENT</div>`;
+        }
+    };
     
     renderPhoto('preview-recto', loan.recto);
     renderPhoto('preview-verso', loan.verso);
 
-    // E. RÉCUPÉRATION DES DÉGÂTS
+    // F. RÉCUPÉRATION DES DÉGÂTS (Points rouges vs nouveaux points)
     try {
         const savedCoords = loan.degats_coords || loan.coords; 
         const oldCoords = JSON.parse(savedCoords || "[]");
+        // On marque les anciens dégâts pour qu'ils soient affichés différemment si tu le souhaites
         state.pret.damages = oldCoords.map(c => ({ ...c, type: 'old' }));
-        renderDamages(); 
+        if (typeof renderDamages === 'function') renderDamages(); 
     } catch(e) {
         state.pret.damages = [];
     }
 
-    // F. OBSERVATIONS
+    // G. OBSERVATIONS
     const obsField = document.getElementById('pret-degats-obs');
     if (obsField) {
-        obsField.value = "PRÉCÉDEMMENT : " + (loan.details || "RAS") + "\n--- NOTES RETOUR ---\n";
+        obsField.value = "PRÉCÉDEMMENT : " + (loan.details || "RAS") + "\n\n--- NOTES RETOUR ---\n";
     }
 
+    // H. FINALISATION
     if (typeof switchView === 'function') switchView('pret');
-    alert("✅ Dossier chargé. Photos du permis affichées.");
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    
+    alert("✅ Dossier de " + loan.nom + " chargé.\nN'oubliez pas d'indiquer votre nom (Technicien) !");
 }
 
 function resetPretForm() {

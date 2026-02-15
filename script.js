@@ -224,7 +224,7 @@ function addToBatch() {
     const vinInput = document.getElementById('vin-input');
     const vinValue = vinInput.value.trim();
 
-    // 1. VÉRIFICATIONS (Sans la signature)
+    // 1. On vérifie seulement le VIN et les Vitres
     if (!vinValue) { 
         alert("⚠️ Le numéro VIN est OBLIGATOIRE."); 
         return vinInput.focus(); 
@@ -233,31 +233,31 @@ function addToBatch() {
         return alert("⚠️ Sélectionnez au moins une vitre.");
     }
     
-    // 2. RÉCUPÉRATION DE L'HEURE ACTUELLE
+    // 2. On récupère l'heure pour ton rectangle récapitulatif
     const now = new Date();
     const heureSaisie = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
 
-    // 3. AJOUT AU LOT
+    // 3. On ajoute au lot (SANS signature pour l'instant)
     state.batch.push({
         vin: vinValue,
         type: document.querySelector('input[name="type"]:checked').value,
         obs: document.getElementById('obs').value,
         windows: state.selectedWindows.map(w => `${w.id} (${w.tint})`), 
         photos: [...state.photos],
-        heure: heureSaisie, // Pour le récapitulatif
+        heure: heureSaisie,
         date: now.toLocaleString('fr-FR')
     });
     
-    // 4. RESET DU FORMULAIRE (On ne reset PAS la signature ici)
+    // 4. RESET du formulaire (mais on NE TOUCHE PAS à la signature)
     vinInput.value = ""; 
     document.getElementById('obs').value = "";
     state.selectedWindows = []; 
     state.photos = []; 
     
-    // 5. MISE À JOUR VISUELLE
+    // 5. MAJ visuelle
     renderPhotos(); 
     renderVitraux(); 
-    updateBatchUI(); // Va dessiner les rectangles
+    updateBatchUI(); 
     
     alert("✅ Véhicule ajouté au lot !");
 }
@@ -613,38 +613,51 @@ async function finalize() {
     // 1. Vérification si le lot n'est pas vide
     if(!state.batch.length) return alert("Le lot est vide !");
     
+    // 2. VERROU : On vérifie si la signature a été faite avant d'autoriser l'envoi
+    if(!state.signature) {
+        return alert("⚠️ La signature du client est obligatoire pour valider l'ensemble du lot !");
+    }
+
     const btn = document.getElementById('btn-final');
     btn.disabled = true;
     const originalContent = btn.innerHTML;
-    btn.innerHTML = "<span>ENVOI EN COURS...</span>";
+    btn.innerHTML = "<span>ENVOI DU LOT...</span>";
     
+    // 3. INJECTION DE LA SIGNATURE : On attache la signature à chaque véhicule
+    const finalBatch = state.batch.map(item => ({
+        ...item,
+        signature: state.signature
+    }));
+
     try {
-        // On utilise l'URL spécifique au Sheet VITRAGE
+        // Envoi du lot complet avec la signature unique
         await fetch(URL_VITRAGE, {
             method: 'POST', 
             mode: 'no-cors', 
             cache: 'no-cache',
-            body: JSON.stringify({ interventions: state.batch })
+            body: JSON.stringify({ interventions: finalBatch })
         });
 
-        // 2. Mise à jour de l'historique local après succès
+        // 4. Mise à jour de l'historique local
         const now = new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
         state.batch.forEach(v => { 
             state.sentHistory.push({ vin: v.vin, sentTime: now }); 
         });
 
-        // 3. Vidage du lot et mise à jour de l'interface
+        // 5. Vidage du lot et de la signature
         state.batch = [];
+        state.signature = null; // Très important pour ne pas réutiliser la signature pour le lot suivant
+        
         updateBatchUI(); 
         updateHistoryUI();
+        resetSignature(); // Nettoie le visuel du bouton de signature
         
-        alert("✅ TERMINÉ ! Données Vitrage transmises.");
+        alert("✅ TERMINÉ ! Le lot de " + finalBatch.length + " véhicule(s) a été transmis.");
         
     } catch(e) {
         console.error(e);
-        alert("❌ Erreur de connexion lors de l'envoi Vitrage.");
+        alert("❌ Erreur de connexion lors de l'envoi du lot.");
     } finally {
-        // 4. Remise en état du bouton
         btn.disabled = false;
         btn.innerHTML = originalContent;
         if (typeof lucide !== 'undefined') lucide.createIcons();

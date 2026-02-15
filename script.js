@@ -1257,18 +1257,36 @@ function toggleFormLock(isReturn) {
 }
 
 function resetDamages() {
-    if (state.pret.inspectionValidated) {
-        return alert("⚠️ Déverrouillez d'abord l'inspection pour modifier les points.");
-    }
+    // 1. GESTION DU MODE DÉPART (Plus flexible pour corriger les erreurs)
+    if (state.pretMode === 'DEPART') {
+        // On réinitialise tout sans condition
+        state.pret.damages = [];
+        state.pret.inspectionValidated = false; // On déverrouille l'inspection
+        
+        // On remet le bouton de confirmation à son état initial
+        const btnLock = document.getElementById('btn-lock-inspection');
+        if (btnLock) {
+            btnLock.innerText = "Confirmer l'inspection";
+            btnLock.className = "w-full mt-4 bg-slate-100 text-slate-600 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border-2 border-slate-200 active:scale-95 transition-all";
+        }
+        
+        // On re-bloque la signature car l'inspection n'est plus validée
+        const sigSection = document.getElementById('signature-section');
+        if (sigSection) {
+            sigSection.classList.add('opacity-30', 'pointer-events-none');
+        }
 
-    if (state.pretMode === 'RETOUR') {
-        // AU RETOUR : On ne garde que les points de type 'old' (Gris)
+        alert("🧹 Tous les points ont été effacés et l'inspection est déverrouillée.");
+    } 
+    // 2. GESTION DU MODE RETOUR (On garde la sécurité pour protéger les points gris)
+    else {
+        if (state.pret.inspectionValidated) {
+            return alert("⚠️ Déverrouillez d'abord l'inspection pour modifier les points.");
+        }
+        
+        // Au retour, on ne filtre que pour garder les points 'old' (gris)
         state.pret.damages = state.pret.damages.filter(d => d.type === 'old');
         alert("🧹 Nouveaux dégâts (rouges) effacés. Les dégâts de départ (gris) sont conservés.");
-    } else {
-        // AU DÉPART : On vide tout
-        state.pret.damages = [];
-        alert("🧹 Tous les points ont été effacés.");
     }
     
     renderDamages();

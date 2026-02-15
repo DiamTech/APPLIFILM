@@ -554,45 +554,51 @@ async function finalize() {
     const techEl = document.getElementById('input-tech-name');
     const clientEl = document.getElementById('input-client-name');
     
-    // On récupère les valeurs sans valeur par défaut ("Inconnu" / "Anonyme")
-    const tech = techEl?.value.trim() || "";
-    const client = clientEl?.value.trim() || "";
+    // 2. LE BLOQUEUR STRICT
+    // On vérifie si les éléments existent ET s'ils sont remplis
+    const tech = techEl ? techEl.value.trim() : "";
+    const client = clientEl ? clientEl.value.trim() : "";
 
-    // 2. LE BLOQUEUR : On vérifie si c'est vide
     let errors = [];
     
-    // Reset des bordures avant vérification
-    if (techEl) techEl.style.border = "none";
-    if (clientEl) clientEl.style.border = "none";
+    // Reset des styles de bordure
+    if (techEl) techEl.style.border = "1px solid #e2e8f0"; // Couleur bordure par défaut (ex: slate-200)
+    if (clientEl) clientEl.style.border = "1px solid #e2e8f0";
 
+    // Vérification Technicien
     if (!tech) {
         errors.push("Nom du Technicien");
-        if (techEl) techEl.style.border = "2px solid #ef4444"; // Bordure rouge
+        if (techEl) {
+            techEl.style.border = "2px solid #ef4444"; // Rouge vif
+            techEl.focus(); // On met le curseur dessus
+        }
     }
+    
+    // Vérification Client
     if (!client) {
         errors.push("Nom du Client");
-        if (clientEl) clientEl.style.border = "2px solid #ef4444"; // Bordure rouge
+        if (clientEl) clientEl.style.border = "2px solid #ef4444"; // Rouge vif
     }
 
+    // SI ERREUR : ON ARRÊTE TOUT ICI
     if (errors.length > 0) {
-        return alert("⚠️ CHAMPS OBLIGATOIRES MANQUANTS :\n" + errors.join(" et ") + ".");
+        return alert("⚠️ ACTION REQUISE :\n" + errors.join(" et ") + " obligatoire(s).");
     }
 
     // 3. Vérifications classiques (Lot et Signature)
-    if(!state.batch.length) return alert("Le lot est vide !");
-    if(!state.signature) return alert("⚠️ Signature client obligatoire !");
+    if (!state.batch.length) return alert("Le lot est vide !");
+    if (!state.signature) return alert("⚠️ Signature client manquante !");
 
-    // 4. Lancement de la procédure d'envoi
+    // --- À PARTIR D'ICI, LE CODE EST VALIDE ---
+    
     const btn = document.getElementById('btn-final');
     btn.disabled = true;
     const originalContent = btn.innerHTML;
     btn.innerHTML = "<span>GÉNÉRATION & ARCHIVAGE...</span>";
     
     try {
-        // Génération du PDF
         const pdfBase64 = await generateVitragePDF(state.batch, state.signature, tech, client);
 
-        // Préparation du paquet final
         const payload = {
             technicien: tech,
             client: client,
@@ -605,7 +611,6 @@ async function finalize() {
             }))
         };
 
-        // Envoi au Google Script
         await fetch(URL_VITRAGE, {
             method: 'POST', 
             mode: 'no-cors', 
@@ -613,32 +618,25 @@ async function finalize() {
             body: JSON.stringify(payload)
         });
 
-        // Historique local
         const now = new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
         state.batch.forEach(v => { 
             state.sentHistory.push({ vin: v.vin, sentTime: now }); 
         });
 
-        // --- RESET APRÈS SUCCÈS ---
+        // RESET
         state.batch = [];
         state.signature = null;
-        
-        // On vide le client mais ON GARDE le technicien (plus pratique)
-        if(clientEl) {
-            clientEl.value = "";
-            clientEl.style.border = "none";
-        }
-        if(techEl) techEl.style.border = "none";
+        if(clientEl) clientEl.value = "";
         
         updateBatchUI(); 
         updateHistoryUI();
         resetSignature();
         
-        alert("✅ TERMINÉ !\nLe lot a été envoyé et la fiche archivée pour " + client);
+        alert("✅ TERMINÉ ! Fiche archivée pour " + client);
         
     } catch(e) {
         console.error(e);
-        alert("❌ Erreur lors de la finalisation.");
+        alert("❌ Erreur lors de l'envoi.");
     } finally {
         btn.disabled = false;
         btn.innerHTML = originalContent;

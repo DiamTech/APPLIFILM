@@ -1016,74 +1016,60 @@ function setPretMode(mode) {
 }
 
 async function fetchActiveLoans() {
-    const wrapper = document.getElementById('active-loans-list'); // Le parent (pour la visibilité)
-    const container = document.getElementById('loans-container'); // Le fils (pour les cartes)
+    // On vise le nouveau nom d'ID pour éviter les conflits
+    const wrapper = document.getElementById('active-loans-wrapper'); 
+    const container = document.getElementById('loans-container');
 
     if (!wrapper || !container) {
-        return console.error("Erreur : Les IDs active-loans-list ou loans-container sont introuvables !");
+        // Petit message pour toi si tu as oublié de changer l'ID dans l'HTML
+        console.error("IDs introuvables. Vérifie que tu as bien renommé active-loans-wrapper");
+        return;
     }
 
-    // 1. ON ENLÈVE LE CACHÉ (Allume la lumière)
+    // On affiche le bloc parent
     wrapper.classList.remove('hidden');
-    
-    // 2. Message d'attente dans le container (on ne touche pas au titre du parent)
-    container.innerHTML = '<div class="text-[10px] font-black text-center py-4 text-indigo-400 animate-pulse uppercase tracking-widest">Récupération des dossiers...</div>';
+    container.innerHTML = '<div class="text-[10px] font-black text-center py-8 text-indigo-400 animate-pulse uppercase tracking-widest">Recherche des véhicules dehors...</div>';
 
     try {
-        // Note : On retire le "?action=get_active" si ton doGet ne le gère pas, 
-        // ou on le garde si c'est nécessaire.
-        const response = await fetch(URL_PRET); 
+        const response = await fetch(URL_PRET);
         const loans = await response.json();
-        
         state.activeLoans = loans;
 
         if (!loans || loans.length === 0) {
             container.innerHTML = `
-                <div class="p-8 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[2rem]">
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">AUCUN VÉHICULE DEHORS</p>
+                <div class="p-8 text-center border-2 border-dashed border-slate-200 rounded-[2rem]">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Aucun véhicule dehors</p>
                 </div>`;
             return;
         }
 
-        // 3. On injecte les cartes uniquement dans loans-container
         container.innerHTML = loans.map(loan => {
-            const d = new Date(loan.date);
-            const datePropre = d.toLocaleDateString('fr-FR', {day: '2-digit', month: '2-digit'});
-            const kmAffichage = loan.km || "0";
-            const titrePrincipal = loan.modele && loan.modele !== "Véhicule" ? loan.modele : loan.immat;
-            const sousTitre = loan.modele && loan.modele !== "Véhicule" ? loan.immat : "";
+            const datePropre = loan.date ? new Date(loan.date).toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit'}) : '--/--';
+            const titre = (loan.modele && loan.modele !== "Véhicule") ? loan.modele : loan.immat;
+            const sousTitre = (loan.modele && loan.modele !== "Véhicule") ? loan.immat : "IMMATRICULATION";
         
             return `
                 <button type="button" onclick="selectLoanForReturn('${loan.immat}')" 
-                        class="w-full bg-indigo-600 p-5 rounded-[2rem] text-left shadow-lg mb-2 flex flex-col gap-6 active:scale-95 transition-all border-b-4 border-indigo-800">
-                    
+                        class="w-full bg-indigo-600 p-5 rounded-[2rem] text-left shadow-lg mb-2 flex flex-col gap-5 active:scale-95 transition-all border-b-4 border-indigo-900">
                     <div class="flex justify-between items-start">
                         <div class="flex flex-col">
-                            <span class="text-[10px] font-black text-indigo-200 uppercase tracking-widest">MODÈLE</span>
-                            <span class="font-black text-white text-xl leading-tight">${titrePrincipal}</span>
-                            <span class="text-[11px] font-bold text-indigo-200 opacity-80">${sousTitre}</span>
+                            <span class="text-[9px] font-black text-indigo-200 opacity-70">VÉHICULE</span>
+                            <span class="font-black text-white text-lg">${titre}</span>
+                            <span class="text-[10px] font-bold text-indigo-100 italic">${sousTitre}</span>
                         </div>
-                        <span class="text-[11px] font-black bg-black text-white px-3 py-1.5 rounded-xl">
-                            ${datePropre}
+                        <span class="text-[10px] font-black bg-black/20 text-white px-3 py-1.5 rounded-xl border border-white/10">
+                            LE ${datePropre}
                         </span>
                     </div>
-        
-                    <div class="flex justify-between items-end">
-                        <div class="flex flex-col">
-                            <span class="text-[10px] font-black text-indigo-200 uppercase tracking-widest">CLIENT</span>
-                            <span class="text-sm font-bold text-white uppercase tracking-wide">${loan.nom}</span>
-                        </div>
-                        <div class="text-right">
-                            <span class="text-[10px] font-black text-indigo-200 uppercase tracking-widest block">COMPTEUR</span>
-                            <span class="text-sm font-black text-white">${kmAffichage} KM</span>
-                        </div>
+                    <div class="flex justify-between items-end border-t border-white/10 pt-3">
+                        <span class="text-xs font-bold text-white uppercase">${loan.nom}</span>
+                        <span class="text-xs font-black text-white">${loan.km} KM</span>
                     </div>
                 </button>
             `;
         }).join('');
     } catch (e) {
-        console.error(e);
-        container.innerHTML = '<div class="text-[10px] font-bold text-center py-4 text-red-400 uppercase">⚠️ Erreur de connexion</div>';
+        container.innerHTML = '<div class="text-[10px] font-bold text-center py-4 text-red-400">⚠️ Erreur de connexion</div>';
     }
 }
 

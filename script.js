@@ -1257,51 +1257,51 @@ function toggleFormLock(isReturn) {
 }
 
 function resetDamages() {
-    // 1. GESTION DU MODE DÉPART
-    if (state.pretMode === 'DEPART') {
-        // Fenêtre de confirmation avant d'agir
-        if (!confirm("Voulez-vous vraiment effacer tous les points de carrosserie ?")) {
-            return; // On arrête tout si l'utilisateur annule
-        }
-
-        // Si l'utilisateur a cliqué sur OK :
-        state.pret.damages = [];
-        state.pret.inspectionValidated = false; // On déverrouille l'inspection
-        
-        // Remise à zéro du bouton de confirmation
-        const btnLock = document.getElementById('btn-lock-inspection');
-        if (btnLock) {
-            btnLock.innerText = "Confirmer l'inspection";
-            btnLock.className = "w-full mt-4 bg-slate-100 text-slate-600 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border-2 border-slate-200 active:scale-95 transition-all";
-        }
-        
-        // On re-bloque la zone de signature
-        const sigSection = document.getElementById('signature-section');
-        if (sigSection) {
-            sigSection.classList.add('opacity-30', 'pointer-events-none');
-        }
-
-        alert("🧹 Tous les points ont été effacés et l'inspection est déverrouillée.");
-    } 
-    
-    // 2. GESTION DU MODE RETOUR
-    else {
-        // On vérifie d'abord si c'est verrouillé (sécurité existante)
-        if (state.pret.inspectionValidated) {
-            return alert("⚠️ Déverrouillez d'abord l'inspection pour modifier les points.");
-        }
-
-        // Fenêtre de confirmation spécifique au retour
-        if (!confirm("Effacer les nouveaux dégâts (rouges) de ce retour ?")) {
-            return;
-        }
-        
-        // On ne garde que les points gris ('old')
-        state.pret.damages = state.pret.damages.filter(d => d.type === 'old');
-        alert("🧹 Nouveaux dégâts effacés. Les dégâts de départ sont conservés.");
+    // 1. ON DÉTERMINE LE MESSAGE DE CONFIRMATION
+    // Si une signature existe déjà, on prévient qu'elle sera effacée
+    let confirmMessage = "Voulez-vous vraiment effacer les points de carrosserie ?";
+    if (state.signature) {
+        confirmMessage = "⚠️ ATTENTION : Effacer les points supprimera la signature actuelle. Il faudra obligatoirement refaire signer le client. Continuer ?";
     }
+
+    // 2. BOÎTE DE CONFIRMATION
+    if (!confirm(confirmMessage)) return;
+
+    // 3. LOGIQUE DE RÉINITIALISATION SELON LE MODE
+    if (state.pretMode === 'DEPART') {
+        // AU DÉPART : On vide tout
+        state.pret.damages = [];
+    } else {
+        // AU RETOUR : On ne garde que les points gris (anciens dégâts)
+        state.pret.damages = state.pret.damages.filter(d => d.type === 'old');
+    }
+
+    // 4. DÉVERROUILLAGE ET SUPPRESSION DE LA SIGNATURE
+    state.pret.inspectionValidated = false; 
+    state.signature = null; // On supprime la signature en mémoire
+
+    // 5. MISE À JOUR DE L'INTERFACE (UI)
     
+    // On remet le bouton de confirmation à l'état initial (gris)
+    const btnLock = document.getElementById('btn-lock-inspection');
+    if (btnLock) {
+        btnLock.innerText = "Confirmer l'inspection";
+        btnLock.className = "w-full mt-4 bg-slate-100 text-slate-600 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border-2 border-slate-200 active:scale-95 transition-all";
+    }
+
+    // On cache le message "Signature OK" et on réinitialise l'aspect de la zone de signature
+    const sigOkMsg = document.getElementById('pret-sig-ok');
+    if (sigOkMsg) sigOkMsg.classList.add('hidden');
+
+    const sigSection = document.getElementById('signature-section');
+    if (sigSection) {
+        sigSection.classList.add('opacity-30', 'pointer-events-none');
+    }
+
+    // On rafraîchit le schéma pour enlever les croix
     renderDamages();
+    
+    alert("🧹 Dégâts effacés et signature supprimée. Vous pouvez recommencer l'inspection.");
 }
 
 function openFullscreen(url) {

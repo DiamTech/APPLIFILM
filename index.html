@@ -207,10 +207,19 @@
     </button>
 </div>
 
-<div class="mb-4">
-    <label class="block text-[10px] font-black text-slate-500 uppercase mb-2 ml-4">Technicien responsable</label>
-    <input type="text" id="pret-tech-name" placeholder="TON NOM" 
-           class="w-full bg-slate-100 dark:bg-slate-800 border-none rounded-2xl p-4 text-sm font-bold shadow-inner outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+<div class="space-y-4 mb-6 mt-6">
+    <div class="bg-slate-800/40 p-5 rounded-[2rem] border border-slate-700/50 shadow-inner">
+        <label class="block text-[10px] font-black text-slate-500 uppercase mb-3 ml-2 tracking-widest">
+            Validation Intervention
+        </label>
+        <div class="grid grid-cols-1 gap-3">
+            <input type="text" id="input-tech-name" placeholder="NOM DU TECHNICIEN" 
+                   class="w-full bg-slate-900/50 text-white rounded-2xl p-4 text-xs font-bold border-2 border-transparent focus:border-indigo-500 outline-none transition-all placeholder:text-slate-600">
+            
+            <input type="text" id="input-client-name" placeholder="NOM DU CLIENT / SOCIÉTÉ" 
+                   class="w-full bg-slate-900/50 text-white rounded-2xl p-4 text-xs font-bold border-2 border-transparent focus:border-indigo-500 outline-none transition-all placeholder:text-slate-600">
+        </div>
+    </div>
 </div>
 
 <div id="batch-recap-container" class="space-y-3 mt-6">

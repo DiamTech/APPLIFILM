@@ -544,64 +544,6 @@ function deselectWindow() {
     closeTintModal();
 }
 
-// --- LA FONCTION SECURISÉE ---
-function addToBatch() {
-    const vinInput = document.getElementById('vin-input');
-    const vin = vinInput.value.trim();
-
-    // 1. VERROU VIN
-    if (!vin) {
-        alert("⚠️ Le VIN est obligatoire !");
-        vinInput.focus();
-        return;
-    }
-
-    // 2. VERROU VITRES
-    if (state.selectedWindows.length === 0) {
-        alert("⚠️ Veuillez sélectionner au moins une vitre.");
-        return;
-    }
-
-    // 3. VERROU SIGNATURE
-    if (!state.signature) {
-        alert("⚠️ La signature est obligatoire pour valider.");
-        return;
-    }
-    
-    state.batch.push({
-        vin: vin,
-        type: document.querySelector('input[name="type"]:checked').value,
-        obs: document.getElementById('obs').value,
-        windows: state.selectedWindows.map(w => `${w.id} (${w.tint})`), 
-        photos: [...state.photos],
-        signature: state.signature,
-        date: new Date().toLocaleString('fr-FR')
-    });
-    
-    // Reset complet
-    vinInput.value = ""; 
-    document.getElementById('obs').value = "";
-    document.querySelectorAll('.window-btn').forEach(b => {
-        b.classList.remove('selected');
-        // On remet le texte d'origine (ID)
-        const originalId = b.id.replace('win-', '');
-        b.innerHTML = `<div>${originalId}</div>`;
-    });
-    state.selectedWindows = []; 
-    state.photos = []; 
-    resetSignature(); 
-    renderPhotos(); 
-    updateBatchUI();
-    alert("✅ Véhicule ajouté au lot !");
-}
-
-function updateBatchUI() { 
-    const counter = document.getElementById('batch-counter');
-    if(counter) counter.innerText = `${state.batch.length} EN ATTENTE`; 
-}
-
-function toggleHistoryMenu() { document.getElementById('history-menu').classList.toggle('hidden'); updateHistoryUI(); }
-
 function updateHistoryUI() {
     const list = document.getElementById('sent-list');
     if(!list) return;

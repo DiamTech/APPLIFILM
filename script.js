@@ -1336,12 +1336,12 @@ async function handleSave() {
     }
 }
 
+// --- 1. FONCTION GÉNÉRATION PDF (CORRIGÉE) ---
 async function generateVitragePDF(batch, signature, tech, client) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
 
-    // Design Entête
     doc.setFont("helvetica", "bold");
     doc.setFontSize(22);
     doc.setTextColor(79, 70, 229);
@@ -1351,14 +1351,12 @@ async function generateVitragePDF(batch, signature, tech, client) {
     doc.setTextColor(100);
     doc.text("BON D'INTERVENTION VITRAGE", pageWidth - 20, 25, { align: "right" });
 
-    // Infos Client / Tech
     doc.setTextColor(40);
     doc.setFontSize(10);
     doc.text(`Technicien : ${tech.toUpperCase()}`, 20, 45);
     doc.text(`Client : ${client.toUpperCase()}`, 20, 52);
     doc.text(`Date : ${new Date().toLocaleDateString('fr-FR')}`, pageWidth - 20, 45, { align: "right" });
 
-    // Tableau des véhicules
     const body = batch.map(item => [item.vin, item.type, item.windows.join('\n')]);
     doc.autoTable({
         startY: 60,
@@ -1369,73 +1367,77 @@ async function generateVitragePDF(batch, signature, tech, client) {
         styles: { fontSize: 9 }
     });
 
-    // Signature
     let finalY = doc.lastAutoTable.finalY + 15;
     doc.setFont("helvetica", "bold");
     doc.text("SIGNATURE CLIENT :", 20, finalY);
     doc.addImage(signature, 'PNG', 20, finalY + 5, 50, 25);
 
-    // Mentions légales bas de page
     doc.setFontSize(8);
     doc.setTextColor(150);
     doc.text("Certifié conforme par Applifilm. Document généré numériquement.", pageWidth / 2, 285, { align: "center" });
 
-    // Retourne le Base64 pour l'envoi Drive
     return doc.output('datauristring');
-}
-    doc.text(`Date : ${dateStr}`, 20, 65);
-    doc.text(`Nombre de véhicules : ${batch.length}`, 20, 72);
+} // <-- Fin correcte de generateVitragePDF
 
-    // --- 3. TABLEAU DES VÉHICULES ---
-    const tableRows = batch.map(item => [
-        item.vin,
-        item.type,
-        item.windows.join('\n'), // Retour à la ligne pour chaque vitre
-    ]);
+// --- 2. FONCTION FINALIZE (CORRIGÉE) ---
+async function finalize() {
+    if(!state.batch.length) return alert("Le lot est vide !");
+    if(!state.signature) return alert("⚠️ Signature obligatoire !");
 
-    doc.autoTable({
-        startY: 85,
-        head: [['N° VIN', 'TYPE', 'VITRAGES DÉTAILLÉS']],
-        body: tableRows,
-        theme: 'striped',
-        headStyles: { fillStyle: [79, 70, 229], fontStyle: 'bold' },
-        styles: { fontSize: 9, cellPadding: 5 },
-        columnStyles: {
-            2: { cellWidth: 80 } // On laisse plus de place aux vitres
-        }
-    });
+    const tech = document.getElementById('input-tech-name')?.value.trim() || "Inconnu";
+    const client = document.getElementById('input-client-name')?.value.trim() || "Anonyme";
 
-    // --- 4. SIGNATURE ---
-    let finalY = doc.lastAutoTable.finalY + 20;
+    const btn = document.getElementById('btn-final');
+    btn.disabled = true;
+    const originalContent = btn.innerHTML;
+    btn.innerHTML = "<span>GÉNÉRATION & ARCHIVAGE...</span>";
     
-    // Si on arrive en bas de page, on change de page
-    if (finalY > 230) { doc.addPage(); finalY = 20; }
+    try {
+        const pdfBase64 = await generateVitragePDF(state.batch, state.signature, tech, client);
 
-    doc.setFont("helvetica", "bold");
-    doc.text("Signature du client :", 20, finalY);
-    
-    if (signature) {
-        // Ajout de l'image de la signature (base64)
-        doc.addImage(signature, 'PNG', 20, finalY + 5, 50, 25);
+        const payload = {
+            technicien: tech,
+            client: client,
+            pdfBase64: pdfBase64,
+            interventions: state.batch.map(item => ({
+                ...item,
+                technicien: tech,
+                client: client,
+                signature: state.signature
+            }))
+        };
+
+        await fetch(URL_VITRAGE, {
+            method: 'POST', 
+            mode: 'no-cors', 
+            cache: 'no-cache',
+            body: JSON.stringify(payload)
+        });
+
+        const now = new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
+        state.batch.forEach(v => { 
+            state.sentHistory.push({ vin: v.vin, sentTime: now }); 
+        });
+
+        state.batch = [];
+        state.signature = null;
+        if(document.getElementById('input-client-name')) document.getElementById('input-client-name').value = "";
+        
+        updateBatchUI(); 
+        updateHistoryUI();
+        resetSignature();
+        
+        alert("✅ TERMINÉ ! Données envoyées et PDF archivé sur Drive.");
+        
+    } catch(e) {
+        console.error(e);
+        alert("❌ Erreur lors de la finalisation.");
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalContent;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
     }
-
-    // --- 5. MENTIONS LÉGALES (Pied de page) ---
-    const legal1 = "Certifie que les travaux ont été effectués conformément aux normes de sécurité en vigueur.";
-    const legal2 = "Le client reconnaît avoir pris connaissance de l'état des travaux et accepte la livraison sans réserve.";
-    const legal3 = "APPLIFILM - SIRET 123 456 789 00000 - TVA FR 12 3456789";
-
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "italic");
-    doc.setTextColor(150);
-    doc.text(legal1, pageWidth / 2, 270, { align: "center" });
-    doc.text(legal2, pageWidth / 2, 275, { align: "center" });
-    doc.setFont("helvetica", "normal");
-    doc.text(legal3, pageWidth / 2, 285, { align: "center" });
-
-    // --- 6. SAUVEGARDE / TÉLÉCHARGEMENT ---
-    const fileName = `Recap_Vitrage_${new Date().getTime()}.pdf`;
-    doc.save(fileName);
-}
+} // <-- Fin correcte de finalize
 
 async function saveReturn() {
     const immat = document.getElementById('pret-vehicule-select').value;

@@ -20,7 +20,7 @@ let state = {
 };
 
 // Mets tes vraies URLs ici
-const URL_VITRAGE = "https://script.google.com/macros/s/AKfycbyl-hYWhxxK8-1jLGxHC_QNFgrVFZtbUv69Ozr2hMAdqWz2iQvP5oG92Div0LbG-L5x/exec";
+const URL_VITRAGE = "https://script.google.com/macros/s/AKfycbw-2cArMwfp_f5SXVsVBeh7OK9tHXz94vIiNmuH1s-ZLQuSRWe7qeTFEhfvgwZtGyU5/exec";
 const URL_PRET = "https://script.google.com/macros/s/AKfycbxh3j0nkQxdO0oTQ5bORE25XwcjlZpUQ_5Fgd0a_utXPuFrkxE0VVp0j2VSmMOAxgXH6w/exec";
 
 let scanner, canvas, ctx, drawing = false;
@@ -550,53 +550,63 @@ function updateHistoryUI() {
 }
 
 async function finalize() {
-    // 1. Vérification si le lot n'est pas vide
     if(!state.batch.length) return alert("Le lot est vide !");
-    
-    // 2. VERROU : On vérifie si la signature a été faite avant d'autoriser l'envoi
-    if(!state.signature) {
-        return alert("⚠️ La signature du client est obligatoire pour valider l'ensemble du lot !");
-    }
+    if(!state.signature) return alert("⚠️ Signature obligatoire !");
+
+    // Récupération des noms (ajoute ces inputs dans ton HTML comme vu avant)
+    const tech = document.getElementById('input-tech-name')?.value.trim() || "Inconnu";
+    const client = document.getElementById('input-client-name')?.value.trim() || "Anonyme";
 
     const btn = document.getElementById('btn-final');
     btn.disabled = true;
     const originalContent = btn.innerHTML;
-    btn.innerHTML = "<span>ENVOI DU LOT...</span>";
+    btn.innerHTML = "<span>GÉNÉRATION & ARCHIVAGE...</span>";
     
-    // 3. INJECTION DE LA SIGNATURE : On attache la signature à chaque véhicule
-    const finalBatch = state.batch.map(item => ({
-        ...item,
-        signature: state.signature
-    }));
-
     try {
-        // Envoi du lot complet avec la signature unique
+        // 1. Générer le PDF et récupérer son contenu
+        const pdfBase64 = await generateVitragePDF(state.batch, state.signature, tech, client);
+
+        // 2. Préparer le paquet final
+        const payload = {
+            technicien: tech,
+            client: client,
+            pdfBase64: pdfBase64,
+            interventions: state.batch.map(item => ({
+                ...item,
+                technicien: tech,
+                client: client,
+                signature: state.signature
+            }))
+        };
+
+        // 3. Envoi au Google Script
         await fetch(URL_VITRAGE, {
             method: 'POST', 
             mode: 'no-cors', 
             cache: 'no-cache',
-            body: JSON.stringify({ interventions: finalBatch })
+            body: JSON.stringify(payload)
         });
 
-        // 4. Mise à jour de l'historique local
+        // Historique local
         const now = new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
         state.batch.forEach(v => { 
             state.sentHistory.push({ vin: v.vin, sentTime: now }); 
         });
 
-        // 5. Vidage du lot et de la signature
+        // Reset
         state.batch = [];
-        state.signature = null; // Très important pour ne pas réutiliser la signature pour le lot suivant
+        state.signature = null;
+        if(document.getElementById('input-client-name')) document.getElementById('input-client-name').value = "";
         
         updateBatchUI(); 
         updateHistoryUI();
-        resetSignature(); // Nettoie le visuel du bouton de signature
+        resetSignature();
         
-        alert("✅ TERMINÉ ! Le lot de " + finalBatch.length + " véhicule(s) a été transmis.");
+        alert("✅ TERMINÉ ! Données envoyées et PDF archivé sur Drive.");
         
     } catch(e) {
         console.error(e);
-        alert("❌ Erreur de connexion lors de l'envoi du lot.");
+        alert("❌ Erreur lors de la finalisation.");
     } finally {
         btn.disabled = false;
         btn.innerHTML = originalContent;
@@ -1324,6 +1334,107 @@ async function handleSave() {
     } else {
         await saveNewLoan(); // Ta logique actuelle pour créer un prêt
     }
+}
+
+async function generateVitragePDF(batch, signature, tech, client) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // Design Entête
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.setTextColor(79, 70, 229);
+    doc.text("APPLIFILM", 20, 25);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text("BON D'INTERVENTION VITRAGE", pageWidth - 20, 25, { align: "right" });
+
+    // Infos Client / Tech
+    doc.setTextColor(40);
+    doc.setFontSize(10);
+    doc.text(`Technicien : ${tech.toUpperCase()}`, 20, 45);
+    doc.text(`Client : ${client.toUpperCase()}`, 20, 52);
+    doc.text(`Date : ${new Date().toLocaleDateString('fr-FR')}`, pageWidth - 20, 45, { align: "right" });
+
+    // Tableau des véhicules
+    const body = batch.map(item => [item.vin, item.type, item.windows.join('\n')]);
+    doc.autoTable({
+        startY: 60,
+        head: [['VIN', 'TYPE', 'VITRAGES']],
+        body: body,
+        theme: 'grid',
+        headStyles: { fillColor: [79, 70, 229] },
+        styles: { fontSize: 9 }
+    });
+
+    // Signature
+    let finalY = doc.lastAutoTable.finalY + 15;
+    doc.setFont("helvetica", "bold");
+    doc.text("SIGNATURE CLIENT :", 20, finalY);
+    doc.addImage(signature, 'PNG', 20, finalY + 5, 50, 25);
+
+    // Mentions légales bas de page
+    doc.setFontSize(8);
+    doc.setTextColor(150);
+    doc.text("Certifié conforme par Applifilm. Document généré numériquement.", pageWidth / 2, 285, { align: "center" });
+
+    // Retourne le Base64 pour l'envoi Drive
+    return doc.output('datauristring');
+}
+    doc.text(`Date : ${dateStr}`, 20, 65);
+    doc.text(`Nombre de véhicules : ${batch.length}`, 20, 72);
+
+    // --- 3. TABLEAU DES VÉHICULES ---
+    const tableRows = batch.map(item => [
+        item.vin,
+        item.type,
+        item.windows.join('\n'), // Retour à la ligne pour chaque vitre
+    ]);
+
+    doc.autoTable({
+        startY: 85,
+        head: [['N° VIN', 'TYPE', 'VITRAGES DÉTAILLÉS']],
+        body: tableRows,
+        theme: 'striped',
+        headStyles: { fillStyle: [79, 70, 229], fontStyle: 'bold' },
+        styles: { fontSize: 9, cellPadding: 5 },
+        columnStyles: {
+            2: { cellWidth: 80 } // On laisse plus de place aux vitres
+        }
+    });
+
+    // --- 4. SIGNATURE ---
+    let finalY = doc.lastAutoTable.finalY + 20;
+    
+    // Si on arrive en bas de page, on change de page
+    if (finalY > 230) { doc.addPage(); finalY = 20; }
+
+    doc.setFont("helvetica", "bold");
+    doc.text("Signature du client :", 20, finalY);
+    
+    if (signature) {
+        // Ajout de l'image de la signature (base64)
+        doc.addImage(signature, 'PNG', 20, finalY + 5, 50, 25);
+    }
+
+    // --- 5. MENTIONS LÉGALES (Pied de page) ---
+    const legal1 = "Certifie que les travaux ont été effectués conformément aux normes de sécurité en vigueur.";
+    const legal2 = "Le client reconnaît avoir pris connaissance de l'état des travaux et accepte la livraison sans réserve.";
+    const legal3 = "APPLIFILM - SIRET 123 456 789 00000 - TVA FR 12 3456789";
+
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "italic");
+    doc.setTextColor(150);
+    doc.text(legal1, pageWidth / 2, 270, { align: "center" });
+    doc.text(legal2, pageWidth / 2, 275, { align: "center" });
+    doc.setFont("helvetica", "normal");
+    doc.text(legal3, pageWidth / 2, 285, { align: "center" });
+
+    // --- 6. SAUVEGARDE / TÉLÉCHARGEMENT ---
+    const fileName = `Recap_Vitrage_${new Date().getTime()}.pdf`;
+    doc.save(fileName);
 }
 
 async function saveReturn() {

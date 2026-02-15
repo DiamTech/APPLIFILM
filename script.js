@@ -1257,20 +1257,25 @@ function toggleFormLock(isReturn) {
 }
 
 function resetDamages() {
-    // 1. GESTION DU MODE DÉPART (Plus flexible pour corriger les erreurs)
+    // 1. GESTION DU MODE DÉPART
     if (state.pretMode === 'DEPART') {
-        // On réinitialise tout sans condition
+        // Fenêtre de confirmation avant d'agir
+        if (!confirm("Voulez-vous vraiment effacer tous les points de carrosserie ?")) {
+            return; // On arrête tout si l'utilisateur annule
+        }
+
+        // Si l'utilisateur a cliqué sur OK :
         state.pret.damages = [];
         state.pret.inspectionValidated = false; // On déverrouille l'inspection
         
-        // On remet le bouton de confirmation à son état initial
+        // Remise à zéro du bouton de confirmation
         const btnLock = document.getElementById('btn-lock-inspection');
         if (btnLock) {
             btnLock.innerText = "Confirmer l'inspection";
             btnLock.className = "w-full mt-4 bg-slate-100 text-slate-600 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border-2 border-slate-200 active:scale-95 transition-all";
         }
         
-        // On re-bloque la signature car l'inspection n'est plus validée
+        // On re-bloque la zone de signature
         const sigSection = document.getElementById('signature-section');
         if (sigSection) {
             sigSection.classList.add('opacity-30', 'pointer-events-none');
@@ -1278,15 +1283,22 @@ function resetDamages() {
 
         alert("🧹 Tous les points ont été effacés et l'inspection est déverrouillée.");
     } 
-    // 2. GESTION DU MODE RETOUR (On garde la sécurité pour protéger les points gris)
+    
+    // 2. GESTION DU MODE RETOUR
     else {
+        // On vérifie d'abord si c'est verrouillé (sécurité existante)
         if (state.pret.inspectionValidated) {
             return alert("⚠️ Déverrouillez d'abord l'inspection pour modifier les points.");
         }
+
+        // Fenêtre de confirmation spécifique au retour
+        if (!confirm("Effacer les nouveaux dégâts (rouges) de ce retour ?")) {
+            return;
+        }
         
-        // Au retour, on ne filtre que pour garder les points 'old' (gris)
+        // On ne garde que les points gris ('old')
         state.pret.damages = state.pret.damages.filter(d => d.type === 'old');
-        alert("🧹 Nouveaux dégâts (rouges) effacés. Les dégâts de départ (gris) sont conservés.");
+        alert("🧹 Nouveaux dégâts effacés. Les dégâts de départ sont conservés.");
     }
     
     renderDamages();

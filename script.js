@@ -20,7 +20,7 @@ let state = {
 };
 
 // Mets tes vraies URLs ici
-const URL_VITRAGE = "https://script.google.com/macros/s/AKfycbxlKbC0uH-VQVuAHHAc08ovkMJj54Nvk0vr5tw4zvv8r3MQRwq26jRivO6ChClfT6Er/exec";
+const URL_VITRAGE = "https://script.google.com/macros/s/AKfycbxlMrtk3lk6-1u2PWGkvlw55k2RTUBS3K_M33jtUiLgA07n61kNSCLkonWEMdDhPrcg/exec";
 const URL_PRET = "https://script.google.com/macros/s/AKfycbwhcluLbGJ0OSsBDPZhWjZR6HxRcGscYHH4bXwbwFu-3RF5EgsWHoHeADiobGOZdLLEuA/exec";
 
 let scanner, canvas, ctx, drawing = false;

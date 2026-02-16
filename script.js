@@ -354,26 +354,29 @@ function renderDailyHistory() {
 // Fonction appelée par tes boutons HTML
 function setScannerMode(mode) {
     scannerMode = mode;
-    console.log("Mode activé : " + mode); // Pour vérifier dans la console
+    console.log("Mode activé : " + mode);
 
     const btnBarcode = document.getElementById('btn-mode-barcode');
     const btnText = document.getElementById('btn-mode-text');
+    const targetBox = document.getElementById('scan-target');
 
-    // Styles : Bleu (Actif) / Gris (Inactif)
     const activeClass = "bg-indigo-600 text-white shadow-sm";
     const inactiveClass = "bg-slate-100 text-slate-500";
     const baseClass = "flex-1 py-3 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all";
 
-    // Mise à jour visuelle des boutons
     if (mode === 'barcode') {
         btnBarcode.className = `${baseClass} ${activeClass}`;
         btnText.className = `${baseClass} ${inactiveClass}`;
-        // Si on repasse en code-barres, on arrête de chercher du texte pour économiser la batterie
+        
+        // En mode Barcode, on cache la cible rouge et on coupe l'OCR
+        if(targetBox) targetBox.classList.add('hidden');
         if (ocrInterval) clearInterval(ocrInterval);
     } else {
         btnText.className = `${baseClass} ${activeClass}`;
         btnBarcode.className = `${baseClass} ${inactiveClass}`;
-        // Si on passe en Texte, on lance la boucle IMMEDIATEMENT
+        
+        // En mode Texte, on affiche la cible rouge et on lance l'OCR
+        if(targetBox) targetBox.classList.remove('hidden');
         startOcrLoop();
     }
 }

@@ -53,10 +53,10 @@ function openDB() {
 async function saveToOutbox(url, payload) {
     const db = await openDB();
     const tx = db.transaction("outbox", "readwrite");
-    await tx.objectStore("outbox").add({ url, payload, timestamp: new Date().toISOString() });
-    updateOfflineCounter();
+    const store = tx.objectStore("outbox");
+    // On enregistre l'URL de destination et les données (photos/pdf inclus)
+    await store.add({ url, payload, timestamp: Date.now() });
 }
-
 // Sauvegarder une copie "consultable" sur le téléphone (Historique local)
 async function saveDossierLocalement(payload) {
     const db = await openDB();
@@ -825,7 +825,6 @@ function updateHistoryUI() {
 async function finalize() {
     const techEl = document.getElementById('input-tech-name');
     const clientEl = document.getElementById('input-client-name');
-    
     const tech = techEl ? techEl.value.trim() : "";
     const client = clientEl ? clientEl.value.trim() : "";
 
@@ -835,65 +834,53 @@ async function finalize() {
         return alert("⚠️ Technicien et Client obligatoires.");
     }
 
-    if (!state.batch.length) return alert("Le lot est vide !");
-    if (!state.signature) return alert("⚠️ Signature client manquante !");
+    if (!state.batch.length || !state.signature) return alert("⚠️ Lot ou Signature manquante !");
 
     const btn = document.getElementById('btn-final');
     btn.disabled = true;
     const originalContent = btn.innerHTML;
-    btn.innerHTML = "<span>GÉNÉRATION & SAUVEGARDE...</span>";
+    btn.innerHTML = "<span>TRAITEMENT...</span>";
     
     try {
         const pdfBase64 = await generateVitragePDF(state.batch, state.signature, tech, client);
-
         const payload = {
             technicien: tech,
             client: client,
             pdfBase64: pdfBase64,
-            type: "VITRAGE", // Pour l'historique local
-            interventions: state.batch.map(item => ({
-                ...item,
-                technicien: tech,
-                client: client,
-                signature: state.signature
-            }))
+            type: "VITRAGE",
+            interventions: state.batch.map(item => ({ ...item, technicien: tech, client: client, signature: state.signature }))
         };
 
-        // --- LOGIQUE HORS-LIGNE ---
-        // 1. On garde une copie dans l'historique interne du tel
+        // 1. Sauvegarde systématique dans l'historique du téléphone
         await saveDossierLocalement({
-            immat: state.batch[0].vin, // On prend le 1er VIN pour l'ID
+            immat: state.batch[0].vin,
             nom: client,
             date: new Date().toLocaleString('fr-FR'),
             pdfBase64: pdfBase64,
             type: "VITRAGE"
         });
 
-        // 2. Envoi ou File d'attente
+        // 2. Gestion de l'envoi
         if (navigator.onLine) {
             try {
                 await fetch(URL_VITRAGE, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
                 alert("✅ Envoyé et Archivé !");
             } catch (e) {
                 await saveToOutbox(URL_VITRAGE, payload);
-                alert("📡 Connexion instable : Enregistré sur le téléphone (envoi auto bientôt).");
+                alert("✅ Données sauvegardées, en attente de réseau.");
             }
         } else {
             await saveToOutbox(URL_VITRAGE, payload);
-            alert("📴 HORS-LIGNE : Enregistré sur le téléphone. L'envoi se fera au retour du réseau.");
+            alert("✅ Données sauvegardées, en attente de réseau.");
         }
 
         // RESET
-        const now = new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
-        state.batch.forEach(v => { state.sentHistory.push({ vin: v.vin, sentTime: now }); });
         state.batch = [];
         state.signature = null;
         if(clientEl) clientEl.value = "";
-        
         updateBatchUI(); 
-        updateHistoryUI();
         resetSignature();
-        updateOfflineCounter(); // Mise à jour du badge
+        updateOfflineCounter();
         
     } catch(e) {
         console.error(e);
@@ -901,29 +888,21 @@ async function finalize() {
     } finally {
         btn.disabled = false;
         btn.innerHTML = originalContent;
-        if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 }
 
 async function finalizePret() {
     const btn = document.getElementById('btn-final-pret');
-    
     const techInput = document.getElementById('pret-tech-name');
     const clientInput = document.getElementById('pret-nom');
     const tech = techInput?.value.trim();
     const client = clientInput?.value.trim();
 
-    if (!tech || !client) {
-        if (techInput) techInput.style.border = "2px solid #ef4444";
-        if (clientInput) clientInput.style.border = "2px solid #ef4444";
-        return alert("⚠️ Technicien et Client obligatoires.");
-    }
+    if (!tech || !client) return alert("⚠️ Technicien et Client obligatoires.");
 
     const selectVehicule = document.getElementById('pret-vehicule-select');
     const fullSelectValue = selectVehicule ? selectVehicule.value : "";
-    let modeleExtraite = "Véhicule";
-    let plaqueAuto = "";
-
+    let modeleExtraite = "Véhicule", plaqueAuto = "";
     if (fullSelectValue.includes(':')) {
         const parts = fullSelectValue.split(':');
         modeleExtraite = parts[0].trim();
@@ -931,12 +910,9 @@ async function finalizePret() {
     } else { plaqueAuto = fullSelectValue; }
 
     const kmSaisi = parseInt(document.getElementById('pret-km-depart')?.value) || 0;
-    
-    // Validations
-    if (!plaqueAuto || plaqueAuto === "-- Choisir un véhicule --") return alert("⚠️ Choisis un véhicule !");
-    if (kmSaisi <= 0) return alert("⚠️ Saisis le kilométrage !");
-    if (!state.signature) return alert("⚠️ Signature obligatoire !");
-    if (!state.pret.inspectionValidated) return alert("⚠️ Valide l'inspection !");
+    if (!plaqueAuto || kmSaisi <= 0 || !state.signature || !state.pret.inspectionValidated) {
+        return alert("⚠️ Vérifiez les infos, le kilométrage et la signature !");
+    }
 
     const payload = {
         type: "PRET",
@@ -959,14 +935,13 @@ async function finalizePret() {
     };
 
     btn.disabled = true;
-    btn.innerText = "GÉNÉRATION & SAUVEGARDE...";
+    btn.innerText = "TRAITEMENT...";
 
     try {
         const pdfBase64 = await generatePretPDF(payload, state.pretMode, tech, client);
         payload.pdfBase64 = pdfBase64;
 
-        // --- LOGIQUE HORS-LIGNE ---
-        // 1. Copie locale pour historique tel
+        // 1. Sauvegarde historique local
         await saveDossierLocalement({
             immat: plaqueAuto,
             nom: client,
@@ -975,18 +950,18 @@ async function finalizePret() {
             type: "PRET-" + state.pretMode
         });
 
-        // 2. Envoi ou File d'attente
+        // 2. Gestion envoi
         if (navigator.onLine) {
             try {
                 await fetch(URL_PRET, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
                 alert(`✅ ${state.pretMode} ENREGISTRÉ !`);
             } catch (e) {
                 await saveToOutbox(URL_PRET, payload);
-                alert("📡 Connexion faible : Stocké sur le téléphone pour envoi auto.");
+                alert("✅ Données sauvegardées, en attente de réseau.");
             }
         } else {
             await saveToOutbox(URL_PRET, payload);
-            alert("📴 MODE HORS-LIGNE : Enregistré sur le téléphone. Synchro au retour du réseau.");
+            alert("✅ Données sauvegardées, en attente de réseau.");
         }
 
         resetPretForm(); 

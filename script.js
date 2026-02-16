@@ -19,6 +19,36 @@ let state = {
     vehiculeType: 'VOITURE'
 };
 
+// --- 1. ACTIVATION PWA (INSTALLATION MOBILE) ---
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('Applifilm Offline Prêt !'))
+            .catch(err => console.error('Erreur PWA', err));
+    });
+}
+
+// --- 2. INITIALISATION BASE DE DONNÉES LOCALE (INDEXEDDB) ---
+const dbName = "ApplifilmOfflineDB";
+function openDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(dbName, 2); // Version 2 pour gérer deux dossiers
+        request.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            // Dossier pour les envois en attente (quand pas de réseau)
+            if (!db.objectStoreNames.contains("outbox")) {
+                db.createObjectStore("outbox", { keyPath: "id", autoIncrement: true });
+            }
+            // Dossier pour stocker tes fiches PDF et Photos sur le téléphone (Historique local)
+            if (!db.objectStoreNames.contains("dossiers")) {
+                db.createObjectStore("dossiers", { keyPath: "id", autoIncrement: true });
+            }
+        };
+        request.onsuccess = (e) => resolve(e.target.result);
+        request.onerror = (e) => reject(e.target.error);
+    });
+}
+
 // Mets tes vraies URLs ici
 const URL_VITRAGE = "https://script.google.com/macros/s/AKfycbz64BaiGZIaYza94KxRLPFDIz_YGG5gm_nUXLxmcGu8X_8lC7D5y94BQX-NKkY3ljo/exec";
 const URL_PRET = "https://script.google.com/macros/s/AKfycbxHLvvS00SQY0nevjQO-dCR59YBDJ4NERU-8g2as4DpEcAjjc_-LzyMkr5T5xNyXJHArA/exec";

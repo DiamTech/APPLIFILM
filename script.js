@@ -49,6 +49,65 @@ function openDB() {
     });
 }
 
+// Sauvegarder un envoi en attente (quand pas de réseau)
+async function saveToOutbox(url, payload) {
+    const db = await openDB();
+    const tx = db.transaction("outbox", "readwrite");
+    await tx.objectStore("outbox").add({ url, payload, timestamp: new Date().toISOString() });
+    updateOfflineCounter();
+}
+
+// Sauvegarder une copie "consultable" sur le téléphone (Historique local)
+async function saveDossierLocalement(payload) {
+    const db = await openDB();
+    const tx = db.transaction("dossiers", "readwrite");
+    // On garde l'immat, le nom, la date et le PDF pour consultation hors-ligne
+    await tx.objectStore("dossiers").add({
+        immat: payload.immat,
+        nom: payload.nom,
+        date: payload.date,
+        pdf: payload.pdfBase64, // Le PDF est sauvegardé dans le téléphone !
+        type: payload.type
+    });
+}
+
+async function syncOutbox() {
+    if (!navigator.onLine) return; // Stop si toujours hors-ligne
+
+    const db = await openDB();
+    const tx = db.transaction("outbox", "readonly");
+    const store = tx.objectStore("outbox");
+    const items = await new Promise(r => {
+        const req = store.getAll();
+        req.onsuccess = () => r(req.result);
+    });
+
+    if (items.length === 0) return;
+
+    for (const item of items) {
+        try {
+            // Tentative d'envoi réel
+            await fetch(item.url, {
+                method: 'POST',
+                mode: 'no-cors',
+                body: JSON.stringify(item.payload)
+            });
+
+            // Si ça passe, on supprime de la mémoire du téléphone
+            const delTx = db.transaction("outbox", "readwrite");
+            await delTx.objectStore("outbox").delete(item.id);
+            console.log("✅ Synchro réussie pour " + item.payload.nom);
+        } catch (err) {
+            console.log("❌ Échec synchro, on garde au chaud...");
+        }
+    }
+    updateOfflineCounter();
+}
+
+// On lance la synchro au démarrage et quand le réseau revient
+window.addEventListener('online', syncOutbox);
+setInterval(syncOutbox, 30000); // Check toutes les 30 sec
+
 // Mets tes vraies URLs ici
 const URL_VITRAGE = "https://script.google.com/macros/s/AKfycbz64BaiGZIaYza94KxRLPFDIz_YGG5gm_nUXLxmcGu8X_8lC7D5y94BQX-NKkY3ljo/exec";
 const URL_PRET = "https://script.google.com/macros/s/AKfycbxHLvvS00SQY0nevjQO-dCR59YBDJ4NERU-8g2as4DpEcAjjc_-LzyMkr5T5xNyXJHArA/exec";
@@ -764,51 +823,25 @@ function updateHistoryUI() {
 }
 
 async function finalize() {
-    // 1. Récupération des éléments HTML
     const techEl = document.getElementById('input-tech-name');
     const clientEl = document.getElementById('input-client-name');
     
-    // 2. LE BLOQUEUR STRICT
-    // On vérifie si les éléments existent ET s'ils sont remplis
     const tech = techEl ? techEl.value.trim() : "";
     const client = clientEl ? clientEl.value.trim() : "";
 
-    let errors = [];
-    
-    // Reset des styles de bordure
-    if (techEl) techEl.style.border = "1px solid #e2e8f0"; // Couleur bordure par défaut (ex: slate-200)
-    if (clientEl) clientEl.style.border = "1px solid #e2e8f0";
-
-    // Vérification Technicien
-    if (!tech) {
-        errors.push("Nom du Technicien");
-        if (techEl) {
-            techEl.style.border = "2px solid #ef4444"; // Rouge vif
-            techEl.focus(); // On met le curseur dessus
-        }
-    }
-    
-    // Vérification Client
-    if (!client) {
-        errors.push("Nom du Client");
-        if (clientEl) clientEl.style.border = "2px solid #ef4444"; // Rouge vif
+    if (!tech || !client) {
+        if (techEl) techEl.style.border = "2px solid #ef4444";
+        if (clientEl) clientEl.style.border = "2px solid #ef4444";
+        return alert("⚠️ Technicien et Client obligatoires.");
     }
 
-    // SI ERREUR : ON ARRÊTE TOUT ICI
-    if (errors.length > 0) {
-        return alert("⚠️ ACTION REQUISE :\n" + errors.join(" et ") + " obligatoire(s).");
-    }
-
-    // 3. Vérifications classiques (Lot et Signature)
     if (!state.batch.length) return alert("Le lot est vide !");
     if (!state.signature) return alert("⚠️ Signature client manquante !");
 
-    // --- À PARTIR D'ICI, LE CODE EST VALIDE ---
-    
     const btn = document.getElementById('btn-final');
     btn.disabled = true;
     const originalContent = btn.innerHTML;
-    btn.innerHTML = "<span>GÉNÉRATION & ARCHIVAGE...</span>";
+    btn.innerHTML = "<span>GÉNÉRATION & SAUVEGARDE...</span>";
     
     try {
         const pdfBase64 = await generateVitragePDF(state.batch, state.signature, tech, client);
@@ -817,6 +850,7 @@ async function finalize() {
             technicien: tech,
             client: client,
             pdfBase64: pdfBase64,
+            type: "VITRAGE", // Pour l'historique local
             interventions: state.batch.map(item => ({
                 ...item,
                 technicien: tech,
@@ -825,19 +859,33 @@ async function finalize() {
             }))
         };
 
-        await fetch(URL_VITRAGE, {
-            method: 'POST', 
-            mode: 'no-cors', 
-            cache: 'no-cache',
-            body: JSON.stringify(payload)
+        // --- LOGIQUE HORS-LIGNE ---
+        // 1. On garde une copie dans l'historique interne du tel
+        await saveDossierLocalement({
+            immat: state.batch[0].vin, // On prend le 1er VIN pour l'ID
+            nom: client,
+            date: new Date().toLocaleString('fr-FR'),
+            pdfBase64: pdfBase64,
+            type: "VITRAGE"
         });
 
-        const now = new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
-        state.batch.forEach(v => { 
-            state.sentHistory.push({ vin: v.vin, sentTime: now }); 
-        });
+        // 2. Envoi ou File d'attente
+        if (navigator.onLine) {
+            try {
+                await fetch(URL_VITRAGE, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+                alert("✅ Envoyé et Archivé !");
+            } catch (e) {
+                await saveToOutbox(URL_VITRAGE, payload);
+                alert("📡 Connexion instable : Enregistré sur le téléphone (envoi auto bientôt).");
+            }
+        } else {
+            await saveToOutbox(URL_VITRAGE, payload);
+            alert("📴 HORS-LIGNE : Enregistré sur le téléphone. L'envoi se fera au retour du réseau.");
+        }
 
         // RESET
+        const now = new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
+        state.batch.forEach(v => { state.sentHistory.push({ vin: v.vin, sentTime: now }); });
         state.batch = [];
         state.signature = null;
         if(clientEl) clientEl.value = "";
@@ -845,12 +893,11 @@ async function finalize() {
         updateBatchUI(); 
         updateHistoryUI();
         resetSignature();
-        
-        alert("✅ TERMINÉ ! Fiche archivée pour " + client);
+        updateOfflineCounter(); // Mise à jour du badge
         
     } catch(e) {
         console.error(e);
-        alert("❌ Erreur lors de l'envoi.");
+        alert("❌ Erreur technique.");
     } finally {
         btn.disabled = false;
         btn.innerHTML = originalContent;
@@ -861,19 +908,15 @@ async function finalize() {
 async function finalizePret() {
     const btn = document.getElementById('btn-final-pret');
     
-    // 1. RÉCUPÉRATION ET VALIDATION
     const techInput = document.getElementById('pret-tech-name');
     const clientInput = document.getElementById('pret-nom');
     const tech = techInput?.value.trim();
     const client = clientInput?.value.trim();
 
-    if(techInput) techInput.style.border = "none";
-    if(clientInput) clientInput.style.border = "none";
-
     if (!tech || !client) {
-        if (!tech && techInput) techInput.style.border = "2px solid #ef4444";
-        if (!client && clientInput) clientInput.style.border = "2px solid #ef4444";
-        return alert("⚠️ STOP ! Le nom du TECHNICIEN et du CLIENT sont obligatoires.");
+        if (techInput) techInput.style.border = "2px solid #ef4444";
+        if (clientInput) clientInput.style.border = "2px solid #ef4444";
+        return alert("⚠️ Technicien et Client obligatoires.");
     }
 
     const selectVehicule = document.getElementById('pret-vehicule-select');
@@ -888,83 +931,74 @@ async function finalizePret() {
     } else { plaqueAuto = fullSelectValue; }
 
     const kmSaisi = parseInt(document.getElementById('pret-km-depart')?.value) || 0;
-    const inputs = {
-        dob: document.getElementById('pret-dob')?.value,
-        lieu_naiss: document.getElementById('pret-lieu-naiss')?.value.trim(),
-        permis_num: document.getElementById('pret-permis-num')?.value.trim(),
-        permis_lieu: document.getElementById('pret-permis-lieu')?.value.trim()
-    };
-
-    // VÉRIFICATIONS SÉCURITÉ
+    
+    // Validations
     if (!plaqueAuto || plaqueAuto === "-- Choisir un véhicule --") return alert("⚠️ Choisis un véhicule !");
     if (kmSaisi <= 0) return alert("⚠️ Saisis le kilométrage !");
     if (!state.signature) return alert("⚠️ Signature obligatoire !");
     if (!state.pret.inspectionValidated) return alert("⚠️ Valide l'inspection !");
 
-    if (state.pretMode === "DEPART") {
-        if (!inputs.dob || !inputs.permis_num) return alert("⚠️ Infos client incomplètes !");
-        if (!state.pret.permis_recto) return alert("⚠️ Photo du permis obligatoire !");
-    }
+    const payload = {
+        type: "PRET",
+        status: state.pretMode,
+        technicien: tech,
+        client: client,
+        immat: plaqueAuto,
+        modele: modeleExtraite,
+        km: kmSaisi,
+        nom: client,
+        dob: document.getElementById('pret-dob')?.value,
+        permis_num: document.getElementById('pret-permis-num')?.value.trim(),
+        degats_details: document.getElementById('pret-degats-obs')?.value.trim() || "RAS",
+        degats_coords: JSON.stringify(state.pret.damages || []),
+        permis_recto: state.pret.permis_recto || "N/A",
+        permis_verso: state.pret.permis_verso || "N/A",
+        photos_inspection: state.pret.photos_inspection || [], 
+        signature: state.signature,
+        date: new Date().toLocaleString('fr-FR')
+    };
 
-    // LOGIQUE TEXTE
-    let texteSaisi = document.getElementById('pret-degats-obs')?.value.trim() || "";
-    const nbCroix = state.pret.damages ? state.pret.damages.length : 0;
-    let degatsFinalText = texteSaisi === "" ? (nbCroix > 0 ? `Dégâts sur schéma (${nbCroix} impacts)` : "Aucun dégât") : texteSaisi;
-
-    if (state.pretMode === "RETOUR" && state.pret.km_depart_initial) {
-        const diff = kmSaisi - state.pret.km_depart_initial;
-        degatsFinalText += ` | KM départ: ${state.pret.km_depart_initial} | Parcouru: ${diff}km`;
-    }
-
-    // --- ENVOI ---
     btn.disabled = true;
-    const originalText = btn.innerText;
-    btn.innerText = "GÉNÉRATION PDF...";
+    btn.innerText = "GÉNÉRATION & SAUVEGARDE...";
 
     try {
-        const payload = {
-            type: "PRET",
-            status: state.pretMode,
-            technicien: tech,
-            client: client,
-            immat: plaqueAuto,
-            modele: modeleExtraite,
-            km: kmSaisi,
-            nom: client,
-            dob: inputs.dob,
-            permis_num: inputs.permis_num,
-            degats_details: degatsFinalText,
-            degats_coords: JSON.stringify(state.pret.damages || []),
-            permis_recto: state.pret.permis_recto || "N/A",
-            // --- CORRECTIF VERSO ET NOUVELLES PHOTOS INSPECTION ---
-            permis_verso: state.pret.permis_verso || "N/A",
-            photos_inspection: state.pret.photos_inspection || [], 
-            // ------------------------------------------------------
-            signature: state.signature,
-            date: new Date().toLocaleString('fr-FR')
-        };
-
-        // 1. GÉNÉRER LE PDF ET L'AJOUTER AU PAQUET
         const pdfBase64 = await generatePretPDF(payload, state.pretMode, tech, client);
         payload.pdfBase64 = pdfBase64;
 
-        // 2. FETCH
-        await fetch(URL_PRET, {
-            method: 'POST',
-            mode: 'no-cors',
-            body: JSON.stringify(payload)
+        // --- LOGIQUE HORS-LIGNE ---
+        // 1. Copie locale pour historique tel
+        await saveDossierLocalement({
+            immat: plaqueAuto,
+            nom: client,
+            date: payload.date,
+            pdfBase64: pdfBase64,
+            type: "PRET-" + state.pretMode
         });
 
-        alert(`✅ ${state.pretMode} ENREGISTRÉ ET PDF ARCHIVÉ !`);
+        // 2. Envoi ou File d'attente
+        if (navigator.onLine) {
+            try {
+                await fetch(URL_PRET, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+                alert(`✅ ${state.pretMode} ENREGISTRÉ !`);
+            } catch (e) {
+                await saveToOutbox(URL_PRET, payload);
+                alert("📡 Connexion faible : Stocké sur le téléphone pour envoi auto.");
+            }
+        } else {
+            await saveToOutbox(URL_PRET, payload);
+            alert("📴 MODE HORS-LIGNE : Enregistré sur le téléphone. Synchro au retour du réseau.");
+        }
+
         resetPretForm(); 
         switchView('vitrage');
+        updateOfflineCounter();
 
     } catch(e) {
         console.error(e);
-        alert("❌ Erreur lors de l'envoi.");
+        alert("❌ Erreur lors de l'enregistrement.");
     } finally {
         btn.disabled = false;
-        btn.innerText = originalText;
+        btn.innerText = "Valider";
     }
 }
 

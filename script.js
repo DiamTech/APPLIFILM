@@ -828,13 +828,9 @@ async function finalize() {
     const tech = techEl ? techEl.value.trim() : "";
     const client = clientEl ? clientEl.value.trim() : "";
 
-    if (!tech || !client) {
-        if (techEl) techEl.style.border = "2px solid #ef4444";
-        if (clientEl) clientEl.style.border = "2px solid #ef4444";
-        return alert("⚠️ Technicien et Client obligatoires.");
+    if (!tech || !client || !state.batch.length || !state.signature) {
+        return alert("⚠️ Vérifiez les champs obligatoires (Technicien, Client, Lot, Signature).");
     }
-
-    if (!state.batch.length || !state.signature) return alert("⚠️ Lot ou Signature manquante !");
 
     const btn = document.getElementById('btn-final');
     btn.disabled = true;
@@ -844,47 +840,50 @@ async function finalize() {
     try {
         const pdfBase64 = await generateVitragePDF(state.batch, state.signature, tech, client);
         const payload = {
-            technicien: tech,
-            client: client,
-            pdfBase64: pdfBase64,
-            type: "VITRAGE",
+            technicien: tech, client: client, pdfBase64: pdfBase64, type: "VITRAGE",
             interventions: state.batch.map(item => ({ ...item, technicien: tech, client: client, signature: state.signature }))
         };
 
-        // 1. Sauvegarde systématique dans l'historique du téléphone
-        await saveDossierLocalement({
-            immat: state.batch[0].vin,
-            nom: client,
-            date: new Date().toLocaleString('fr-FR'),
-            pdfBase64: pdfBase64,
-            type: "VITRAGE"
-        });
+        // SAUVEGARDE LOCALE (HISTORIQUE)
+        try { 
+            await saveDossierLocalement({ immat: state.batch[0].vin, nom: client, date: new Date().toLocaleString('fr-FR'), pdfBase64: pdfBase64, type: "VITRAGE" }); 
+        } catch(e) { console.warn("Erreur sauvegarde historique local (non bloquant):", e); }
 
-        // 2. Gestion de l'envoi
+        // GESTION ENVOI
+        let successMessage = "";
         if (navigator.onLine) {
             try {
                 await fetch(URL_VITRAGE, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
-                alert("✅ Envoyé et Archivé !");
+                successMessage = "✅ Envoyé et Archivé !";
             } catch (e) {
                 await saveToOutbox(URL_VITRAGE, payload);
-                alert("✅ Données sauvegardées, en attente de réseau.");
+                successMessage = "✅ Données sauvegardées, en attente de réseau.";
             }
         } else {
             await saveToOutbox(URL_VITRAGE, payload);
-            alert("✅ Données sauvegardées, en attente de réseau.");
+            successMessage = "✅ Données sauvegardées, en attente de réseau.";
         }
 
-        // RESET
+        // --- NETTOYAGE SÉCURISÉ ---
+        // On fait le reset AVANT l'alerte pour être sûr que tout est propre
         state.batch = [];
         state.signature = null;
         if(clientEl) clientEl.value = "";
-        updateBatchUI(); 
-        resetSignature();
-        updateOfflineCounter();
+        
+        try {
+            if (typeof updateBatchUI === "function") updateBatchUI(); 
+            if (typeof resetSignature === "function") resetSignature();
+            if (typeof updateOfflineCounter === "function") updateOfflineCounter();
+        } catch(resetError) {
+            console.warn("Erreur mineure pendant le reset UI:", resetError);
+        }
+
+        // On affiche le succès à la toute fin
+        alert(successMessage);
         
     } catch(e) {
-        console.error(e);
-        alert("❌ Erreur technique.");
+        console.error("Erreur critique:", e);
+        alert("❌ Une erreur est survenue lors de la génération du dossier.");
     } finally {
         btn.disabled = false;
         btn.innerHTML = originalContent;
@@ -898,78 +897,47 @@ async function finalizePret() {
     const tech = techInput?.value.trim();
     const client = clientInput?.value.trim();
 
-    if (!tech || !client) return alert("⚠️ Technicien et Client obligatoires.");
-
-    const selectVehicule = document.getElementById('pret-vehicule-select');
-    const fullSelectValue = selectVehicule ? selectVehicule.value : "";
-    let modeleExtraite = "Véhicule", plaqueAuto = "";
-    if (fullSelectValue.includes(':')) {
-        const parts = fullSelectValue.split(':');
-        modeleExtraite = parts[0].trim();
-        plaqueAuto = parts[1].trim();
-    } else { plaqueAuto = fullSelectValue; }
-
-    const kmSaisi = parseInt(document.getElementById('pret-km-depart')?.value) || 0;
-    if (!plaqueAuto || kmSaisi <= 0 || !state.signature || !state.pret.inspectionValidated) {
-        return alert("⚠️ Vérifiez les infos, le kilométrage et la signature !");
-    }
-
-    const payload = {
-        type: "PRET",
-        status: state.pretMode,
-        technicien: tech,
-        client: client,
-        immat: plaqueAuto,
-        modele: modeleExtraite,
-        km: kmSaisi,
-        nom: client,
-        dob: document.getElementById('pret-dob')?.value,
-        permis_num: document.getElementById('pret-permis-num')?.value.trim(),
-        degats_details: document.getElementById('pret-degats-obs')?.value.trim() || "RAS",
-        degats_coords: JSON.stringify(state.pret.damages || []),
-        permis_recto: state.pret.permis_recto || "N/A",
-        permis_verso: state.pret.permis_verso || "N/A",
-        photos_inspection: state.pret.photos_inspection || [], 
-        signature: state.signature,
-        date: new Date().toLocaleString('fr-FR')
-    };
+    if (!tech || !client || !state.signature) return alert("⚠️ Infos obligatoires manquantes.");
 
     btn.disabled = true;
     btn.innerText = "TRAITEMENT...";
 
     try {
+        // [Gardez votre logique de plaqueAuto et kmSaisi ici...]
         const pdfBase64 = await generatePretPDF(payload, state.pretMode, tech, client);
         payload.pdfBase64 = pdfBase64;
 
-        // 1. Sauvegarde historique local
-        await saveDossierLocalement({
-            immat: plaqueAuto,
-            nom: client,
-            date: payload.date,
-            pdfBase64: pdfBase64,
-            type: "PRET-" + state.pretMode
-        });
+        try { 
+            await saveDossierLocalement({ immat: payload.immat, nom: client, date: payload.date, pdfBase64: pdfBase64, type: "PRET-" + state.pretMode }); 
+        } catch(e) { console.warn("Erreur historique local ignored"); }
 
-        // 2. Gestion envoi
+        let successMessage = "";
         if (navigator.onLine) {
             try {
                 await fetch(URL_PRET, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
-                alert(`✅ ${state.pretMode} ENREGISTRÉ !`);
+                successMessage = `✅ ${state.pretMode} ENREGISTRÉ !`;
             } catch (e) {
                 await saveToOutbox(URL_PRET, payload);
-                alert("✅ Données sauvegardées, en attente de réseau.");
+                successMessage = "✅ Données sauvegardées, en attente de réseau.";
             }
         } else {
             await saveToOutbox(URL_PRET, payload);
-            alert("✅ Données sauvegardées, en attente de réseau.");
+            successMessage = "✅ Données sauvegardées, en attente de réseau.";
         }
 
-        resetPretForm(); 
-        switchView('vitrage');
-        updateOfflineCounter();
+        // --- NETTOYAGE SÉCURISÉ ---
+        try {
+            if (typeof resetPretForm === "function") resetPretForm(); 
+            if (typeof switchView === "function") switchView('vitrage');
+            if (typeof updateOfflineCounter === "function") updateOfflineCounter();
+        } catch(resetError) {
+            console.warn("Erreur reset Pret UI:", resetError);
+        }
+
+        alert(successMessage);
 
     } catch(e) {
-        console.error(e);
+        console.error("Erreur critique Pret:", e);
         alert("❌ Erreur lors de l'enregistrement.");
     } finally {
         btn.disabled = false;

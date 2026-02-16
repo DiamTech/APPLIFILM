@@ -27,7 +27,13 @@ const logoApplifilm = new Image();
 logoApplifilm.src = 'https://www.applifilm.fr/wp-content/uploads/2020/07/applifilm.png';
 logoApplifilm.crossOrigin = "Anonymous";
 
-let scanner, canvas, ctx, drawing = false;
+// Variables pour le Scanner (Barcode & OCR)
+let scanner; 
+let scannerMode = 'barcode'; 
+let ocrInterval = null;
+
+// Variables pour la Signature (Canvas)
+let canvas, ctx, drawing = false;
 
 // --- INITIALISATION AU CHARGEMENT ---
 window.addEventListener('load', () => {

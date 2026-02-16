@@ -926,115 +926,104 @@ async function finalize() {
 
 async function finalizePret() {
     const btn = document.getElementById('btn-final-pret');
-    
-    // 1. RÉCUPÉRATION ET VALIDATION
-    const techInput = document.getElementById('pret-tech-name');
-    const clientInput = document.getElementById('pret-nom');
-    const tech = techInput?.value.trim() || "";
-    const client = clientInput?.value.trim() || "";
-
-    if (!tech || !client || !state.signature) {
-        return alert("⚠️ Le nom du Technicien, du Client et la Signature sont obligatoires.");
-    }
-
-    // Gestion du véhicule et de la plaque
-    const selectVehicule = document.getElementById('pret-vehicule-select');
-    const fullSelectValue = selectVehicule ? selectVehicule.value : "";
-    let modeleExtraite = "Véhicule";
-    let plaqueAuto = "";
-
-    if (fullSelectValue.includes(':')) {
-        const parts = fullSelectValue.split(':');
-        modeleExtraite = parts[0].trim();
-        plaqueAuto = parts[1].trim();
-    } else { plaqueAuto = fullSelectValue; }
-
-    const kmSaisi = parseInt(document.getElementById('pret-km-depart')?.value) || 0;
-    if (!plaqueAuto || plaqueAuto === "-- Choisir un véhicule --" || kmSaisi <= 0) {
-        return alert("⚠️ Veuillez sélectionner un véhicule et saisir le kilométrage.");
-    }
-
-    // 2. PRÉPARATION DU TRAITEMENT
-    btn.disabled = true;
-    btn.innerText = "TRAITEMENT EN COURS...";
+    if (!btn) return;
 
     try {
-        // Création du Payload (L'objet qui contient TOUT)
+        // --- ÉTAPE 1 : RÉCUPÉRATION ---
+        const techInput = document.getElementById('pret-tech-name');
+        const clientInput = document.getElementById('pret-nom');
+        const tech = techInput?.value.trim() || "";
+        const client = clientInput?.value.trim() || "";
+
+        if (!tech || !client || !state.signature) {
+            return alert("⚠️ Technicien, Client et Signature obligatoires.");
+        }
+
+        // --- ÉTAPE 2 : VÉHICULE & KM ---
+        const selectVehicule = document.getElementById('pret-vehicule-select');
+        const fullSelectValue = selectVehicule ? selectVehicule.value : "";
+        let plaqueAuto = "";
+        if (fullSelectValue.includes(':')) {
+            plaqueAuto = fullSelectValue.split(':')[1].trim();
+        } else { plaqueAuto = fullSelectValue; }
+
+        const kmSaisi = document.getElementById('pret-km-depart')?.value || 0;
+        if (!plaqueAuto || plaqueAuto === "-- Choisir un véhicule --" || kmSaisi <= 0) {
+            return alert("⚠️ Sélectionnez un véhicule et le kilométrage.");
+        }
+
+        btn.disabled = true;
+        btn.innerText = "GÉNÉRATION DU DOSSIER...";
+
+        // --- ÉTAPE 3 : CRÉATION DU PAYLOAD ---
         const payload = {
             type: "PRET",
-            status: state.pretMode,
+            status: state.pretMode || "DEPART",
             technicien: tech,
             client: client,
             immat: plaqueAuto,
-            modele: modeleExtraite,
             km: kmSaisi,
             nom: client,
-            dob: document.getElementById('pret-dob')?.value || "N/A",
-            permis_num: document.getElementById('pret-permis-num')?.value.trim() || "N/A",
-            degats_details: document.getElementById('pret-degats-obs')?.value.trim() || "RAS",
+            dob: document.getElementById('pret-dob')?.value || "",
+            permis_num: document.getElementById('pret-permis-num')?.value || "",
+            degats_details: document.getElementById('pret-degats-obs')?.value || "RAS",
             degats_coords: JSON.stringify(state.pret.damages || []),
             permis_recto: state.pret.permis_recto || "N/A",
             permis_verso: state.pret.permis_verso || "N/A",
-            photos_inspection: state.pret.photos_inspection || [], 
+            photos_inspection: state.pret.photos_inspection || [],
             signature: state.signature,
             date: new Date().toLocaleString('fr-FR')
         };
 
-        // 3. GÉNÉRATION DU PDF
-        const pdfBase64 = await generatePretPDF(payload, state.pretMode, tech, client);
-        payload.pdfBase64 = pdfBase64; // On ajoute le PDF au paquet final
+        // --- ÉTAPE 4 : GÉNÉRATION PDF (Zone de crash n°1) ---
+        let pdfBase64;
+        try {
+            pdfBase64 = await generatePretPDF(payload, state.pretMode, tech, client);
+            payload.pdfBase64 = pdfBase64;
+        } catch (pdfErr) {
+            console.error(pdfErr);
+            throw new Error("La génération du PDF a échoué. Vérifiez la signature.");
+        }
 
-        // 4. SAUVEGARDE HISTORIQUE LOCAL (Pour consulter le PDF sur le tel sans réseau)
-        try { 
-            await saveDossierLocalement({ 
-                immat: plaqueAuto, 
-                nom: client, 
-                date: payload.date, 
-                pdfBase64: pdfBase64, 
-                type: "PRET-" + state.pretMode 
-            }); 
-        } catch(e) { console.warn("Erreur historique local ignored"); }
+        // --- ÉTAPE 5 : SAUVEGARDE INDEXEDDB (Zone de crash n°2) ---
+        try {
+            await saveDossierLocalement({
+                immat: plaqueAuto,
+                nom: client,
+                date: payload.date,
+                pdfBase64: pdfBase64,
+                type: "PRET"
+            });
+        } catch (dbErr) {
+            console.warn("Échec historique local, on continue quand même l'envoi...");
+        }
 
-        // 5. GESTION DE L'ENVOI (SMART SYNC)
-        let successMessage = "";
+        // --- ÉTAPE 6 : ENVOI ---
+        let successMsg = "";
         if (navigator.onLine) {
             try {
-                // Timeout de 8 secondes pour ne pas bloquer le tech si la 4G rame
-                const controller = new AbortController();
-                const id = setTimeout(() => controller.abort(), 8000);
-
-                await fetch(URL_PRET, { 
-                    method: 'POST', 
-                    mode: 'no-cors', 
-                    body: JSON.stringify(payload),
-                    signal: controller.signal 
-                });
-                clearTimeout(id);
-                successMessage = `✅ ${state.pretMode} ENREGISTRÉ ET ARCHIVÉ !`;
-            } catch (e) {
+                // On tente l'envoi réel
+                await fetch(URL_PRET, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+                successMsg = "✅ Prêt enregistré et envoyé !";
+            } catch (netErr) {
                 await saveToOutbox(URL_PRET, payload);
-                successMessage = "✅ Données sauvegardées, en attente de réseau.";
+                successMsg = "✅ Données sauvegardées, en attente de réseau.";
             }
         } else {
             await saveToOutbox(URL_PRET, payload);
-            successMessage = "✅ Données sauvegardées, en attente de réseau.";
+            successMsg = "✅ Données sauvegardées, en attente de réseau.";
         }
 
-        // 6. NETTOYAGE UI SÉCURISÉ
-        try {
-            if (typeof resetPretForm === "function") resetPretForm(); 
-            if (typeof switchView === "function") switchView('vitrage');
-            if (typeof updateOfflineCounter === "function") updateOfflineCounter();
-        } catch(resetError) {
-            console.warn("Erreur reset UI mineure:", resetError);
-        }
+        // --- ÉTAPE 7 : RESET ---
+        if (typeof resetPretForm === "function") resetPretForm();
+        if (typeof switchView === "function") switchView('vitrage');
+        if (typeof updateOfflineCounter === "function") updateOfflineCounter();
 
-        // Alerte de succès finale
-        alert(successMessage);
+        alert(successMsg);
 
-    } catch(e) {
-        console.error("Erreur critique Pret:", e);
-        alert("❌ Erreur lors de la préparation du dossier. Vérifiez votre connexion ou les photos.");
+    } catch (err) {
+        console.error("CRASH ANALYSE :", err);
+        alert("❌ ERREUR : " + err.message);
     } finally {
         btn.disabled = false;
         btn.innerText = "Valider";

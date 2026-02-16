@@ -354,16 +354,40 @@ function renderDailyHistory() {
 // Fonction appelée par tes boutons HTML
 function setScannerMode(mode) {
     scannerMode = mode;
-    // Petit feedback visuel ou alert pour confirmer le mode
-    console.log("Mode scanner : " + mode);
+    
+    const btnBarcode = document.getElementById('btn-mode-barcode');
+    const btnText = document.getElementById('btn-mode-text');
+
+    // Styles : Bleu pour actif, Gris pour inactif
+    const activeClass = "bg-indigo-600 text-white shadow-sm";
+    const inactiveClass = "bg-slate-100 text-slate-500";
+    const baseClass = "flex-1 py-3 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all";
+
+    // Application des couleurs
+    if (mode === 'barcode') {
+        btnBarcode.className = `${baseClass} ${activeClass}`;
+        btnText.className = `${baseClass} ${inactiveClass}`;
+    } else {
+        btnText.className = `${baseClass} ${activeClass}`;
+        btnBarcode.className = `${baseClass} ${inactiveClass}`;
+    }
 }
 
+// --- 2. DÉMARRAGE DU SCANNER ---
 async function startScanner() {
     const readerDiv = document.getElementById('reader');
-    readerDiv.classList.remove('hidden'); // On affiche la zone
+    const controlsDiv = document.getElementById('scanner-controls');
+
+    // IMPORTANT : On force l'affichage de la caméra ET des boutons
+    readerDiv.classList.remove('hidden');
+    if (controlsDiv) controlsDiv.classList.remove('hidden');
 
     // Si le scanner tourne déjà, on l'arrête proprement avant de relancer
-    if (scanner) { await stopScanner(); readerDiv.classList.remove('hidden'); }
+    if (scanner) { 
+        await stopScanner(false); // false = ne pas cacher l'interface
+        readerDiv.classList.remove('hidden'); 
+        if (controlsDiv) controlsDiv.classList.remove('hidden');
+    }
 
     scanner = new Html5Qrcode("reader");
     
@@ -372,85 +396,101 @@ async function startScanner() {
             { facingMode: "environment" }, 
             { fps: 15, qrbox: { width: 280, height: 150 } }, 
             async (text) => {
-                // 1. MODE CODE-BARRES
+                // Si on est en mode Code-Barres, on valide le résultat direct
                 if (scannerMode === 'barcode') {
-                    handleSuccess(text);
+                    handleScanSuccess(text);
                 }
             }
         );
 
-        // 2. MODE TEXTE (OCR) - On lance une boucle d'analyse
-        if (scannerMode === 'text') {
-            ocrInterval = setInterval(async () => {
-                // Si l'utilisateur a fermé le scanner ou changé de mode entre temps
-                if (scannerMode !== 'text' || readerDiv.classList.contains('hidden')) return;
-
-                const video = document.querySelector('#reader video');
-                if (!video) return;
-
-                // On capture l'image du flux vidéo
-                const canvas = document.createElement('canvas');
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                canvas.getContext('2d').drawImage(video, 0, 0);
-
-                // On demande à Tesseract de lire le texte
-                try {
-                    const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
-                    
-                    // On ne garde que les lettres (A-Z) et chiffres (0-9)
-                    const cleanedVin = text.replace(/[^A-Z0-9]/gi, "").trim();
-
-                    // Un VIN fait 17 caractères. On valide si on en trouve au moins 15 cohérents.
-                    if (cleanedVin.length >= 15 && cleanedVin.length <= 17) {
-                        clearInterval(ocrInterval); // On arrête de chercher
-                        handleSuccess(cleanedVin.toUpperCase());
-                    }
-                } catch (e) {
-                    // Tesseract échoue parfois sur des images floues, on continue la boucle
-                }
-            }, 1500); // Analyse toutes les 1.5 secondes
-        }
+        // On lance la boucle de surveillance pour le mode TEXTE
+        startOcrLoop();
 
     } catch (err) {
-        alert("Caméra non accessible");
-        readerDiv.classList.add('hidden');
+        alert("Impossible d'accéder à la caméra. Vérifiez les permissions.");
+        stopScanner();
     }
 }
 
-// Fonction commune pour traiter le résultat (Texte ou Code-barres)
-async function handleSuccess(resultText) {
-    document.getElementById('vin-input').value = resultText;
+// --- 3. BOUCLE DE LECTURE DE TEXTE (OCR) ---
+function startOcrLoop() {
+    if (ocrInterval) clearInterval(ocrInterval);
+
+    ocrInterval = setInterval(async () => {
+        // On ne fait rien si on n'est pas en mode TEXTE ou si c'est caché
+        if (scannerMode !== 'text' || document.getElementById('reader').classList.contains('hidden')) return;
+
+        const video = document.querySelector('#reader video');
+        if (!video) return;
+
+        // Capture de l'image vidéo sur un canvas invisible
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+
+        try {
+            // Analyse avec Tesseract
+            const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
+            
+            // Nettoyage : on ne garde que les lettres et chiffres
+            const cleaned = text.replace(/[^A-Z0-9]/gi, "").trim();
+
+            // Validation : un VIN fait 17 caractères (on accepte >= 15 pour être large)
+            if (cleaned.length >= 15 && cleaned.length <= 17) {
+                handleScanSuccess(cleaned.toUpperCase());
+            }
+        } catch (e) {
+            // Erreur silencieuse si l'image est floue
+        }
+    }, 1500); // Scanne toutes les 1.5 secondes
+}
+
+// --- 4. VALIDATION ET SUCCÈS ---
+async function handleScanSuccess(result) {
+    // Remplir le champ
+    document.getElementById('vin-input').value = result;
     
-    // Capture automatique de la "Photo Preuve"
+    // PREUVE PHOTO : On capture l'image du succès
     try {
         const video = document.querySelector('#reader video');
-        const canvasPhoto = document.createElement('canvas');
-        canvasPhoto.width = video.videoWidth;
-        canvasPhoto.height = video.videoHeight;
-        const ctxPhoto = canvasPhoto.getContext('2d');
-        ctxPhoto.drawImage(video, 0, 0);
-        
-        const photoVIN = canvasPhoto.toDataURL('image/jpeg', 0.7);
-        state.photos.push(photoVIN); // Ajout au dossier
-        renderPhotos(); // Mise à jour de l'affichage
-    } catch (e) { 
-        console.log("Erreur capture auto :", e); 
-    }
+        if (video) {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            
+            const photoData = canvas.toDataURL('image/jpeg', 0.7);
+            
+            // On l'ajoute à ta liste de photos (avec vérification si state existe)
+            if (typeof state !== 'undefined' && state.photos) {
+                state.photos.push(photoData);
+                if (typeof renderPhotos === "function") renderPhotos();
+            }
+        }
+    } catch (e) { console.error("Erreur photo auto", e); }
 
     await stopScanner();
-    alert("VIN détecté : " + resultText);
+    // Petit délai pour laisser l'interface se fermer
+    setTimeout(() => alert("VIN détecté : " + result), 300);
 }
 
-async function stopScanner() {
-    if (ocrInterval) clearInterval(ocrInterval); // On arrête l'analyse de texte
+// --- 5. ARRÊT DU SCANNER ---
+async function stopScanner(hideUI = true) {
+    if (ocrInterval) clearInterval(ocrInterval);
+    
     if (scanner) {
         try { await scanner.stop(); } catch(e) {}
         scanner = null;
     }
-    document.getElementById('reader').classList.add('hidden');
+    
+    // On cache tout seulement si demandé (par défaut oui)
+    if (hideUI) {
+        document.getElementById('reader').classList.add('hidden');
+        const controlsDiv = document.getElementById('scanner-controls');
+        if (controlsDiv) controlsDiv.classList.add('hidden');
+    }
 }
-
 // --- SIGNATURE ---
 function initSignature() {
     canvas = document.getElementById('canvas');

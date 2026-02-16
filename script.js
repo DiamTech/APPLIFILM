@@ -353,50 +353,108 @@ function renderDailyHistory() {
     `).reverse().join('');
 }
 
+let scanner;
+let scannerMode = 'barcode'; // Par défaut : Code-barres
+let ocrInterval = null;      // Pour la boucle de lecture de texte
+
+// Fonction appelée par tes boutons HTML
+function setScannerMode(mode) {
+    scannerMode = mode;
+    // Petit feedback visuel ou alert pour confirmer le mode
+    console.log("Mode scanner : " + mode);
+}
+
 async function startScanner() {
     const readerDiv = document.getElementById('reader');
-    readerDiv.classList.toggle('hidden');
-    
-    if (readerDiv.classList.contains('hidden')) {
-        if(scanner) await scanner.stop();
-        return;
-    }
+    readerDiv.classList.remove('hidden'); // On affiche la zone
+
+    // Si le scanner tourne déjà, on l'arrête proprement avant de relancer
+    if (scanner) { await stopScanner(); readerDiv.classList.remove('hidden'); }
 
     scanner = new Html5Qrcode("reader");
     
     try {
         await scanner.start(
             { facingMode: "environment" }, 
-            { fps: 10, qrbox: { width: 250, height: 150 } }, 
+            { fps: 15, qrbox: { width: 280, height: 150 } }, 
             async (text) => {
-                document.getElementById('vin-input').value = text;
-                try {
-                    const video = document.querySelector('#reader video');
-                    const canvasPhoto = document.createElement('canvas');
-                    canvasPhoto.width = video.videoWidth;
-                    canvasPhoto.height = video.videoHeight;
-                    const ctxPhoto = canvasPhoto.getContext('2d');
-                    ctxPhoto.drawImage(video, 0, 0);
-                    const photoVIN = canvasPhoto.toDataURL('image/jpeg', 0.7);
-                    state.photos.push(photoVIN);
-                    renderPhotos();
-                } catch (e) { console.log("Erreur capture auto :", e); }
-
-                stopScanner();
-                alert("VIN détecté !");
+                // 1. MODE CODE-BARRES
+                if (scannerMode === 'barcode') {
+                    handleSuccess(text);
+                }
             }
         );
+
+        // 2. MODE TEXTE (OCR) - On lance une boucle d'analyse
+        if (scannerMode === 'text') {
+            ocrInterval = setInterval(async () => {
+                // Si l'utilisateur a fermé le scanner ou changé de mode entre temps
+                if (scannerMode !== 'text' || readerDiv.classList.contains('hidden')) return;
+
+                const video = document.querySelector('#reader video');
+                if (!video) return;
+
+                // On capture l'image du flux vidéo
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                canvas.getContext('2d').drawImage(video, 0, 0);
+
+                // On demande à Tesseract de lire le texte
+                try {
+                    const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
+                    
+                    // On ne garde que les lettres (A-Z) et chiffres (0-9)
+                    const cleanedVin = text.replace(/[^A-Z0-9]/gi, "").trim();
+
+                    // Un VIN fait 17 caractères. On valide si on en trouve au moins 15 cohérents.
+                    if (cleanedVin.length >= 15 && cleanedVin.length <= 17) {
+                        clearInterval(ocrInterval); // On arrête de chercher
+                        handleSuccess(cleanedVin.toUpperCase());
+                    }
+                } catch (e) {
+                    // Tesseract échoue parfois sur des images floues, on continue la boucle
+                }
+            }, 1500); // Analyse toutes les 1.5 secondes
+        }
+
     } catch (err) {
         alert("Caméra non accessible");
         readerDiv.classList.add('hidden');
     }
 }
 
-async function stopScanner() {
-    if (scanner) {
-        await scanner.stop();
-        document.getElementById('reader').classList.add('hidden');
+// Fonction commune pour traiter le résultat (Texte ou Code-barres)
+async function handleSuccess(resultText) {
+    document.getElementById('vin-input').value = resultText;
+    
+    // Capture automatique de la "Photo Preuve"
+    try {
+        const video = document.querySelector('#reader video');
+        const canvasPhoto = document.createElement('canvas');
+        canvasPhoto.width = video.videoWidth;
+        canvasPhoto.height = video.videoHeight;
+        const ctxPhoto = canvasPhoto.getContext('2d');
+        ctxPhoto.drawImage(video, 0, 0);
+        
+        const photoVIN = canvasPhoto.toDataURL('image/jpeg', 0.7);
+        state.photos.push(photoVIN); // Ajout au dossier
+        renderPhotos(); // Mise à jour de l'affichage
+    } catch (e) { 
+        console.log("Erreur capture auto :", e); 
     }
+
+    await stopScanner();
+    alert("VIN détecté : " + resultText);
+}
+
+async function stopScanner() {
+    if (ocrInterval) clearInterval(ocrInterval); // On arrête l'analyse de texte
+    if (scanner) {
+        try { await scanner.stop(); } catch(e) {}
+        scanner = null;
+    }
+    document.getElementById('reader').classList.add('hidden');
 }
 
 // --- SIGNATURE ---

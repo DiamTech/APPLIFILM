@@ -27,13 +27,11 @@ const logoApplifilm = new Image();
 logoApplifilm.src = 'https://www.applifilm.fr/wp-content/uploads/2020/07/applifilm.png';
 logoApplifilm.crossOrigin = "Anonymous";
 
-// Variables pour le Scanner (Barcode & OCR)
-let scanner; 
-let scannerMode = 'barcode'; 
-let ocrInterval = null;
-
-// Variables pour la Signature (Canvas)
-let canvas, ctx, drawing = false;
+// --- VARIABLES GLOBALES (À mettre tout en haut du fichier) ---
+let scanner = null;           // Une seule fois !
+let scannerMode = 'barcode';  // Mode par défaut
+let ocrInterval = null;       // Pour Tesseract
+let canvas, ctx, drawing = false; // Pour la signature
 
 // --- INITIALISATION AU CHARGEMENT ---
 window.addEventListener('load', () => {
@@ -352,10 +350,6 @@ function renderDailyHistory() {
         </div>
     `).reverse().join('');
 }
-
-let scanner;
-let scannerMode = 'barcode'; // Par défaut : Code-barres
-let ocrInterval = null;      // Pour la boucle de lecture de texte
 
 // Fonction appelée par tes boutons HTML
 function setScannerMode(mode) {

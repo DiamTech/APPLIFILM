@@ -393,6 +393,26 @@
     </button>
 </div>
 
+           <div class="mt-6 px-2">
+    <label class="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 ml-1">
+        Photos d'inspection carrosserie
+    </label>
+    
+    <div id="pret-photos-container" class="grid grid-cols-4 gap-3">
+        <label class="aspect-square rounded-[1.5rem] border-2 border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center cursor-pointer active:scale-95 transition-all bg-slate-50/50 dark:bg-slate-900/50">
+            <input type="file" 
+                   accept="image/*" 
+                   multiple 
+                   capture="environment" 
+                   onchange="handlePhotosPret(this)" 
+                   class="hidden">
+            <i data-lucide="camera" class="w-6 h-6 text-slate-400"></i>
+            <span class="text-[8px] mt-1 text-slate-400 font-bold uppercase">Ajouter</span>
+        </label>
+        
+        </div>
+</div>
+
 <div id="signature-section" class="opacity-30 pointer-events-none transition-all duration-500">
     </div>
 

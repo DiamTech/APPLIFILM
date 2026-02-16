@@ -1,20 +1,16 @@
 {
   "name": "Applifilm Pro",
   "short_name": "Applifilm",
-  "start_url": "index.html",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#4f46e5",
   "icons": [
     {
       "src": "https://www.applifilm.fr/wp-content/uploads/2020/07/applifilm.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "https://www.applifilm.fr/wp-content/uploads/2020/07/applifilm.png",
-      "sizes": "512x512",
-      "type": "image/png"
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }

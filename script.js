@@ -417,51 +417,98 @@ async function startScanner() {
     }
 }
 
+function preprocessImage(canvas) {
+    const ctx = canvas.getContext('2d');
+    const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = image.data;
+    
+    // On parcourt chaque pixel
+    for (let i = 0; i < data.length; i += 4) {
+        // Conversion en niveaux de gris (Formule luminosité perçue)
+        const grayscale = data[i] * 0.3 + data[i + 1] * 0.59 + data[i + 2] * 0.11;
+        
+        // Binarisation (Seuil) : Si gris foncé -> Noir, Si gris clair -> Blanc
+        // On inverse les couleurs car souvent le VIN est clair sur fond foncé
+        const threshold = 100; 
+        const value = grayscale > threshold ? 255 : 0; 
+
+        data[i] = value;     // R
+        data[i + 1] = value; // V
+        data[i + 2] = value; // B
+    }
+    ctx.putImageData(image, 0, 0);
+    return canvas;
+}
+
 // --- 3. BOUCLE DE LECTURE DE TEXTE (OCR) ---
 function startOcrLoop() {
-    // On nettoie d'abord pour éviter d'avoir 2 boucles en même temps
     if (ocrInterval) clearInterval(ocrInterval);
 
-    console.log("Démarrage de l'analyse OCR...");
+    // On affiche la cible rouge
+    const targetBox = document.getElementById('scan-target');
+    if(targetBox) targetBox.classList.remove('hidden');
+
+    console.log("Démarrage OCR Haute Précision...");
 
     ocrInterval = setInterval(async () => {
-        // Sécurité : si le scanner est fermé ou si on a changé de mode, on arrête tout
         if (scannerMode !== 'text' || document.getElementById('reader').classList.contains('hidden')) {
             clearInterval(ocrInterval);
+            if(targetBox) targetBox.classList.add('hidden');
             return;
         }
 
         const video = document.querySelector('#reader video');
         if (!video) return;
 
-        // 1. Capture de l'image
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0);
+        // 1. On ne capture QUE la zone centrale (la cible rouge)
+        // Cela augmente la qualité et évite de lire le décor
+        const captureCanvas = document.createElement('canvas');
+        const boxWidth = video.videoWidth * 0.8; // 80% de la largeur
+        const boxHeight = video.videoHeight * 0.2; // 20% de la hauteur (bande étroite)
+        const startX = (video.videoWidth - boxWidth) / 2;
+        const startY = (video.videoHeight - boxHeight) / 2;
 
-        // 2. Analyse Tesseract
+        captureCanvas.width = boxWidth;
+        captureCanvas.height = boxHeight;
+        
+        const ctx = captureCanvas.getContext('2d');
+        ctx.drawImage(video, startX, startY, boxWidth, boxHeight, 0, 0, boxWidth, boxHeight);
+
+        // 2. On applique le filtre "Noir & Blanc"
+        preprocessImage(captureCanvas);
+
         try {
-            // Astuce : on utilise une whitelist pour forcer Tesseract à ne chercher que des lettres et chiffres
-            const { data: { text } } = await Tesseract.recognize(canvas, 'eng', {
+            // 3. Analyse Tesseract avec contraintes strictes
+            const { data: { text } } = await Tesseract.recognize(captureCanvas, 'eng', {
+                // On force Tesseract à ne chercher QUE des majuscules et chiffres
                 tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
             });
-            
-            // 3. Nettoyage et Validation
-            const cleaned = text.replace(/[^A-Z0-9]/gi, "").trim();
-            console.log("Texte vu : " + cleaned); // Tu verras ça dans la console (F12)
 
-            // Un VIN fait 17 caractères. On est souple (15 à 17)
-            if (cleaned.length >= 15 && cleaned.length <= 17) {
-                handleScanSuccess(cleaned.toUpperCase());
+            // 4. Nettoyage final
+            // On enlève tout ce qui n'est pas lettre/chiffre et les espaces
+            const cleaned = text.replace(/[^A-Z0-9]/g, "").trim();
+
+            console.log("Lu :", cleaned); // Regarde ta console pour voir ce qu'il voit
+
+            // 5. Validation VIN (17 caractères exactement, ou 15-16 si un peu flou)
+            if (cleaned.length === 17) {
+                // Si on a 17 caractères, c'est le jackpot
+                clearInterval(ocrInterval);
+                if(targetBox) targetBox.classList.add('hidden');
+                handleScanSuccess(cleaned);
+            } 
+            else if (cleaned.length > 13 && cleaned.includes("VF")) {
+                 // Si ça commence par VF (Renault/Peugeot...) et que c'est long, on tente
+                 clearInterval(ocrInterval);
+                 if(targetBox) targetBox.classList.add('hidden');
+                 handleScanSuccess(cleaned);
             }
-        } catch (e) {
-            // Ignorer les erreurs de lecture
-        }
-    }, 1000); // On scanne toutes les 1 seconde
-}
 
+        } catch (e) {
+            // Erreur lecture
+        }
+    }, 800); // Un peu plus rapide (0.8s) car l'image est plus petite (rognée)
+}
 // --- 4. VALIDATION ET SUCCÈS ---
 async function handleScanSuccess(result) {
     console.log("SUCCÈS VIN : ", result);
@@ -492,6 +539,10 @@ async function handleScanSuccess(result) {
 async function stopScanner(hideUI = true) {
     if (ocrInterval) clearInterval(ocrInterval);
     
+    // On cache la cible rouge
+    const targetBox = document.getElementById('scan-target');
+    if(targetBox) targetBox.classList.add('hidden');
+
     if (scanner) {
         try { await scanner.stop(); } catch(e) {}
         scanner = null;
@@ -499,8 +550,7 @@ async function stopScanner(hideUI = true) {
     
     if (hideUI) {
         document.getElementById('reader').classList.add('hidden');
-        const controlsDiv = document.getElementById('scanner-controls');
-        if (controlsDiv) controlsDiv.classList.add('hidden');
+        document.getElementById('scanner-controls').classList.add('hidden');
     }
 }
 // --- SIGNATURE ---

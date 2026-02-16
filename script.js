@@ -6,22 +6,22 @@ let state = {
     batch: [], 
     signature: null,
     sentHistory: [],
-    // AJOUTE BIEN CES LIGNES :
     activeLoans: [], 
     dailyHistory: [],
     pret: { 
         permis_recto: null, 
         permis_verso: null,
-        damages: [], // <--- INDISPENSABLE pour stocker les croix
+        photos_inspection: [], // <--- INDISPENSABLE pour stocker tes nouvelles photos de carrosserie
+        damages: [],           // Pour stocker les croix (X)
         inspectionValidated: false,
-        photos_depart: [] // Même si tu n'as pas de bouton, laisse-le pour éviter l'erreur
+        photos_depart: []      // On le garde pour la compatibilité
     },
     vehiculeType: 'VOITURE'
 };
 
 // Mets tes vraies URLs ici
 const URL_VITRAGE = "https://script.google.com/macros/s/AKfycbz64BaiGZIaYza94KxRLPFDIz_YGG5gm_nUXLxmcGu8X_8lC7D5y94BQX-NKkY3ljo/exec";
-const URL_PRET = "https://script.google.com/macros/s/AKfycbwhcluLbGJ0OSsBDPZhWjZR6HxRcGscYHH4bXwbwFu-3RF5EgsWHoHeADiobGOZdLLEuA/exec";
+const URL_PRET = "https://script.google.com/macros/s/AKfycbxHLvvS00SQY0nevjQO-dCR59YBDJ4NERU-8g2as4DpEcAjjc_-LzyMkr5T5xNyXJHArA/exec";
 // On pré-charge le logo APPLIFILM dès le démarrage de l'appli
 const logoApplifilm = new Image();
 logoApplifilm.src = 'https://www.applifilm.fr/wp-content/uploads/2020/07/applifilm.png';
@@ -906,6 +906,10 @@ async function finalizePret() {
             degats_details: degatsFinalText,
             degats_coords: JSON.stringify(state.pret.damages || []),
             permis_recto: state.pret.permis_recto || "N/A",
+            // --- CORRECTIF VERSO ET NOUVELLES PHOTOS INSPECTION ---
+            permis_verso: state.pret.permis_verso || "N/A",
+            photos_inspection: state.pret.photos_inspection || [], 
+            // ------------------------------------------------------
             signature: state.signature,
             date: new Date().toLocaleString('fr-FR')
         };
@@ -1815,5 +1819,69 @@ document.getElementById('pret-vehicule-select').addEventListener('change', async
         console.error("Erreur lors de la récupération :", err);
     }
 });
+
+// 1. Initialiser le tableau dans le state (si pas déjà fait)
+if (!state.pret.photos_inspection) state.pret.photos_inspection = [];
+
+// 2. Gérer l'ajout des photos
+function handlePhotosPret(input) {
+    const files = Array.from(input.files);
+    files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width, height = img.height, max_size = 1000;
+                if (width > height) { if (width > max_size) { height *= max_size / width; width = max_size; } }
+                else { if (height > max_size) { width *= max_size / height; height = max_size; } }
+                canvas.width = width; canvas.height = height;
+                canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+                
+                // On stocke dans le sous-objet pret
+                state.pret.photos_inspection.push(canvas.toDataURL('image/jpeg', 0.6));
+                renderPhotosPret();
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+// 3. Afficher les miniatures
+function renderPhotosPret() {
+    const container = document.getElementById('pret-photos-container');
+    const addButton = container.querySelector('label');
+    container.innerHTML = ''; 
+    container.appendChild(addButton);
+    
+    state.pret.photos_inspection.forEach((photo, index) => {
+        const div = document.createElement('div');
+        div.className = "relative aspect-square rounded-2xl overflow-hidden border border-slate-200 shadow-sm";
+        div.innerHTML = `
+            <img src="${photo}" class="w-full h-full object-cover">
+            <button type="button" onclick="removePhotoPret(${index})" class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">×</button>
+        `;
+        container.appendChild(div);
+    });
+}
+
+function removePhotoPret(index) {
+    state.pret.photos_inspection.splice(index, 1);
+    renderPhotosPret();
+}
+
+// 4. IMPORTANT : Modifier ta fonction finalizePret() existante pour envoyer les photos
+// Dans finalizePret(), au moment de créer le "payload", rajoute la ligne :
+// photos_inspection: state.pret.photos_inspection,
+
+function resetPretForm() {
+    // ... tes resets de champs existants ...
+    
+    state.pret.photos_inspection = []; // On vide le tableau
+    renderPhotosPret(); // On vide l'affichage
+    
+    // ... reste du code ...
+}
 
 setTimeout(() => setVehicle('VOITURE'), 200);

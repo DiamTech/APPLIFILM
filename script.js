@@ -1691,6 +1691,12 @@ async function generatePretPDF(data, mode, tech, client) {
     return doc.output('datauristring');
 }
 
+function updateOfflineCounter() {
+    const badge = document.getElementById('offline-badge');
+    if (!badge) return; // Si l'élément HTML n'existe pas, on sort sans faire d'erreur
+    // ... reste de ta logique ...
+}
+
 
 
 async function generateVitragePDF(batch, signature, tech, client) {

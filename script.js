@@ -339,10 +339,10 @@ function addToBatch() {
     const vinValue = vinInput.value.trim();
 
     // 1. On vérifie seulement le VIN et les Vitres
-    if (!vinValue) { 
+    /*if (!vinValue) { 
         alert("⚠️ Le numéro VIN est OBLIGATOIRE."); 
         return vinInput.focus(); 
-    }
+    }*/
     if (state.selectedWindows.length === 0) {
         return alert("⚠️ Sélectionnez au moins une vitre.");
     }
@@ -1162,6 +1162,28 @@ function setVehicle(type) {
         }
     });
     document.getElementById('vehicle-svg-container').innerHTML = VEHICLES_CONFIG[type].shape;
+
+    if (type === 'VDL') {
+        // Mettez ici les noms EXACTS de vos vitres (tels qu'ils sont définis dans vos SVG)
+        const vitresVDL = [
+            "CUST. EXT-G", 
+            "CUST. EXT-D", 
+            "LUNETTE"
+        ]; 
+        
+        vitresVDL.forEach(vitreId => {
+            // On cherche si la vitre est déjà dans la sélection
+            const index = state.selectedWindows.findIndex(w => w.id === vitreId);
+            if (index === -1) {
+                // Si elle n'y est pas, on l'ajoute avec la teinte "5"
+                state.selectedWindows.push({ id: vitreId, tint: '5' });
+            } else {
+                // Si elle y est déjà, on force sa teinte à "5"
+                state.selectedWindows[index].tint = '5';
+            }
+        });
+    }
+    
     renderVitraux();
 }
 
